@@ -1,1 +1,58 @@
-{"name":"Deploy Capsule Builder","on":{"push":{"branches":["main"],"paths":["site.zip"]},"workflow_dispatch":{}},"permissions":{"contents":"read","pages":"write","id-token":"write"},"concurrency":{"group":"pages","cancel-in-progress":true},"jobs":{"deploy":{"runs-on":"ubuntu-latest","environment":{"name":"github-pages","url":"${{ steps.deployment.outputs.page_url }}"},"steps":[{"uses":"actions/checkout@v4"},{"run":"mkdir _site && unzip -q site.zip -d _site && touch _site/.nojekyll"},{"uses":"actions/upload-pages-artifact@v3","with":{"path":"_site"}},{"id":"deployment","uses":"actions/deploy-pages@v4"}]}}}
+# Deploys the Capsule Builder web copy to GitHub Pages (shown at onlyifyouknow.com/pages/capsule-builder).
+# Two ways to release:
+#  1. Upload a new site.zip (full release): it is unpacked into site/ and deployed.
+#  2. Edit files in site/ (e.g. in the GitHub editor), then change release.txt: that commit deploys site/ as is.
+#     Edits to site/ alone do not deploy, so several files can change before one release.
+{
+ "name": "Deploy Capsule Builder",
+ "on": {
+  "push": {
+   "branches": [
+    "main"
+   ],
+   "paths": [
+    "site.zip",
+    "release.txt",
+    ".github/workflows/pages.yml"
+   ]
+  },
+  "workflow_dispatch": {}
+ },
+ "permissions": {
+  "contents": "write",
+  "pages": "write",
+  "id-token": "write"
+ },
+ "concurrency": {
+  "group": "pages",
+  "cancel-in-progress": false
+ },
+ "jobs": {
+  "deploy": {
+   "runs-on": "ubuntu-latest",
+   "environment": {
+    "name": "github-pages",
+    "url": "${{ steps.deployment.outputs.page_url }}"
+   },
+   "steps": [
+    {
+     "uses": "actions/checkout@v4"
+    },
+    {
+     "name": "Unpack a new site.zip into site/ (full release), then stage site/ for Pages",
+     "run": "set -e\nZ=$(md5sum site.zip | cut -d' ' -f1)\nif [ ! -f site/.zip-md5 ] || [ \"$(cat site/.zip-md5)\" != \"$Z\" ]; then\n  rm -rf site && mkdir site && unzip -q site.zip -d site && echo \"$Z\" > site/.zip-md5\n  git config user.name 'github-actions[bot]'\n  git config user.email '41898282+github-actions[bot]@users.noreply.github.com'\n  git add -A site && git commit -q -m 'Unpack site.zip into site/ [skip ci]' && git push -q origin HEAD:main\nfi\nmkdir _site && cp -a site/. _site/ && rm -f _site/.zip-md5 && touch _site/.nojekyll\n"
+    },
+    {
+     "uses": "actions/upload-pages-artifact@v3",
+     "with": {
+      "path": "_site"
+     }
+    },
+    {
+     "id": "deployment",
+     "uses": "actions/deploy-pages@v4"
+    }
+   ]
+  }
+ }
+}
