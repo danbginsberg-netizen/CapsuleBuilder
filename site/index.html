@@ -229,7 +229,7 @@
 <body>
 <div class="app">
   <aside>
-    <div class="brand"><img id="brandLogo" src="logo_rf.png" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.4.2</small></div></div>
+    <div class="brand"><img id="brandLogo" src="logo_rf.png" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.4.3</small></div></div>
     <div class="lines">
       <button class="on" id="lineRF" data-line="RF">Retro Forever</button>
       <button id="lineOIYK" data-line="OIYK">OIYK</button>
@@ -249,6 +249,8 @@
     <input type="text" id="buyer" placeholder="e.g. Sea Breeze Boutique">
     <label class="f" for="capName">Capsule name</label>
     <input type="text" id="capName" placeholder="Curated for [buyer name]">
+    <label class="f" for="units">Order type</label>
+    <select id="units"></select>
 
     <h3>Anchor pieces</h3>
     <label class="f">Pick 1 — the piece the buyer liked</label>
@@ -267,8 +269,6 @@
       <label class="f">Buyer's budget <a class="link" id="guideLink">what do buyers spend?</a></label>
       <div class="chips" id="presetChips"></div>
       <input type="number" id="budget" min="50" step="25" placeholder="$ custom">
-      <label class="f" for="units">Units per style</label>
-      <select id="units"></select>
     </div>
     <label class="f">Category mix</label>
     <div class="mix">
