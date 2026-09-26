@@ -167,7 +167,11 @@ window.CAPSULE_CONFIG = {
       sheetTagline: "Curated capsule",           // small line under the logo on the line sheet
       minQty: 6,
       terms: {
-        firstOrderUnits: 6,      // 6 pieces per style on an account's first order (in stock, so we can break a dozen)
+        firstOrderUnits: 12,     // sold by the dozen (Dan, 26 Sep 2026): dozens move better and keep packs closed
+        // A first order may include a few styles at a half dozen: styles with under stockBelow pieces in stock (they can't
+        // be sold by the dozen) and styles the rep switches on the card; at most maxStyles per first order (Dan, 26 Sep 2026).
+        // Budget builds spend in dozens and only use a half dozen when a category would otherwise be empty.
+        halfDozen: { units: 6, maxStyles: 3, stockBelow: 12 },
         reorderUnits: 12,        // one dozen per style on reorder (the "Reorder" order type)
         orderMinimum: 100,       // $100 order minimum
         tiered: false,           // same price per piece at 6 or 12 (adopted terms, 23 Sep 2026)
@@ -178,7 +182,7 @@ window.CAPSULE_CONFIG = {
         shipping: "In stock at our U.S. warehouse. Ships via UPS / FedEx, prepaid & add or on your carrier account. Fast reorders from inventory on hand.",
         returns: "",
         retailNote: "Suggested retail 3.2–3.5x wholesale.",
-        unitsNote: "6 pieces per style on a first order, a dozen on reorder — same price per piece either way.",
+        unitsNote: "Sold by the dozen. First orders may include a limited number of ½-dozen styles. Same price per piece either way.",
       },
       // Wholesale order page (on onlyifyouknow.com; the Shopify page shows the GitHub Pages form full-screen and passes
       // ?cart= through to it): capsules only use styles listed there (app/orderpage_rf.js, from
