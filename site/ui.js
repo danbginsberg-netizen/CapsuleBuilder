@@ -12,6 +12,8 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
     del(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } },
   };
+  // order type: "first" or "reorder" (older saved values 6 / 12 map to first order / reorder)
+  const normUnits = (v) => (v === "reorder" || String(v) === "12" ? "reorder" : "first");
   const CAT_LABEL = { necklace: "Necklaces", bracelet: "Bracelets", earring: "Earrings" };
   const VOCAB = {
     category: CATS,
@@ -136,7 +138,7 @@
   const state = {
     anchors: [null, null], buyer: saved.buyer || "", capName: saved.capName || "", capNameEdited: !!saved.capNameEdited,
     mode: saved.mode || "pieces", size: saved.size || BASE.defaultSize, counts: null,
-    budget: saved.budget || null, units: saved.units || "first",
+    budget: saved.budget || null, units: normUnits(saved.units),
     story: !!saved.story, showScores: !!saved.showScores, minQty: null,
     sheet: sheetDefaults(saved.sheet, saved.markPick),
     capsule: null, locked: new Set(), lastMs: 0, loadedId: null,
@@ -156,7 +158,10 @@
   });
   const anchorItems = () => state.anchors.filter(Boolean).map((s) => engine.bySku.get(s)).filter(Boolean);
   const capTitle = () => state.capName.trim() || (state.buyer.trim() ? `Curated for ${state.buyer.trim()}` : "Curated capsule");
-  const unitsLabel = (u) => (u === "first" ? `first order (${cfg.terms.firstOrderUnits}/style${line === "OIYK" ? ", 3 on pearl & scarf styles" : ""})` : `${u} per style`);
+  // "first" = the buyer's first order (line minimum per style, with exceptions); "reorder" = a dozen per style
+  const firstDesc = () => `${cfg.terms.firstOrderUnits}/style${Object.keys(cfg.terms.firstOrderExceptions || {}).length ? ", 3–6 on baroque pearl & scarf styles" : ""}`;
+  const unitsLabel = (u) => (u === "first" ? `first order (${firstDesc()})` : u === "reorder" ? `reorder (${engine.reorderUnits()}/style)` : `${u} per style`);
+  const minFor = (it) => engine.unitsFor(it, activeUnits() === "reorder" ? "reorder" : "first");
 
   function switchLine(L, keep) {
     loadLine(L);
@@ -253,7 +258,8 @@
     $("budget").value = state.budget || "";
   }
   function drawUnits() {
-    const opts = [["first", `First order — ${cfg.terms.firstOrderUnits} per style${line === "OIYK" ? " (3 on baroque pearl & scarf styles)" : ""}`], [6, "6 per style"], [12, "12 per style (dozen / reorder)"]];
+    const ex = Object.keys(cfg.terms.firstOrderExceptions || {}).length;
+    const opts = [["first", `First order — ${cfg.terms.firstOrderUnits} per style${ex ? " (3–6 on baroque pearl & scarf styles)" : ""}`], ["reorder", `Reorder — ${engine.reorderUnits()} per style (buyer has ordered before)`]];
     $("units").innerHTML = opts.map(([v, t]) => `<option value="${v}" ${String(state.units) === String(v) ? "selected" : ""}>${t}</option>`).join("");
   }
   function setMode(m) {
@@ -291,7 +297,7 @@
     $("econ").innerHTML = ""; $("boardTitle").textContent = "Capsule Builder"; $("boardMeta").textContent = `${cfg.name} · pick the piece the buyer liked to start.`;
     ["regenBtn", "anotherBtn", "sheetBtn", "xlsxBtn", "orderPageBtn", "csvBtn", "saveBtn", "saveNewBtn"].forEach((id) => ($(id).disabled = true));
   }
-  const activeUnits = () => (state.mode === "budget" ? state.units : "first");
+  const activeUnits = () => state.units;   // the order type applies in both build modes
   // short wholesale label: flat price, or dozen-to-smallest-order range on tiered lines
   function wsShort(it) {
     if (!tiered()) return money(it.ws);
@@ -299,16 +305,10 @@
     return br.length > 1 ? `${money(br[br.length - 1].each)}–${money(br[0].each)}` : money(br[0].each);
   }
   function priceLine(it) {
-    const f = engine.lineCost(it, "first"), a6 = engine.lineCost(it, 6), a12 = engine.lineCost(it, 12);
-    if (tiered()) {
-      const br = engine.priceBreaks(it).map((b) => `${b.units}+ ${money(b.each)}`).join(" · ");
-      let t = `WS/pc ${br}<br>6 = ${money0(a6.total)} · 12 = ${money0(a12.total)}`;
-      if (f.units !== 6) t += ` · first order ${f.units} = ${money0(f.total)}`;
-      return t;
-    }
-    let t = `WS ${money(it.ws)} · 6 = ${money0(a6.total)} · 12 = ${money0(a12.total)}`;
-    if (f.units !== 6) t += ` · first order ${f.units} = ${money0(f.total)}`;
-    return t;
+    const f = engine.lineCost(it, "first"), r = engine.lineCost(it, "reorder");
+    const orders = f.units === r.units ? `min ${f.units} = ${money0(f.total)}` : `first order ${f.units} = ${money0(f.total)} · reorder ${r.units} = ${money0(r.total)}`;
+    if (tiered()) return `WS/pc ${engine.priceBreaks(it, activeUnits()).map((b) => `${b.units}+ ${money(b.each)}`).join(" · ")}<br>${orders}`;
+    return `WS ${money(it.ws)} · ${orders}`;
   }
   function cardHTML(it, e, isAnchor, idx) {
     const scoreBit = state.showScores && e ? `<span class="score">${e.score.toFixed(1)}</span>` : "";
@@ -328,15 +328,13 @@
     const u = activeUnits();
     const eco = engine.economics(items, u);
     const min = eco.orderMinimum;
-    const cur = u === "first" ? eco.first : u === 6 || u === "6" ? eco.at6 : eco.at12;
+    const cur = u === "reorder" ? eco.reorder : eco.first;
     const markup = cur.total ? cur.retail / cur.total : 0;
     const minOk = cur.total >= min;
     let h = `<div class="econ">
       <div class="tile"><div class="k">Styles</div><div class="v">${eco.styles}</div><div class="s">${cap.counts.necklace} N · ${cap.counts.bracelet} B · ${cap.counts.earring} E</div></div>
-      <div class="tile"><div class="k">Wholesale per piece</div><div class="v">${money(eco.avgEach)}</div><div class="s">avg at ${esc(u === "first" ? "first order" : u + " per style")} · range ${money(eco.minEach)}–${money(eco.maxEach)}${eco.tiered ? " · priced by quantity" : ""}</div></div>
-      <div class="tile ${u === "first" ? "hl" : ""}"><div class="k">First order</div><div class="v">${money0(eco.first.total)}</div><div class="s">${eco.first.units} pcs · <span class="${eco.first.total >= min ? "ok" : "bad"}">${eco.first.total >= min ? "clears" : "below"} ${money(min, 0)} min</span></div></div>
-      <div class="tile ${String(u) === "6" ? "hl" : ""}"><div class="k">At 6 per style</div><div class="v">${money0(eco.at6.total)}</div><div class="s">${eco.at6.units} pcs</div></div>
-      <div class="tile ${String(u) === "12" ? "hl" : ""}"><div class="k">At 12 per style</div><div class="v">${money0(eco.at12.total)}</div><div class="s">${eco.at12.units} pcs · reorder / dozen</div></div>
+      <div class="tile"><div class="k">Wholesale per piece</div><div class="v">${money(eco.avgEach)}</div><div class="s">avg at ${esc(u === "reorder" ? "reorder" : "first order")} · range ${money(eco.minEach)}–${money(eco.maxEach)}${eco.tiered ? " · priced by quantity" : ""}</div></div>
+      <div class="tile hl"><div class="k">${u === "reorder" ? "Reorder" : "First order"}</div><div class="v">${money0(cur.total)}</div><div class="s">${cur.units} pcs · ${esc(u === "reorder" ? engine.reorderUnits() + "/style" : firstDesc())} · <span class="${minOk ? "ok" : "bad"}">${minOk ? "clears" : "below"} ${money(min, 0)} min</span></div></div>
       <div class="tile"><div class="k">Retail value (MSRP)</div><div class="v">${money0(cur.retail)}</div><div class="s">${markup.toFixed(2)}x the buyer's cost at ${esc(unitsLabel(u))}</div></div>`;
     if (cap.budget) {
       const b = cap.budget, pct = Math.min(100, (100 * b.spent) / (b.budget || 1));
@@ -348,7 +346,7 @@
     // budget ladder for this anchor
     const ladder = (cfg.budgetPresets || []).map((p) => {
       const c = engine.buildBudget(state.anchors.filter(Boolean), { budget: p.amount, units: activeUnits(), mix: mixShares(), colorwayStory: state.story, minQty: state.minQty });
-      return `<a class="link" data-amt="${p.amount}">${esc(p.label)}</a>: <b>${c.anchors.length + c.picks.length} styles</b> (${money0(c.budget.spent)})`;
+      return `<a class="link" data-amt="${p.amount}">${esc(p.label)}</a>: <b>${c.anchors.length + c.picks.length} style${c.anchors.length + c.picks.length === 1 ? "" : "s"}</b> (${money0(c.budget.spent)})`;
     });
     h += `<div class="ladder">Around this pick, by budget at ${esc(unitsLabel(activeUnits()))}: ${ladder.join(" · ")} · <a class="link" id="guideLink2">what do buyers spend?</a></div>`;
     $("econ").innerHTML = h;
@@ -448,7 +446,7 @@
   const setLib = (l) => store.set(LIB_KEY, l);
   function summaryOf() {
     const eco = engine.economics(allItems(), activeUnits());
-    const cur = activeUnits() === "first" ? eco.first : String(activeUnits()) === "6" ? eco.at6 : eco.at12;
+    const cur = activeUnits() === "reorder" ? eco.reorder : eco.first;
     return { styles: eco.styles, total: Math.round(cur.total * 100) / 100, units: cur.units, basis: activeUnits() };
   }
   function recordFromState(id) {
@@ -495,7 +493,7 @@
     if (r.line !== line) loadLine(r.line);
     Object.assign(state, {
       buyer: r.buyer || "", capName: r.capName || "", capNameEdited: true, mode: r.mode || "pieces", size: r.size || BASE.defaultSize,
-      counts: r.counts, budget: r.budget, units: r.units || "first", story: !!r.story, minQty: r.minQty != null ? r.minQty : cfg.minQty, loadedId: r.id,
+      counts: r.counts, budget: r.budget, units: normUnits(r.units), story: !!r.story, minQty: r.minQty != null ? r.minQty : cfg.minQty, loadedId: r.id,
     });
     state.anchors = [r.anchors[0] || null, r.anchors[1] || null];
     state.locked = new Set(r.locked || []);
@@ -552,6 +550,7 @@
       parts.push(`${encodeURIComponent(sku)}:${q}`);
     });
     let url = `${op.url}?cart=${parts.join(",")}`;
+    if (u === "reorder") url += "&reorder=1";   // the order page then offers dozen boxes only
     if (state.buyer.trim()) url += `&store=${encodeURIComponent(state.buyer.trim())}`;
     return { url, off, n: parts.length };
   }
@@ -586,7 +585,7 @@
   function wsText(it) {
     const S = sheetOpts();
     if (tiered() && S.fields.tiers) {
-      const br = engine.priceBreaks(it);
+      const br = engine.priceBreaks(it, activeUnits());
       return br.map((b) => `${b.units}+ ${money(b.each)}`).join(" · ");
     }
     return money(engine.priceEach(it, 12)) + (tiered() ? " (12+)" : "");
@@ -598,7 +597,7 @@
     if (f.name) tx += `<div class="n">${esc(it.name)}</div>`;
     if (f.wholesale && it.ws != null) tx += `<div class="p">Wholesale ${wsText(it)}</div>`;
     if (f.msrp && it.msrp) tx += `<div class="p m">MSRP ${money(it.msrp)}</div>`;
-    if (f.units) tx += `<div class="u">Minimum ${engine.firstUnits(it)} per style</div>`;
+    if (f.units) tx += `<div class="u">Minimum ${minFor(it)} per style</div>`;
     return `<div class="it"><div class="ph"><img src="${esc(it.img)}" alt="">${o.anchor && S.markPick ? '<span class="yp">Your pick</span>' : ""}</div><div class="tx">${tx}</div></div>`;
   }
   // [label, text] pairs for the terms block and the Excel header, in print order; blank entries are skipped
@@ -606,7 +605,7 @@
     const t = cfg.terms || {};
     return [
       ["Minimum", `${money(t.orderMinimum || 0, 0)} on a first order`],
-      ["Quantities", t.unitsNote],
+      ["Quantities", activeUnits() === "reorder" ? `Reorder: ${engine.reorderUnits()} pieces per style.` : t.unitsNote],
       ["Pricing", t.tiered ? t.tierNote : ""],
       ["Payment", t.paymentTerms],
       ["Shipping", t.shipping],
@@ -701,11 +700,11 @@
       const priceHead = tiered() ? "Wholesale per piece" : "Wholesale";
       const rowsHTML = items.map((o, i) => {
         const c = engine.lineCost(o.it, u);
-        const price = tiered() ? engine.priceBreaks(o.it).map((b) => `${b.units}+ ${money(b.each)}`).join("<br>") : money(o.it.ws);
+        const price = tiered() ? engine.priceBreaks(o.it, u).map((b) => `${b.units}+ ${money(b.each)}`).join("<br>") : money(o.it.ws);
         return `<tr><td class="im"><img src="${esc(o.it.img)}" alt=""></td><td><b>${esc(o.it.sku)}</b><br>${esc(o.it.name)}</td><td class="num">${price}</td><td class="num">${c.units}</td><td class="num">${money(c.total)}</td><td class="bl"><i></i></td><td class="bl"><i></i></td></tr>`;
       });
       const eco = engine.economics(items.map((o) => o.it), u);
-      const cur = u === "first" ? eco.first : u === 6 || u === "6" ? eco.at6 : u === 12 || u === "12" ? eco.at12 : eco.chosen;
+      const cur = u === "reorder" ? eco.reorder : eco.first;
       const thead = `<tr><th></th><th>Style</th><th class="num">${priceHead}</th><th class="num">Suggested units</th><th class="num">Suggested total</th><th>Qty</th><th>Total</th></tr>`;
       const totRow = `<tr class="tot"><td></td><td>Suggested order · ${esc(unitsLabel(u))}</td><td></td><td class="num">${cur.units}</td><td class="num">${money(cur.total)}</td><td class="bl"></td><td class="bl"><i></i></td></tr>`;
       const fields = `<div class="of-fields"><div>Store</div><div>Buyer</div><div>Date</div><div>Ship to</div><div>Phone / email</div><div>PO #</div></div>`;
@@ -851,16 +850,19 @@
       const row = [N(i + 1), S(it.sku), S(it.name), S(CAT_LABEL[it.cat].replace(/s$/, "")), S(o.anchor ? "Buyer pick" : "Capsule")];
       let price;
       if (T) {
-        const p3 = engine.firstUnits(it) <= 3 && it.tiers && it.tiers["3"] != null ? N(it.tiers["3"], 3) : S("");
-        row.push(p3, N((it.tiers || {})["6"] != null ? it.tiers["6"] : it.ws, 3), N((it.tiers || {})["12"] != null ? it.tiers["12"] : it.ws, 3));
+        // set prices only where the style can be ordered in that set at this order type (blank = dozen only)
+        const lo = minFor(it), tr = it.tiers || {};
+        const p3 = lo <= 3 && tr["3"] != null ? N(tr["3"], 3) : S(""), p6 = lo <= 6 && tr["6"] != null ? N(tr["6"], 3) : S("");
+        row.push(p3, p6, N(tr["12"] != null ? tr["12"] : it.ws, 3));
         const P3 = `${col(ci("WS each 3+"))}${r}`, P6 = `${col(ci("WS each 6+"))}${r}`, P12 = `${col(ci("WS each 12+"))}${r}`;
-        price = `IF(${q}>=12,${P12},IF(${q}>=6,${P6},IF(${P3}="",${P6},${P3})))`;
+        const at6 = `IF(${P6}="",${P12},${P6})`;
+        price = `IF(${q}>=12,${P12},IF(${q}>=6,${at6},IF(${P3}="",${at6},${P3})))`;
       } else {
         row.push(N(it.ws || 0, 3));
         price = `${col(ci("WS each"))}${r}`;
       }
       const pe = `${col(ci("Price each"))}${r}`;
-      row.push(N(engine.firstUnits(it)), N(c.units), N(c.units, 4), F(price, 3), F(`${q}*${pe}`, 3), N(it.msrp || 0, 3), F(`${q}*${col(ci("MSRP each"))}${r}`, 3),
+      row.push(N(minFor(it)), N(c.units), N(c.units, 4), F(price, 3), F(`${q}*${pe}`, 3), N(it.msrp || 0, 3), F(`${q}*${col(ci("MSRP each"))}${r}`, 3),
         F(`IF(AND(${q}>0,${q}<${mn}),"Below minimum","")`));
       rows.push(row);
     });
@@ -933,7 +935,7 @@
   $("modePieces").onclick = () => setMode("pieces");
   $("modeBudget").onclick = () => setMode("budget");
   $("budget").onchange = () => { const v = +$("budget").value; if (v > 0) setBudget(v); };
-  $("units").onchange = () => { const v = $("units").value; state.units = v === "first" ? "first" : +v; persist(); if (state.capsule) build(); };
+  $("units").onchange = () => { state.units = normUnits($("units").value); persist(); if (state.capsule) { if (state.mode === "budget") build(); else renderBoard(); } };
   $("guideLink").onclick = openGuide;
   $("story").onchange = () => { state.story = $("story").checked; persist(); if (state.capsule) build(); };
   $("showScores").onchange = () => { state.showScores = $("showScores").checked; persist(); if (state.capsule) renderBoard(); };
