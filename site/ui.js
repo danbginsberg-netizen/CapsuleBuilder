@@ -141,7 +141,7 @@
     budget: saved.budget || null, units: normUnits(saved.units),
     story: !!saved.story, showScores: !!saved.showScores, minQty: null,
     sheet: sheetDefaults(saved.sheet, saved.markPick),
-    capsule: null, locked: new Set(), lastMs: 0, loadedId: null,
+    capsule: null, locked: new Set(), halves: new Set(), lastMs: 0, loadedId: null,
   };
   function sheetDefaults(s, markPick) {
     const d = JSON.parse(JSON.stringify(BASE.lineSheet.defaults || {}));
@@ -159,7 +159,11 @@
   const anchorItems = () => state.anchors.filter(Boolean).map((s) => engine.bySku.get(s)).filter(Boolean);
   const capTitle = () => state.capName.trim() || (state.buyer.trim() ? `Curated for ${state.buyer.trim()}` : "Curated capsule");
   // "first" = the buyer's first order (line minimum per style, with exceptions); "reorder" = a dozen per style
-  const firstDesc = () => `${cfg.terms.firstOrderUnits}/style${Object.keys(cfg.terms.firstOrderExceptions || {}).length ? ", 3–6 on baroque pearl & scarf styles" : ""}`;
+  const HT = () => engine.halfTerms();   // Retro Forever: sold by the dozen, a few styles may be a half dozen on a first order
+  const firstDesc = () => HT() ? `by the dozen, up to ${HT().maxStyles} styles at ½ dozen` : `${cfg.terms.firstOrderUnits}/style${Object.keys(cfg.terms.firstOrderExceptions || {}).length ? ", 3–6 on baroque pearl & scarf styles" : ""}`;
+  // "1 dozen" / "½ dozen" on dozen-sold lines, "12 pcs" elsewhere
+  const qtyWord = (n) => (HT() ? (n === 6 ? "½ dozen" : n % 12 === 0 ? `${n / 12} dozen` : `${n} pcs`) : `${n} pcs`);
+  const syncHalves = () => { engine.halfSet = state.halves; };
   const unitsLabel = (u) => (u === "first" ? `first order (${firstDesc()})` : u === "reorder" ? `reorder (${engine.reorderUnits()}/style)` : `${u} per style`);
   const minFor = (it) => engine.unitsFor(it, activeUnits() === "reorder" ? "reorder" : "first");
 
@@ -169,7 +173,8 @@
     state.anchors = keep ? state.anchors : (s[`anchors_${L}`] || [null, null]).map((x) => (x && engine.bySku.has(x) ? x : null));
     state.counts = keep ? state.counts : s[`counts_${L}`] || null;
     state.minQty = s[`minQty_${L}`] != null ? s[`minQty_${L}`] : cfg.minQty;
-    if (!keep) { state.capsule = null; state.locked.clear(); state.loadedId = null; }
+    if (!keep) { state.capsule = null; state.locked.clear(); state.halves = new Set(); state.loadedId = null; }
+    syncHalves();
     $("minQty").value = state.minQty;
     $("minQtyRow").classList.toggle("hide", line === "OIYK");
     drawPresets(); drawUnits();
@@ -224,7 +229,7 @@
   }
   function onAnchorsChanged() {
     renderSlot(0); renderSlot(1);
-    state.locked.clear();
+    state.locked.clear(); state.halves = new Set(); syncHalves();
     resetMix(false);
     $("buildBtn").disabled = !state.anchors[0];
     persist();
@@ -259,7 +264,7 @@
   }
   function drawUnits() {
     const ex = Object.keys(cfg.terms.firstOrderExceptions || {}).length;
-    const opts = [["first", `First order — ${cfg.terms.firstOrderUnits} per style${ex ? " (3–6 on baroque pearl & scarf styles)" : ""}`], ["reorder", `Reorder — ${engine.reorderUnits()} per style (buyer has ordered before)`]];
+    const opts = [["first", HT() ? `First order — by the dozen, up to ${HT().maxStyles} styles at ½ dozen` : `First order — ${cfg.terms.firstOrderUnits} per style${ex ? " (3–6 on baroque pearl & scarf styles)" : ""}`], ["reorder", `Reorder — ${engine.reorderUnits()} per style (buyer has ordered before)`]];
     $("units").innerHTML = opts.map(([v, t]) => `<option value="${v}" ${String(state.units) === String(v) ? "selected" : ""}>${t}</option>`).join("");
   }
   function setMode(m) {
@@ -281,12 +286,17 @@
     if (!state.anchors[0]) return;
     if (!anchorsFit(state.counts)) { drawMix(); return; }
     const t0 = performance.now();
-    const common = { colorwayStory: state.story, minQty: state.minQty, locked: [...state.locked] };
+    syncHalves();
+    const common = { colorwayStory: state.story, minQty: state.minQty, locked: [...state.locked], units: state.units };
     if (state.mode === "budget") {
-      state.capsule = engine.buildBudget(state.anchors.filter(Boolean), Object.assign({ budget: state.budget || 300, units: state.units, mix: mixShares() }, common, extra || {}));
+      state.capsule = engine.buildBudget(state.anchors.filter(Boolean), Object.assign({ budget: state.budget || 300, mix: mixShares(), halves: [...state.halves] }, common, extra || {}));
+      state.halves = new Set(state.capsule.halves || []);
     } else {
       state.capsule = engine.build(state.anchors.filter(Boolean), Object.assign({ counts: state.counts, size: sum(state.counts) }, common, extra || {}));
+      const inCap = new Set(allItems().map((it) => it.sku));   // a rep's half-dozen switches stay on pieces still in the capsule
+      state.halves = new Set([...state.halves].filter((s) => inCap.has(s)));
     }
+    syncHalves();
     state.lastMs = Math.round(performance.now() - t0);
     ["regenBtn", "anotherBtn", "sheetBtn", "xlsxBtn", "orderPageBtn", "csvBtn", "saveBtn", "saveNewBtn"].forEach((id) => ($(id).disabled = false));
     renderBoard();
@@ -306,6 +316,7 @@
   }
   function priceLine(it) {
     const f = engine.lineCost(it, "first"), r = engine.lineCost(it, "reorder");
+    if (HT()) return `WS ${money(it.ws)} · ${activeUnits() === "reorder" ? `reorder ${qtyWord(r.units)} = ${money0(r.total)}` : `first order ${qtyWord(f.units)} = ${money0(f.total)}${f.units !== r.units ? ` · reorder ${qtyWord(r.units)} = ${money0(r.total)}` : ""}`}`;
     const orders = f.units === r.units ? `min ${f.units} = ${money0(f.total)}` : `first order ${f.units} = ${money0(f.total)} · reorder ${r.units} = ${money0(r.total)}`;
     if (tiered()) return `WS/pc ${engine.priceBreaks(it, activeUnits()).map((b) => `${b.units}+ ${money(b.each)}`).join(" · ")}<br>${orders}`;
     return `WS ${money(it.ws)} · ${orders}`;
@@ -319,7 +330,17 @@
     return `<div class="card ${isAnchor ? "anchor" : ""}" data-sku="${esc(it.sku)}">
       <div class="im"><img src="${esc(it.img)}" alt="${esc(it.name)}" loading="lazy">${isAnchor ? `<span class="tag">${anchorItems().length > 1 ? "Pick " + (idx + 1) : "Anchor"}</span>` : ""}${locked ? `<span class="tag lock">Locked</span>` : ""}${it.lowres ? `<span class="tag lr">Low-res image</span>` : ""}</div>
       <div class="b"><div class="sku"><span>${esc(it.sku)}</span>${scoreBit}</div><div class="nm">${esc(it.name)}</div><div class="px">${priceLine(it)}</div>${stale}<div class="why">${esc(why)}</div>${attrs}
+      ${halfHTML(it)}
       ${isAnchor ? "" : `<div class="acts"><button data-act="swap">Swap</button><button data-act="lock" class="${locked ? "on" : ""}">${locked ? "Unlock" : "Lock"}</button></div>`}</div></div>`;
+  }
+  // dozen / half-dozen switch on each card (dozen-sold lines, first orders only)
+  function halfHTML(it) {
+    if (!HT()) return "";
+    if (activeUnits() === "reorder") return engine.halfOnly(it) ? `<div class="half only warn">Only ${it.qty} in stock — not enough for a reorder dozen</div>` : "";
+    if (engine.halfOnly(it)) return `<div class="half only">½ dozen only · ${it.qty} in stock</div>`;
+    const on = state.halves.has(it.sku);
+    const full = !on && engine.halfCount(allItems()) >= HT().maxStyles;
+    return `<div class="half"><button data-act="half" class="${on ? "on" : ""}" ${full ? `disabled title="A first order takes at most ${HT().maxStyles} styles at ½ dozen"` : ""}>${on ? "½ dozen · make it 1 dozen" : "Make it ½ dozen"}</button></div>`;
   }
   function allItems() { return state.capsule.anchors.concat(state.capsule.picks.map((p) => p.item)); }
   function renderEcon() {
@@ -334,7 +355,7 @@
     let h = `<div class="econ">
       <div class="tile"><div class="k">Styles</div><div class="v">${eco.styles}</div><div class="s">${cap.counts.necklace} N · ${cap.counts.bracelet} B · ${cap.counts.earring} E</div></div>
       <div class="tile"><div class="k">Wholesale per piece</div><div class="v">${money(eco.avgEach)}</div><div class="s">avg at ${esc(u === "reorder" ? "reorder" : "first order")} · range ${money(eco.minEach)}–${money(eco.maxEach)}${eco.tiered ? " · priced by quantity" : ""}</div></div>
-      <div class="tile hl"><div class="k">${u === "reorder" ? "Reorder" : "First order"}</div><div class="v">${money0(cur.total)}</div><div class="s">${cur.units} pcs · ${esc(u === "reorder" ? engine.reorderUnits() + "/style" : firstDesc())} · <span class="${minOk ? "ok" : "bad"}">${minOk ? "clears" : "below"} ${money(min, 0)} min</span></div></div>
+      <div class="tile hl"><div class="k">${u === "reorder" ? "Reorder" : "First order"}</div><div class="v">${money0(cur.total)}</div><div class="s">${cur.units} pcs · ${esc(u === "reorder" ? engine.reorderUnits() + "/style" : HT() ? `${eco.styles - eco.halves} of ${eco.styles} styles by the dozen · ${eco.halves} of ${eco.halfCap} ½ dozen` : firstDesc())} · <span class="${minOk ? "ok" : "bad"}">${minOk ? "clears" : "below"} ${money(min, 0)} min</span></div></div>
       <div class="tile"><div class="k">Retail value (MSRP)</div><div class="v">${money0(cur.retail)}</div><div class="s">${markup.toFixed(2)}x the buyer's cost at ${esc(unitsLabel(u))}</div></div>`;
     if (cap.budget) {
       const b = cap.budget, pct = Math.min(100, (100 * b.spent) / (b.budget || 1));
@@ -355,6 +376,7 @@
   }
   function renderBoard() {
     const cap = state.capsule;
+    syncHalves();
     $("boardTitle").textContent = capTitle();
     const total = cap.anchors.length + cap.picks.length;
     $("boardMeta").textContent = `${cfg.name} · ${total} styles · built in ${state.lastMs} ms` + (state.buyer ? ` · buyer: ${state.buyer}` : "") + (state.loadedId ? " · saved capsule" : "");
@@ -374,10 +396,16 @@
     $("board").innerHTML = h;
     $("board").querySelectorAll(".card [data-act]").forEach((b) => {
       const sku = b.closest(".card").dataset.sku;
-      b.onclick = () => (b.dataset.act === "swap" ? openSwap(sku) : toggleLock(sku));
+      b.onclick = () => (b.dataset.act === "swap" ? openSwap(sku) : b.dataset.act === "half" ? toggleHalf(sku) : toggleLock(sku));
     });
   }
   function toggleLock(sku) { state.locked.has(sku) ? state.locked.delete(sku) : state.locked.add(sku); renderBoard(); }
+  function toggleHalf(sku) {
+    const H = HT(); if (!H) return;
+    if (state.halves.has(sku)) state.halves.delete(sku);
+    else if (engine.halfCount(allItems()) < H.maxStyles) state.halves.add(sku);
+    syncHalves(); recalcBudget(); renderBoard();
+  }
   function recalcBudget() {
     const cap = state.capsule;
     if (!cap.budget) return;
@@ -452,7 +480,7 @@
   function recordFromState(id) {
     return {
       id, line, buyer: state.buyer.trim(), capName: capTitle(), anchors: state.anchors.filter(Boolean),
-      picks: state.capsule.picks.map((p) => p.item.sku), locked: [...state.locked], mode: state.mode, size: state.size,
+      picks: state.capsule.picks.map((p) => p.item.sku), locked: [...state.locked], halves: [...state.halves], mode: state.mode, size: state.size,
       counts: state.counts, budget: state.budget, units: state.units, story: state.story, minQty: state.minQty,
       savedAt: new Date().toISOString(), summary: summaryOf(), sheet: JSON.parse(JSON.stringify(state.sheet)),
     };
@@ -497,6 +525,7 @@
     });
     state.anchors = [r.anchors[0] || null, r.anchors[1] || null];
     state.locked = new Set(r.locked || []);
+    state.halves = new Set(r.halves || []); syncHalves();
     if (r.sheet) state.sheet = Object.assign(sheetDefaults(), r.sheet, { fields: Object.assign(sheetDefaults().fields, r.sheet.fields || {}) });
     $("buyer").value = state.buyer; $("capName").value = state.capName; $("story").checked = state.story; $("minQty").value = state.minQty;
     $("minQtyRow").classList.toggle("hide", line === "OIYK");
@@ -513,7 +542,7 @@
   }
   function newCapsule() {
     state.loadedId = null; state.buyer = ""; state.capName = ""; state.capNameEdited = false;
-    state.anchors = [null, null]; state.locked.clear(); state.sheet.note = "";
+    state.anchors = [null, null]; state.locked.clear(); state.halves = new Set(); syncHalves(); state.sheet.note = "";
     $("buyer").value = ""; $("capName").value = ""; $("capName").placeholder = capTitle();
     renderSlot(0); renderSlot(1); resetMix(true); persist(); renderLib(); clearBoard();
   }
@@ -597,7 +626,7 @@
     if (f.name) tx += `<div class="n">${esc(it.name)}</div>`;
     if (f.wholesale && it.ws != null) tx += `<div class="p">Wholesale ${wsText(it)}</div>`;
     if (f.msrp && it.msrp) tx += `<div class="p m">MSRP ${money(it.msrp)}</div>`;
-    if (f.units) tx += `<div class="u">Minimum ${minFor(it)} per style</div>`;
+    if (f.units) tx += HT() ? `<div class="u">Qty ${qtyWord(minFor(it))}</div>` : `<div class="u">Minimum ${minFor(it)} per style</div>`;
     return `<div class="it"><div class="ph"><img src="${esc(it.img)}" alt="">${o.anchor && S.markPick ? '<span class="yp">Your pick</span>' : ""}</div><div class="tx">${tx}</div></div>`;
   }
   // [label, text] pairs for the terms block and the Excel header, in print order; blank entries are skipped
