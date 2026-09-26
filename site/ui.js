@@ -1,4 +1,4 @@
-/* Capsule Builder UI — runs offline from the local folder. v1.3 */
+/* Capsule Builder UI — runs offline from the local folder. v1.6.0 */
 (function () {
   "use strict";
   const BASE = window.CAPSULE_CONFIG;
@@ -133,6 +133,13 @@
     store.set("capsule_line", L);
   }
 
+  /* ================================================= rep code + capsule ID (v1.6.0) */
+  // A rep's code rides on every link, QR code and export so orders from their capsules are credited to them.
+  function cleanRep(v) { return String(v || "").toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 20); }
+  const newCapId = () => "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  // the capsule's ID: its saved-capsule ID, or a temporary one kept until the capsule is saved (then it becomes the saved ID)
+  function capId() { return state.loadedId || state.tmpId || (state.tmpId = newCapId()); }
+
   /* ================================================= state */
   const saved = store.get("capsule_ui", {});
   const state = {
@@ -142,6 +149,7 @@
     story: !!saved.story, showScores: !!saved.showScores, minQty: null,
     sheet: sheetDefaults(saved.sheet, saved.markPick),
     capsule: null, locked: new Set(), halves: new Set(), lastMs: 0, loadedId: null,
+    rep: cleanRep(store.get("capsule_rep", "")), tmpId: null,
   };
   function sheetDefaults(s, markPick) {
     const d = JSON.parse(JSON.stringify(BASE.lineSheet.defaults || {}));
@@ -230,6 +238,7 @@
   function onAnchorsChanged() {
     renderSlot(0); renderSlot(1);
     state.locked.clear(); state.halves = new Set(); syncHalves();
+    if (!state.loadedId) state.tmpId = null;   // a new anchor on an unsaved capsule is a new capsule
     resetMix(false);
     $("buildBtn").disabled = !state.anchors[0];
     persist();
@@ -298,14 +307,14 @@
     }
     syncHalves();
     state.lastMs = Math.round(performance.now() - t0);
-    ["regenBtn", "anotherBtn", "sheetBtn", "xlsxBtn", "orderPageBtn", "csvBtn", "saveBtn", "saveNewBtn"].forEach((id) => ($(id).disabled = false));
+    ["regenBtn", "anotherBtn", "sheetBtn", "xlsxBtn", "orderPageBtn", "csvBtn", "saveBtn", "saveNewBtn", "sendBtn", "sendToBtn", "whyBtn"].forEach((id) => ($(id).disabled = false));
     renderBoard();
   }
   function clearBoard() {
     state.capsule = null;
     $("board").innerHTML = '<div class="empty"><b>One piece in, a capsule out.</b>Search or browse for the buyer\'s favorite, then build — by number of pieces or by the buyer\'s budget.</div>';
     $("econ").innerHTML = ""; $("boardTitle").textContent = "Capsule Builder"; $("boardMeta").textContent = `${cfg.name} · pick the piece the buyer liked to start.`;
-    ["regenBtn", "anotherBtn", "sheetBtn", "xlsxBtn", "orderPageBtn", "csvBtn", "saveBtn", "saveNewBtn"].forEach((id) => ($(id).disabled = true));
+    ["regenBtn", "anotherBtn", "sheetBtn", "xlsxBtn", "orderPageBtn", "csvBtn", "saveBtn", "saveNewBtn", "sendBtn", "sendToBtn", "whyBtn"].forEach((id) => ($(id).disabled = true));
   }
   const activeUnits = () => state.units;   // the order type applies in both build modes
   // short wholesale label: flat price, or dozen-to-smallest-order range on tiered lines
@@ -489,7 +498,8 @@
     if (!state.capsule) return;
     const l = lib();
     const i = !asNew && state.loadedId ? l.findIndex((r) => r.id === state.loadedId) : -1;
-    const id = i >= 0 ? state.loadedId : "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const id = i >= 0 ? state.loadedId : (!asNew && state.tmpId) || newCapId();
+    state.tmpId = null;
     const rec = recordFromState(id);
     if (i >= 0) l[i] = rec; else l.push(rec);
     if (!setLib(l)) { $("libNote").innerHTML = '<span class="warn">Could not save — this browser is blocking local storage.</span>'; return; }
@@ -521,7 +531,7 @@
     if (r.line !== line) loadLine(r.line);
     Object.assign(state, {
       buyer: r.buyer || "", capName: r.capName || "", capNameEdited: true, mode: r.mode || "pieces", size: r.size || BASE.defaultSize,
-      counts: r.counts, budget: r.budget, units: normUnits(r.units), story: !!r.story, minQty: r.minQty != null ? r.minQty : cfg.minQty, loadedId: r.id,
+      counts: r.counts, budget: r.budget, units: normUnits(r.units), story: !!r.story, minQty: r.minQty != null ? r.minQty : cfg.minQty, loadedId: r.id, tmpId: null,
     });
     state.anchors = [r.anchors[0] || null, r.anchors[1] || null];
     state.locked = new Set(r.locked || []);
@@ -536,12 +546,12 @@
     state.capsule = engine.restore(r.anchors, r.picks, { colorwayStory: state.story, minQty: state.minQty });
     if (state.mode === "budget") { state.capsule.budget = { budget: state.budget, units: state.units }; recalcBudget(); }
     state.lastMs = Math.round(performance.now() - t0);
-    ["regenBtn", "anotherBtn", "sheetBtn", "xlsxBtn", "orderPageBtn", "csvBtn", "saveBtn", "saveNewBtn"].forEach((x) => ($(x).disabled = false));
+    ["regenBtn", "anotherBtn", "sheetBtn", "xlsxBtn", "orderPageBtn", "csvBtn", "saveBtn", "saveNewBtn", "sendBtn", "sendToBtn", "whyBtn"].forEach((x) => ($(x).disabled = false));
     $("buildBtn").disabled = false;
     persist(); renderLib(); renderBoard();
   }
   function newCapsule() {
-    state.loadedId = null; state.buyer = ""; state.capName = ""; state.capNameEdited = false;
+    state.loadedId = null; state.tmpId = null; state.buyer = ""; state.capName = ""; state.capNameEdited = false;
     state.anchors = [null, null]; state.locked.clear(); state.halves = new Set(); syncHalves(); state.sheet.note = "";
     $("buyer").value = ""; $("capName").value = ""; $("capName").placeholder = capTitle();
     renderSlot(0); renderSlot(1); resetMix(true); persist(); renderLib(); clearBoard();
@@ -556,11 +566,11 @@
   }
   function exportCSV() {
     const u = activeUnits();
-    const rows = [["capsule_name", "buyer_name", "line", "position", "sku", "category", "product_name", "role", "units_per_style", "wholesale_each", "line_total"]];
+    const rows = [["capsule_name", "buyer_name", "line", "position", "sku", "category", "product_name", "role", "units_per_style", "wholesale_each", "line_total", "rep_code", "capsule_id"]];
     let tot = 0;
     orderedItems().forEach((o, i) => {
       const c = engine.lineCost(o.it, u); tot += c.total;
-      rows.push([capTitle(), state.buyer, line, i + 1, o.it.sku, o.it.cat, o.it.name, o.anchor ? "buyer pick" : "capsule", c.units, c.each.toFixed(2), c.total.toFixed(2)]);
+      rows.push([capTitle(), state.buyer, line, i + 1, o.it.sku, o.it.cat, o.it.name, o.anchor ? "buyer pick" : "capsule", c.units, c.each.toFixed(2), c.total.toFixed(2), state.rep, capId()]);
     });
     rows.push(["", "", "", "", "", "", "", "TOTAL", "", "", tot.toFixed(2)]);
     download(`${fileSafe(capTitle())}_SKUs.csv`, "﻿" + rows.map((r) => r.map(csvCell).join(",")).join("\r\n"), "text/csv;charset=utf-8");
@@ -581,16 +591,19 @@
     let url = `${op.url}?cart=${parts.join(",")}`;
     if (u === "reorder") url += "&reorder=1";   // the order page then offers dozen boxes only
     if (state.buyer.trim()) url += `&store=${encodeURIComponent(state.buyer.trim())}`;
+    url += tagParams();
     return { url, off, n: parts.length };
   }
+  // &rep=CODE&cap=ID on every link: the order pages add both to the submitted order; Shopify analytics records the capsule page visit
+  function tagParams() { return (state.rep ? `&rep=${encodeURIComponent(state.rep)}` : "") + `&cap=${encodeURIComponent(capId())}`; }
   function openOrderPage() {
     const l = orderLink();
     if (!l) return;
     if (l.off.length) alert(`Not on the order page, so left out: ${l.off.join(", ")}. The buyer can email for those.`);
     window.open(l.url, "_blank", "noopener");
   }
-  function qrSVG(text) {
-    try { const q = qrcode(0, "M"); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 2, margin: 0, scalable: true }); }
+  function qrSVG(text, ec) {
+    try { const q = qrcode(0, ec || "M"); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 2, margin: 0, scalable: true }); }
     catch (e) { return ""; }
   }
   function orderBandHTML() {
@@ -862,7 +875,7 @@
     const rows = [];   // each row: array of cells {v, t:'s'|'n'|'f', s:styleId}
     const S = (v, s) => ({ v, t: "s", s: s || 0 }), N = (v, s) => ({ v, t: "n", s: s || 0 }), F = (v, s) => ({ v, t: "f", s: s || 0 });
     rows.push([S(`${cfg.name} — ${capTitle()}`, 1)]);
-    rows.push([S(`Buyer: ${state.buyer.trim() || "—"}`), S(""), S(`Date: ${new Date().toLocaleDateString("en-US")}`)]);
+    rows.push([S(`Buyer: ${state.buyer.trim() || "—"}`), S(""), S(`Date: ${new Date().toLocaleDateString("en-US")}`), S(""), S(`${state.rep ? "Rep code: " + state.rep + " · " : ""}Capsule ID: ${capId()}`)]);
     termsRows().forEach((r) => rows.push([S(`${r[0]}: ${r[1]}`)]));
     rows.push([S(cfg.lineSheet.contactLine)]);
     const ol = orderLink();
@@ -926,6 +939,164 @@
     download(`${fileSafe(capTitle())}_order_form.xlsx`, bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   }
 
+  /* ================================================= v1.6.0: why these pieces, send capsule, send log, send to… */
+  const SEND_LOG = "capsule_send_log";
+  const today = () => new Date().toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
+  function flash(id, msg) { const el = $(id); if (!el) return; el.innerHTML = msg; clearTimeout(el._t); el._t = setTimeout(() => (el.innerHTML = ""), 6000); }
+  function copyText(text, noteId, what) {
+    const done = () => flash(noteId, `${esc(what)} copied.`);
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, noteId, what));
+    else fallbackCopy(text, noteId, what);
+  }
+  function fallbackCopy(text, noteId, what) {
+    const ta = document.createElement("textarea"); ta.value = text; ta.style.cssText = "position:fixed;left:-9999px;top:0"; document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove(); flash(noteId, ok ? `${esc(what)} copied.` : '<span class="warn">Copy is blocked here — select the text and copy it by hand.</span>');
+  }
+
+  /* ---------- "Why these pieces" (engine.explain) ---------- */
+  function whyHTML(x) {
+    const ul = (a) => `<ul>${a.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>`;
+    let h = `<h4>The family</h4>${ul(x.family)}`;
+    h += `<h4>Colorways</h4><p class="note">A colorway is the same design in a different color. Showing a style in two or three colorways lets each customer find her color without the store buying a new design; switching a colorway changes the color, not the fit or the price.</p>`;
+    h += x.colorways.length ? ul(x.colorways) : `<p class="note">No style appears in more than one color in this capsule. Tick <b>Colorway story</b> to add the buyer's pick in two more colors.</p>`;
+    h += `<h4>Sister pieces</h4><p class="note">Pieces made to be worn together: the lookbook's sister pieces, the same collection, or the same motif or material across categories.</p>`;
+    h += x.sisters.length ? ul(x.sisters) : `<p class="note">No matching pairs in this capsule.</p>`;
+    h += `<h4>Balance</h4>${ul(x.balance)}`;
+    return h;
+  }
+  function explainNow() { return engine.explain(state.capsule.anchors, allItems(), state.halves, { minQty: state.minQty }); }
+  function openWhy() { if (!state.capsule) return; $("whyBody").innerHTML = whyHTML(explainNow()); openDlg("whyDlg"); }
+
+  /* ---------- "View your capsule" link (hosted page; the capsule travels inside the link) ---------- */
+  function capsuleLink(withPrices) {
+    const page = (BASE.capsulePage || {}).url;
+    if (!page || !state.capsule) return null;
+    const u = activeUnits();
+    const parts = orderedItems().map((o) => `${encodeURIComponent(o.it.sku)}:${engine.lineCost(o.it, u).units}`);
+    let url = `${page}?l=${line}&i=${parts.join(",")}&a=${state.capsule.anchors.length}`;
+    if (u === "reorder") url += "&u=r";
+    if (state.buyer.trim()) url += `&st=${encodeURIComponent(state.buyer.trim())}`;
+    if (state.capName.trim()) url += `&n=${encodeURIComponent(state.capName.trim())}`;
+    if (withPrices) url += "&p=1";
+    return url + tagParams();
+  }
+
+  /* ---------- send log: every send, share, copy or platform export (for the monthly capsule report) ---------- */
+  function logSend(channel, extra) {
+    const s = summaryOf(), l = store.get(SEND_LOG, []);
+    l.push(Object.assign({ sent_at: new Date().toISOString(), capsule_id: capId(), line, store: state.buyer.trim(), capsule: capTitle(), rep_code: state.rep,
+      anchors: state.capsule.anchors.map((a) => a.sku).join(" "), styles: s.styles, total: s.total, order_type: activeUnits(), channel }, extra || {}));
+    store.set(SEND_LOG, l.slice(-3000));
+  }
+  function exportSendLog() {
+    const l = store.get(SEND_LOG, []);
+    const cols = ["sent_at", "capsule_id", "line", "store", "capsule", "rep_code", "anchors", "styles", "total", "order_type", "channel", "to"];
+    const rows = [cols].concat(l.map((r) => cols.map((c) => (r[c] == null ? "" : r[c]))));
+    download(`capsule_send_log_${new Date().toISOString().slice(0, 10)}.csv`, "\ufeff" + rows.map((r) => r.map(csvCell).join(",")).join("\r\n"), "text/csv;charset=utf-8");
+  }
+
+  /* ---------- Send capsule: email draft in the rep's own mail app, share sheet, copy ---------- */
+  function sendDefaults() {
+    const n = allItems().length, t = cfg.terms || {}, who = state.buyer.trim();
+    $("sdSubj").value = `${cfg.name}: ${capTitle()}`;
+    const a = state.capsule.anchors;
+    $("sdMsg").value = [
+      "Hi,",
+      "",
+      `Here is the ${cfg.name} capsule we put together${who ? " for " + who : ""}: ${n} styles${a.length ? `, built around the ${a[0].name.toLowerCase()} you liked` : ""}.`,
+      "",
+      "See the capsule (photos, why each piece was chosen, and a printable line sheet):",
+      "{capsule link}",
+      "",
+      "Ready to order? This opens our order page with the capsule already filled in:",
+      "{order link}",
+      "",
+      activeUnits() === "reorder" ? `Reorders are ${engine.reorderUnits()} pieces per style.` : [t.unitsNote, t.orderMinimum ? `${money(t.orderMinimum, 0)} minimum on a first order.` : ""].filter(Boolean).join(" "),
+      "",
+      "Best,",
+    ].join("\n");
+  }
+  function sendText() {
+    const cl = capsuleLink($("sdPrices").checked), ol = orderLink();
+    return $("sdMsg").value.replace("{capsule link}", cl || "").replace("{order link}", ol ? ol.url : "");
+  }
+  function drawSendSide() {
+    const cl = capsuleLink($("sdPrices").checked);
+    $("sdQR").innerHTML = cl ? qrSVG(cl, "L") : "";   // low error correction keeps a long link scannable on screen
+    $("sdLink").textContent = cl || "";
+    $("sdRep").innerHTML = state.rep ? `Rep code <b>${esc(state.rep)}</b> and capsule ID <b>${esc(capId())}</b> ride on both links, so the order is credited to you.` : `<span class="warn">No rep code set.</span> Add yours under Buyer so orders from this capsule are credited to you. Capsule ID <b>${esc(capId())}</b>.`;
+  }
+  function openSend() {
+    if (!state.capsule) return;
+    sendDefaults(); drawSendSide(); $("sdNote").innerHTML = "";
+    $("sdShare").classList.toggle("hide", !navigator.share);
+    openDlg("sendDlg");
+  }
+  function sendMail() {
+    const to = $("sdTo").value.trim().replace(/[\s,;]+/g, ",");
+    const href = `mailto:${encodeURIComponent(to).replace(/%2C/g, ",").replace(/%40/g, "@")}?subject=${encodeURIComponent($("sdSubj").value)}&body=${encodeURIComponent(sendText())}`;
+    const a = document.createElement("a"); a.href = href; a.target = "_top"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove();
+    logSend("email", { to: $("sdTo").value.trim() });
+    flash("sdNote", "Your email app opened with the message filled in. Review it and press Send there — nothing is sent from here.");
+  }
+  function sendShare() {
+    const cl = capsuleLink($("sdPrices").checked);
+    navigator.share({ title: $("sdSubj").value, text: sendText().replace(cl, "").replace(/\n{3,}/g, "\n\n"), url: cl })
+      .then(() => { logSend("share"); flash("sdNote", "Shared."); })
+      .catch((e) => { if (e && e.name === "AbortError") return; copyText(sendText(), "sdNote", "Sharing isn't available here, so the message was"); logSend("copy-message"); });
+  }
+
+  /* ---------- Send to…: files for the platforms reps and buyers already use ---------- */
+  function simpleXLSX(fileName, sheetName, header, rows) {
+    const x = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const col = (n) => { let s = ""; n++; while (n) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; };
+    const cell = (v, ref, st) => (typeof v === "number" && isFinite(v) ? `<c r="${ref}"${st}><v>${v}</v></c>` : v === "" || v == null ? `<c r="${ref}"${st}/>` : `<c r="${ref}"${st} t="inlineStr"><is><t>${x(v)}</t></is></c>`);
+    const all = [header].concat(rows);
+    const data = all.map((r, ri) => `<row r="${ri + 1}">${r.map((v, k) => cell(v, `${col(k)}${ri + 1}`, ri === 0 ? ' s="1"' : "")).join("")}</row>`).join("");
+    const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols>${header.map((h, k) => `<col min="${k + 1}" max="${k + 1}" width="${Math.max(12, Math.min(40, String(h).length + 4))}" customWidth="1"/>`).join("")}</cols><sheetData>${data}</sheetData></worksheet>`;
+    const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/><family val="2"/></font><font><b/><sz val="11"/><name val="Calibri"/><family val="2"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+    const bytes = zipStore([
+      { name: "[Content_Types].xml", text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>` },
+      { name: "_rels/.rels", text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
+      { name: "xl/workbook.xml", text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${x(sheetName)}" sheetId="1" r:id="rId1"/></sheets></workbook>` },
+      { name: "xl/_rels/workbook.xml.rels", text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
+      { name: "xl/worksheets/sheet1.xml", text: sheet },
+      { name: "xl/styles.xml", text: styles },
+    ]);
+    download(fileName, bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  }
+  // one row per style: pieces at this order type; SKUs always go out as text
+  function exportLines() {
+    const u = activeUnits();
+    return orderedItems().map((o) => { const c = engine.lineCost(o.it, u); return { it: o.it, units: c.units, each: Math.round(c.each * 100) / 100, total: Math.round(c.total * 100) / 100 }; });
+  }
+  const SEND_TO = [
+    { id: "order", name: "Our order page (Shopify)", tag: "Default", what: "Every account. Opens onlyifyouknow.com with the capsule filled in; the rep code and capsule ID ride along into the order.", acts: [["Open ↗", () => { openOrderPage(); logSend("order-page"); }], ["Copy link", () => { const l = orderLink(); if (l) { copyText(l.url, "stNote", "Order link"); logSend("copy-order-link"); } }]] },
+    { id: "markettime", name: "MarketTime", what: "Quick Import file (.xlsx): Item Number + Quantity in pieces. In MarketTime: Basket → Quick Import. Works once the rep's agency has loaded our line with the same item numbers (agency-managed, no cost to us).", acts: [["Download .xlsx", () => { simpleXLSX(`${fileSafe(capTitle())}_MarketTime_QuickImport.xlsx`, "Quick Import", ["Item Number", "Quantity"], exportLines().map((r) => [r.it.sku, r.units])); logSend("export-markettime"); }]] },
+    { id: "nuorder", name: "NuORDER", what: "Order import file (.xlsx): Style Number, Season \"Core\", Color \"Multi\", Size \"One Size\", Quantity. In NuORDER: Working Order → Import. Only when the line is on NuORDER.", acts: [["Download .xlsx", () => { simpleXLSX(`${fileSafe(capTitle())}_NuORDER_import.xlsx`, "Order", ["Style Number", "Season", "Color", "Size", "Quantity"], exportLines().map((r) => [r.it.sku, "Core", "Multi", "One Size", r.units])); logSend("export-nuorder"); }]] },
+    { id: "faire", name: "Faire (Faire Direct order)", what: "SKU and quantity list to build a Faire Direct order in the brand portal (add products by SKU). Faire Direct orders from our own accounts carry no Faire commission.", acts: [["Copy SKU list", () => { copyText(exportLines().map((r) => `${r.it.sku}\t${r.units}`).join("\n"), "stNote", "SKU list"); logSend("export-faire"); }]] },
+    { id: "repzio", name: "RepZio · JOOR", what: "Neither takes an order file. Send the line sheet with SKUs showing and key the styles in; the order link above still works for the buyer.", acts: [["Line sheet…", () => { closeDlg("sendToDlg"); openSheet(); logSend("line-sheet"); }]] },
+    { id: "upc", name: "UPC + quantity (RepSpark, scanners)", what: "Needs UPCs, and the builder has none on file yet. Add a UPC column to the catalog data to turn this on.", acts: [] },
+    { id: "universal", name: "Universal order file", what: "Every column the platforms ask for, one row per style (.xlsx): item and style number, name, category, wholesale and retail price, pack, minimum, quantity, line total, image file, store, PO, date, rep code, capsule ID.", acts: [["Download .xlsx", () => {
+      const u = activeUnits(), H = HT();
+      const rows = exportLines().map((r) => [cfg.name, r.it.sku, r.it.sku, r.it.name, CAT_LABEL[r.it.cat].replace(/s$/, ""), label(r.it.dom), "One Size", "Core", "", r.each, r.it.msrp || "",
+        H ? (r.units === H.units ? H.units : 12) : engine.unitsFor(r.it, u), engine.unitsFor(r.it, u), r.units, r.total, `${r.it.sku}.jpg`, state.buyer.trim(), "", today(), state.rep, capId()]);
+      simpleXLSX(`${fileSafe(capTitle())}_order_universal.xlsx`, "Order", ["Brand", "Item Number", "Style Number", "Item Name", "Category", "Color", "Size", "Season", "UPC", "Wholesale Price", "Retail Price", "Case Pack", "Minimum Qty", "Quantity", "Line Total", "Image File", "Store Name", "PO Number", "Order Date", "Rep Code", "Capsule ID"], rows);
+      logSend("export-universal"); }]] },
+  ];
+  function openSendTo() {
+    if (!state.capsule) return;
+    $("stBody").innerHTML = SEND_TO.map((p, i) => `<div class="st-row"><div class="st-t"><b>${esc(p.name)}</b>${p.tag ? `<span class="pill">${esc(p.tag)}</span>` : ""}<div class="note">${esc(p.what)}</div></div><div class="st-a">${p.acts.length ? p.acts.map((a, k) => `<button class="btn" data-p="${i}" data-k="${k}">${esc(a[0])}</button>`).join("") : '<span class="note">Not available</span>'}</div></div>`).join("");
+    $("stBody").querySelectorAll("button[data-p]").forEach((b) => (b.onclick = () => SEND_TO[+b.dataset.p].acts[+b.dataset.k][1]()));
+    $("stNote").innerHTML = ""; openDlg("sendToDlg");
+  }
+  function drawRepNote() {
+    const list = BASE.repCodes || [];
+    $("repNote").innerHTML = !state.rep ? "Rides on every link, QR code and export so orders from your capsules are credited to you."
+      : list.length && !list.map(cleanRep).includes(state.rep) ? `<span class="warn">${esc(state.rep)} isn't on the list of issued rep codes — check it.</span>` : `Orders from your capsules are credited to <b>${esc(state.rep)}</b>.`;
+  }
+
   /* ================================================= dialogs + status */
   function openDlg(id) { $(id).classList.add("open"); }
   function closeDlg(id) { $(id).classList.remove("open"); }
@@ -973,6 +1144,19 @@
   $("regenBtn").onclick = () => build();
   $("anotherBtn").onclick = () => build({ exclude: state.capsule.picks.filter((p) => !state.locked.has(p.item.sku)).map((p) => p.item.sku) });
   $("csvBtn").onclick = exportCSV;
+  $("sendBtn").onclick = openSend;
+  $("sendToBtn").onclick = openSendTo;
+  $("whyBtn").onclick = openWhy;
+  $("sendLogBtn").onclick = exportSendLog;
+  $("sdMail").onclick = sendMail;
+  $("sdShare").onclick = sendShare;
+  $("sdCopy").onclick = () => { copyText(sendText(), "sdNote", "Message"); logSend("copy-message"); };
+  $("sdCopyLink").onclick = () => { copyText(capsuleLink($("sdPrices").checked), "sdNote", "Capsule link"); logSend("copy-capsule-link"); };
+  $("sdOpen").onclick = () => { window.open(capsuleLink($("sdPrices").checked), "_blank", "noopener"); };
+  $("sdPrices").onchange = drawSendSide;
+  $("repCode").value = state.rep; drawRepNote();
+  $("repCode").oninput = () => { state.rep = cleanRep($("repCode").value); store.set("capsule_rep", state.rep); drawRepNote(); };
+  $("repCode").onchange = () => { $("repCode").value = state.rep; };
   $("xlsxBtn").onclick = exportXLSX;
   $("orderPageBtn").onclick = openOrderPage;
   $("sheetBtn").onclick = openSheet;
@@ -1053,5 +1237,5 @@
   $("buildBtn").disabled = !state.anchors[0];
   renderStatus(); renderLib();
   if (state.anchors[0]) build(); else clearBoard();
-  window.__capsule = { orderLink, state, engine: () => engine, build, buildSheet: () => { setPageRule(); return buildSheet(); }, openSheet, exportXLSX, setSheet: (o) => { Object.assign(state.sheet, o, { fields: Object.assign(state.sheet.fields, (o || {}).fields || {}) }); persist(); }, orderedItems, setAnchor, switchLine, setMode, setBudget, saveCapsule, openRecord, lib, line: () => line };
+  window.__capsule = { orderLink, state, engine: () => engine, build, buildSheet: () => { setPageRule(); return buildSheet(); }, openSheet, exportXLSX, setSheet: (o) => { Object.assign(state.sheet, o, { fields: Object.assign(state.sheet.fields, (o || {}).fields || {}) }); persist(); }, orderedItems, setAnchor, switchLine, setMode, setBudget, saveCapsule, openRecord, lib, line: () => line, capsuleLink, capId, explain: explainNow, sendText, openSend, openSendTo, exportLines, SEND_TO, setRep: (v) => { state.rep = cleanRep(v); store.set("capsule_rep", state.rep); } };
 })();
