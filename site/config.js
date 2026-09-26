@@ -221,7 +221,7 @@ window.CAPSULE_CONFIG = {
         // The page's dated "Shipping end of September 2026" line is left out so sheets don't go stale.
         // OIYK is made to order; reorders ship from U.S. warehouse stock (Dan, 25 Sep 2026).
         paymentTerms: "Net 30 from date of shipping. Early pay: 3% in 10 days, 2% in 15, 1% in 20. Credit card, ACH, check or wire transfer (credit cards add 3%; wires add $20).",
-        shipping: "First orders are made to order; reorders ship from our U.S. warehouse. Ships via UPS / FedEx, prepaid & add or on your carrier account. First orders prepay shipping or use your carrier account.",
+        shipping: "Made to order: 45- to 60-day lead times on most styles, depending on the season. Reorders ship from our U.S. warehouse in about 10 business days. Ships via UPS / FedEx, prepaid & add or on your carrier account. First orders prepay shipping or use your carrier account.",
         returns: "RA required within 14 days. Damage claims: notify us within 7 days of receipt.",
         retailNote: "",
         unitsNote: "A dozen per style. First orders: 3 on baroque pearl and scarf-wrapped necklaces, 6 on baroque pearl drop earrings. Reorders: a dozen per style.",
@@ -231,10 +231,11 @@ window.CAPSULE_CONFIG = {
       // prefill.js fills its Dz / 6-pk / 3-pk / Pc boxes from that (app/orderpage_oiyk.js, from tools/sync_order_page.py oiyk).
       orderPage: { url: "https://onlyifyouknow.com/pages/oiyk-wholesale-orders", onlyListed: true, qtyIn: "pieces" },
       budgetPresets: [
-        { amount: 250, label: "$250", note: "Test order" },
-        { amount: 500, label: "$500", note: "Starter" },
-        { amount: 1000, label: "$1,000", note: "Standard opening order" },
-        { amount: 2000, label: "$2,000", note: "Collection / window" },
+        // With a dozen per style, $750 is the realistic minimum: about 5 styles, and a necklace, earrings and a
+        // bracelet for 92 of 114 picks (Sept 2026 catalog). $250 bought one dozen of one style, so it was dropped.
+        { amount: 750, label: "$750", note: "Minimum opening order" },
+        { amount: 1500, label: "$1,500", note: "Standard opening order" },
+        { amount: 3000, label: "$3,000", note: "Collection / window" },
       ],
     },
   },
