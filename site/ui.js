@@ -109,6 +109,7 @@
   }
   function loadLine(L) {
     line = L;
+    document.body.classList.toggle("line-rf", L === "RF"); document.body.classList.toggle("line-oiyk", L === "OIYK");
     cfg = Object.assign({}, BASE, BASE.lines[L] || {});
     const src = SOURCES[L];
     catalog = { line: src.line, built: src.built, tagFile: src.tagFile, flags: src.flags.slice(), items: src.items.map((i) => Object.assign({}, i)) };
@@ -307,6 +308,7 @@
     }
     syncHalves();
     state.lastMs = Math.round(performance.now() - t0);
+    state.alt = !!(extra && extra.exclude && extra.exclude.length);   // true only while another version is showing
     ["regenBtn", "anotherBtn", "sheetBtn", "xlsxBtn", "orderPageBtn", "csvBtn", "saveBtn", "saveNewBtn", "sendBtn", "sendToBtn", "whyBtn"].forEach((id) => ($(id).disabled = false));
     renderBoard();
   }
@@ -386,6 +388,7 @@
   function renderBoard() {
     const cap = state.capsule;
     syncHalves();
+    $("regenBtn").disabled = !state.alt;
     $("boardTitle").textContent = capTitle();
     const total = cap.anchors.length + cap.picks.length;
     $("boardMeta").textContent = `${cfg.name} · ${total} styles · built in ${state.lastMs} ms` + (state.buyer ? ` · buyer: ${state.buyer}` : "") + (state.loadedId ? " · saved capsule" : "");
@@ -546,6 +549,7 @@
     state.capsule = engine.restore(r.anchors, r.picks, { colorwayStory: state.story, minQty: state.minQty });
     if (state.mode === "budget") { state.capsule.budget = { budget: state.budget, units: state.units }; recalcBudget(); }
     state.lastMs = Math.round(performance.now() - t0);
+    state.alt = true;   // a saved capsule may differ from today's best match
     ["regenBtn", "anotherBtn", "sheetBtn", "xlsxBtn", "orderPageBtn", "csvBtn", "saveBtn", "saveNewBtn", "sendBtn", "sendToBtn", "whyBtn"].forEach((x) => ($(x).disabled = false));
     $("buildBtn").disabled = false;
     persist(); renderLib(); renderBoard();
@@ -942,16 +946,20 @@
   /* ================================================= v1.6.0: why these pieces, send capsule, send log, send to… */
   const SEND_LOG = "capsule_send_log";
   const today = () => new Date().toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
-  function flash(id, msg) { const el = $(id); if (!el) return; el.innerHTML = msg; clearTimeout(el._t); el._t = setTimeout(() => (el.innerHTML = ""), 6000); }
-  function copyText(text, noteId, what) {
-    const done = () => flash(noteId, `${esc(what)} copied.`);
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, noteId, what));
-    else fallbackCopy(text, noteId, what);
+  function flash(id, msg) { const el = $(id); if (el) { el.innerHTML = msg; clearTimeout(el._t); el._t = setTimeout(() => (el.innerHTML = ""), 6000); } toast(msg); }
+  function toast(msg) {   // v1.6.1: copy and export feedback you can see wherever the button sits
+    let t = $("toast"); if (!t) { t = document.createElement("div"); t.id = "toast"; t.className = "toast"; t.setAttribute("role", "status"); document.body.appendChild(t); }
+    t.innerHTML = msg; t.classList.add("on"); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove("on"), 2600);
   }
-  function fallbackCopy(text, noteId, what) {
+  function copyText(text, noteId, what, msg) {   // msg: optional full confirmation (already escaped)
+    const done = () => flash(noteId, msg || `${esc(what)} copied.`);
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, noteId, what, msg));
+    else fallbackCopy(text, noteId, what, msg);
+  }
+  function fallbackCopy(text, noteId, what, msg) {
     const ta = document.createElement("textarea"); ta.value = text; ta.style.cssText = "position:fixed;left:-9999px;top:0"; document.body.appendChild(ta); ta.select();
     let ok = false; try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
-    ta.remove(); flash(noteId, ok ? `${esc(what)} copied.` : '<span class="warn">Copy is blocked here — select the text and copy it by hand.</span>');
+    ta.remove(); flash(noteId, ok ? (msg || `${esc(what)} copied.`) : '<span class="warn">Copy is blocked here — select the text and copy it by hand.</span>');
   }
 
   /* ---------- "Why these pieces" (engine.explain) ---------- */
@@ -1075,7 +1083,7 @@
     { id: "order", name: "Our order page (Shopify)", tag: "Default", what: "Every account. Opens onlyifyouknow.com with the capsule filled in; the rep code and capsule ID ride along into the order.", acts: [["Open ↗", () => { openOrderPage(); logSend("order-page"); }], ["Copy link", () => { const l = orderLink(); if (l) { copyText(l.url, "stNote", "Order link"); logSend("copy-order-link"); } }]] },
     { id: "markettime", name: "MarketTime", what: "Quick Import file (.xlsx): Item Number + Quantity in pieces. In MarketTime: Basket → Quick Import. Works once the rep's agency has loaded our line with the same item numbers (agency-managed, no cost to us).", acts: [["Download .xlsx", () => { simpleXLSX(`${fileSafe(capTitle())}_MarketTime_QuickImport.xlsx`, "Quick Import", ["Item Number", "Quantity"], exportLines().map((r) => [r.it.sku, r.units])); logSend("export-markettime"); }]] },
     { id: "nuorder", name: "NuORDER", what: "Order import file (.xlsx): Style Number, Season \"Core\", Color \"Multi\", Size \"One Size\", Quantity. In NuORDER: Working Order → Import. Only when the line is on NuORDER.", acts: [["Download .xlsx", () => { simpleXLSX(`${fileSafe(capTitle())}_NuORDER_import.xlsx`, "Order", ["Style Number", "Season", "Color", "Size", "Quantity"], exportLines().map((r) => [r.it.sku, "Core", "Multi", "One Size", r.units])); logSend("export-nuorder"); }]] },
-    { id: "faire", name: "Faire (Faire Direct order)", what: "SKU and quantity list to build a Faire Direct order in the brand portal (add products by SKU). Faire Direct orders from our own accounts carry no Faire commission.", acts: [["Copy SKU list", () => { copyText(exportLines().map((r) => `${r.it.sku}\t${r.units}`).join("\n"), "stNote", "SKU list"); logSend("export-faire"); }]] },
+    { id: "faire", lines: ["RF"], name: "Faire (Faire Direct order)", what: "Faire has no order import: you write the order in Faire's brand portal and add each style by searching its SKU. The helper lists every style with its Faire SKU, quantity in Faire case packs and whether it's live on Faire, with a copy button per line and a checklist. The retailer then reviews and approves the order. Faire Direct orders from our own accounts carry 0% Faire commission.", acts: [["Faire order helper…", () => openFaire()]] },
     { id: "repzio", name: "RepZio · JOOR", what: "Neither takes an order file. Send the line sheet with SKUs showing and key the styles in; the order link above still works for the buyer.", acts: [["Line sheet…", () => { closeDlg("sendToDlg"); openSheet(); logSend("line-sheet"); }]] },
     { id: "upc", name: "UPC + quantity (RepSpark, scanners)", what: "Needs UPCs, and the builder has none on file yet. Add a UPC column to the catalog data to turn this on.", acts: [] },
     { id: "universal", name: "Universal order file", what: "Every column the platforms ask for, one row per style (.xlsx): item and style number, name, category, wholesale and retail price, pack, minimum, quantity, line total, image file, store, PO, date, rep code, capsule ID.", acts: [["Download .xlsx", () => {
@@ -1087,10 +1095,79 @@
   ];
   function openSendTo() {
     if (!state.capsule) return;
-    $("stBody").innerHTML = SEND_TO.map((p, i) => `<div class="st-row"><div class="st-t"><b>${esc(p.name)}</b>${p.tag ? `<span class="pill">${esc(p.tag)}</span>` : ""}<div class="note">${esc(p.what)}</div></div><div class="st-a">${p.acts.length ? p.acts.map((a, k) => `<button class="btn" data-p="${i}" data-k="${k}">${esc(a[0])}</button>`).join("") : '<span class="note">Not available</span>'}</div></div>`).join("");
+    $("stBody").innerHTML = SEND_TO.map((p, i) => p.lines && !p.lines.includes(line) ? "" : `<div class="st-row"><div class="st-t"><b>${esc(p.name)}</b>${p.tag ? `<span class="pill">${esc(p.tag)}</span>` : ""}<div class="note">${esc(p.what)}</div></div><div class="st-a">${p.acts.length ? p.acts.map((a, k) => `<button class="btn" data-p="${i}" data-k="${k}">${esc(a[0])}</button>`).join("") : '<span class="note">Not available</span>'}</div></div>`).join("");
     $("stBody").querySelectorAll("button[data-p]").forEach((b) => (b.onclick = () => SEND_TO[+b.dataset.p].acts[+b.dataset.k][1]()));
     $("stNote").innerHTML = ""; openDlg("sendToDlg");
   }
+  /* ---- v1.6.1: Faire Direct order helper (RF only; OIYK is never on Faire) ---- */
+  const FAIRE_ORDERS = "https://www.faire.com/brand-portal/invoices";   // Orders -> Faire Direct tab (Faire Help Center, brand portal walkthrough)
+  const fd = { key: "", done: new Set(), copied: new Set() };
+  function faireInfo(sku) { const r = window.FAIRE_RF && window.FAIRE_RF.items[sku]; return r ? { status: r[0], pack: r[1], moq: r[2], fsku: r[3] || sku } : null; }
+  function faireAsOf() { const d = window.FAIRE_RF && window.FAIRE_RF.asOf; return d ? new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "unknown date"; }
+  function faireRows() {
+    return exportLines().map((r) => {
+      const f = faireInfo(r.it.sku);
+      const ok = !!f && f.status === "live";
+      const cases = f && f.pack ? r.units / f.pack : null;
+      const why = !f ? "Not on Faire" : f.status === "unpublished" ? "Unpublished on Faire" : f.status === "draft" ? "Draft on Faire" : "";
+      return Object.assign({}, r, { f, ok, why, fsku: f ? f.fsku : r.it.sku, cases, packOk: !f || !f.pack || r.units % f.pack === 0 });
+    });
+  }
+  function openFaire() {
+    if (!state.capsule || line !== "RF") return;
+    const key = capId() + "|" + exportLines().map((r) => r.it.sku + ":" + r.units).join(",");
+    if (key !== fd.key) { fd.key = key; fd.done = new Set(); fd.copied = new Set(); }
+    closeDlg("sendToDlg"); drawFaire(); openDlg("faireDlg"); logSend("faire-helper");
+  }
+  function faireListText(rows) { return ["Faire SKU\tQuantity (pieces)\tStyle"].concat(rows.map((r) => `${r.fsku}\t${r.units}\t${r.it.name}`)).join("\n"); }
+  function drawFaire() {
+    const rows = faireRows(), live = rows.filter((r) => r.ok), off = rows.filter((r) => !r.ok);
+    const pcs = live.reduce((a, r) => a + r.units, 0), done = rows.filter((r) => fd.done.has(r.it.sku)).length;
+    const store = state.buyer.trim();
+    const status = off.length
+      ? `<div class="fd-flag warn"><b>${off.length} of ${rows.length} styles can't be added on Faire as listed</b> (Faire product export of ${faireAsOf()}): ${off.map((r) => `${esc(r.it.sku)} (${esc(r.why.charAt(0).toLowerCase() + r.why.slice(1))})`).join(", ")}. Publish them in Faire first, swap them here, or book those styles on our order page.</div>`
+      : `<div class="fd-flag ok">All ${rows.length} styles are live on Faire (Faire product export of ${faireAsOf()}).</div>`;
+    const packWarn = rows.filter((r) => r.f && !r.packOk);
+    $("fdBody").innerHTML = `
+      <ol class="fd-steps">
+        <li>Open Faire&rsquo;s brand portal: <b>Orders &rarr; Faire Direct</b>, create an order and pick or add the retailer${store ? ` (<b>${esc(store)}</b>)` : ""}.</li>
+        <li>For each style below: <b>Copy SKU</b>, paste it into Faire&rsquo;s product search, add it and set the quantity. Tick it off here once it&rsquo;s in.</li>
+        <li>Send it. The retailer gets an email to review, pay and approve &mdash; nothing is ordered until they do.</li>
+      </ol>
+      ${status}
+      ${packWarn.length ? `<div class="fd-flag warn">${packWarn.map((r) => esc(r.it.sku)).join(", ")}: quantity isn't a whole number of Faire&rsquo;s ${packWarn[0].f.pack}-piece case. Round it in Faire.</div>` : ""}
+      <table class="fd-t"><thead><tr><th>In Faire</th><th></th><th>Faire SKU &middot; style</th><th class="num">Quantity</th><th></th></tr></thead><tbody>
+      ${rows.map((r) => `<tr class="${fd.done.has(r.it.sku) ? "done" : ""} ${r.ok ? "" : "off"}">
+        <td><input type="checkbox" data-done="${esc(r.it.sku)}" ${fd.done.has(r.it.sku) ? "checked" : ""} ${r.ok ? "" : "disabled"} aria-label="${esc(r.fsku)} entered in Faire"></td>
+        <td class="im"><img src="${esc(r.it.img)}" alt=""></td>
+        <td><b>${esc(r.fsku)}</b>${r.fsku !== r.it.sku ? `<span class="pill" title="Faire's SKU text differs from our style code">Faire SKU</span>` : ""}<div class="note">${esc(r.it.name)}${r.ok ? "" : ` &middot; <span class="warn">${esc(r.why)}</span>`}</div></td>
+        <td class="num"><b>${r.units}</b> pcs<div class="note">${r.cases != null && r.packOk ? `${r.cases} case${r.cases === 1 ? "" : "s"} of ${r.f.pack}` : ""}</div></td>
+        <td class="act">${r.ok ? `<button class="btn fd-copy ${fd.copied.has(r.it.sku) ? "was" : ""}" data-copy="${esc(r.it.sku)}">${fd.copied.has(r.it.sku) ? "Copied &#10003;" : "Copy SKU"}</button>` : ""}</td></tr>`).join("")}
+      </tbody></table>
+      <div class="fd-prog"><div class="bar"><i style="width:${live.length ? Math.round((done / live.length) * 100) : 0}%"></i></div><span><b>${done} of ${live.length}</b> styles entered in Faire &middot; ${pcs} pieces to add</span></div>
+      <div class="row fd-foot">
+        <a class="btn primary" href="${FAIRE_ORDERS}" target="_blank" rel="noopener">Open Faire &rarr; Orders &#8599;</a>
+        <button class="btn" id="fdCopyAll">Copy full list</button>
+        <button class="btn" id="fdCsv">Download list (.csv)</button>
+      </div>
+      <details class="fd-peek"><summary>What &ldquo;Copy full list&rdquo; puts on the clipboard</summary><pre>${esc(faireListText(live))}</pre><div class="note">Faire can&rsquo;t import this list; keep it beside you as a checklist or send it to whoever enters the order.</div></details>
+      <div class="note" id="fdNote" aria-live="polite"></div>`;
+    $("fdBody").querySelectorAll("[data-copy]").forEach((b) => (b.onclick = () => {
+      const r = rows.find((x) => x.it.sku === b.dataset.copy);
+      copyText(r.fsku, "fdNote", r.fsku, `<b>${esc(r.fsku)}</b> copied — paste it into Faire’s product search and set <b>${r.units} pcs</b>.`);
+      fd.copied.add(r.it.sku); b.classList.add("was"); b.innerHTML = "Copied &#10003;";
+    }));
+    $("fdBody").querySelectorAll("[data-done]").forEach((c) => (c.onchange = () => { if (c.checked) fd.done.add(c.dataset.done); else fd.done.delete(c.dataset.done); drawFaire(); }));
+    $("fdCopyAll").onclick = () => { copyText(faireListText(live), "fdNote", "", `Full list copied: ${live.length} styles, ${pcs} pcs.`); logSend("export-faire"); };
+    $("fdCsv").onclick = () => {
+      const q = (v) => `"${String(v).replace(/"/g, '""')}"`;
+      const lines = [["Faire SKU", "Style", "Name", "Quantity (pieces)", "Faire case pack", "Cases", "On Faire"].map(q).join(",")]
+        .concat(rows.map((r) => [r.fsku, r.it.sku, r.it.name, r.units, r.f ? r.f.pack : "", r.cases != null && r.packOk ? r.cases : "", r.ok ? "Yes" : r.why].map(q).join(",")));
+      download(`${fileSafe(capTitle())}_Faire_order_list.csv`, "\ufeff" + lines.join("\r\n"), "text/csv;charset=utf-8");
+      flash("fdNote", "Faire order list downloaded."); logSend("export-faire-csv");
+    };
+  }
+
   function drawRepNote() {
     const list = BASE.repCodes || [];
     $("repNote").innerHTML = !state.rep ? "Rides on every link, QR code and export so orders from your capsules are credited to you."
@@ -1141,7 +1218,7 @@
   $("showScores").onchange = () => { state.showScores = $("showScores").checked; persist(); if (state.capsule) renderBoard(); };
   $("minQty").onchange = () => { state.minQty = Math.max(0, +$("minQty").value || 0); persist(); renderStatus(); renderSlot(0); renderSlot(1); if (state.capsule) build(); };
   $("buildBtn").onclick = () => build();
-  $("regenBtn").onclick = () => build();
+  $("regenBtn").onclick = () => build();   // back to the top-ranked capsule for this pick and settings (locks kept)
   $("anotherBtn").onclick = () => build({ exclude: state.capsule.picks.filter((p) => !state.locked.has(p.item.sku)).map((p) => p.item.sku) });
   $("csvBtn").onclick = exportCSV;
   $("sendBtn").onclick = openSend;
@@ -1237,5 +1314,5 @@
   $("buildBtn").disabled = !state.anchors[0];
   renderStatus(); renderLib();
   if (state.anchors[0]) build(); else clearBoard();
-  window.__capsule = { orderLink, state, engine: () => engine, build, buildSheet: () => { setPageRule(); return buildSheet(); }, openSheet, exportXLSX, setSheet: (o) => { Object.assign(state.sheet, o, { fields: Object.assign(state.sheet.fields, (o || {}).fields || {}) }); persist(); }, orderedItems, setAnchor, switchLine, setMode, setBudget, saveCapsule, openRecord, lib, line: () => line, capsuleLink, capId, explain: explainNow, sendText, openSend, openSendTo, exportLines, SEND_TO, setRep: (v) => { state.rep = cleanRep(v); store.set("capsule_rep", state.rep); } };
+  window.__capsule = { orderLink, state, engine: () => engine, build, buildSheet: () => { setPageRule(); return buildSheet(); }, openSheet, exportXLSX, setSheet: (o) => { Object.assign(state.sheet, o, { fields: Object.assign(state.sheet.fields, (o || {}).fields || {}) }); persist(); }, orderedItems, setAnchor, switchLine, setMode, setBudget, saveCapsule, openRecord, lib, line: () => line, capsuleLink, capId, explain: explainNow, sendText, openSend, openSendTo, exportLines, SEND_TO, openFaire, faireInfo, setRep: (v) => { state.rep = cleanRep(v); store.set("capsule_rep", state.rep); } };
 })();
