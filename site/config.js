@@ -167,8 +167,8 @@ window.CAPSULE_CONFIG = {
       sheetTagline: "Curated capsule",           // small line under the logo on the line sheet
       minQty: 6,
       terms: {
-        firstOrderUnits: 6,      // 6 pieces per style on an account's first order
-        reorderUnits: 12,        // one dozen per style on reorder
+        firstOrderUnits: 6,      // 6 pieces per style on an account's first order (in stock, so we can break a dozen)
+        reorderUnits: 12,        // one dozen per style on reorder (the "Reorder" order type)
         orderMinimum: 100,       // $100 order minimum
         tiered: false,           // same price per piece at 6 or 12 (adopted terms, 23 Sep 2026)
         // Commercial terms as published on the RF line sheet (FW26) and the RF wholesale order page
@@ -200,15 +200,23 @@ window.CAPSULE_CONFIG = {
       sheetTagline: "Color, memory, light",
       minQty: 0,                 // made to order: no stock rule
       mix: { necklace: 0.50, bracelet: 0.17, earring: 0.33 },   // OIYK has 5 bracelets today
+      budgetMaxStyleShare: 0.4,  // budget mode: no single added style over 40% of the budget (dozen minimums)
       terms: {
-        firstOrderUnits: 6,      // 6 per style on a first order ...
-        reorderUnits: 12,
+        firstOrderUnits: 12,     // a dozen per style on a first order: the factory won't make fewer to order ...
+        // ... except these styles, which the factory makes in smaller sets (the 3-pk / 6-pk styles on the OIYK
+        // wholesale order page; Dan, 26 Sep 2026). Minimum pieces per style on a first order:
+        firstOrderExceptions: {
+          OYN0010GDPRL: 3, OYN0011GDPRL: 3, OYN0012GDPRL: 3, OYN0026GDPRL: 3,          // baroque pearl necklaces
+          OYN0015GDSGPRL: 3, OYN0015GDMSTPRL: 3, OYN0015GDBLKPRL: 3, OYN0015GDBLPRL: 3, OYN0015GDBEGPRL: 3,
+          OYN0015GDGRNPRL: 3, OYN0015GDLORPRL: 3, OYN0015GDORPRL: 3, OYN0015GDREDPRL: 3, OYN0015GDTLPRL: 3,  // scarf-wrapped pearl
+          OYE0002GDPRL: 6, OYE0006GDPRL: 6, OYE0012GDPRL: 6,                               // baroque pearl drop earrings
+        },
+        reorderUnits: 12,        // every style, once the buyer has ordered before
         orderMinimum: 100,
         tiered: true,            // OIYK prices by units per style, from the Product Master's columns:
                                  //   12+ = WS Dozen Price / 12 (same as WS 1-pcs Price), 6-11 = 6-pcs Price / 6,
                                  //   3-5 = 3-pcs Price / 3. Breaking a dozen costs more because the
                                  //   manufacturer prices it that way (higher-priced materials).
-        // ... except baroque pearl and scarf-wrapped styles: 3 pieces (set per SKU as "Min units" in the catalog)
         // Commercial terms as published on the OIYK wholesale order page (onlyifyouknow.com/pages/order-page).
         // The page's dated "Shipping end of September 2026" line is left out so sheets don't go stale.
         // OIYK is made to order; reorders ship from U.S. warehouse stock (Dan, 25 Sep 2026).
@@ -216,8 +224,8 @@ window.CAPSULE_CONFIG = {
         shipping: "First orders are made to order; reorders ship from our U.S. warehouse. Ships via UPS / FedEx, prepaid & add or on your carrier account. First orders prepay shipping or use your carrier account.",
         returns: "RA required within 14 days. Damage claims: notify us within 7 days of receipt.",
         retailNote: "",
-        unitsNote: "6 pieces per style on a first order (3 on baroque pearl and scarf-wrapped styles); reorders by the dozen.",
-        tierNote: "Wholesale is priced per piece by quantity per style: dozen pricing at 12+, set prices at 6 and at 3.",
+        unitsNote: "A dozen per style. First orders: 3 on baroque pearl and scarf-wrapped necklaces, 6 on baroque pearl drop earrings. Reorders: a dozen per style.",
+        tierNote: "Dozen pricing per piece; the 3- and 6-piece set prices apply to the baroque pearl and scarf-wrapped styles.",
       },
       // OIYK wholesale order page: same idea as RF. The link carries pieces per style (?cart=SKU:6,...); the page's
       // prefill.js fills its Dz / 6-pk / 3-pk / Pc boxes from that (app/orderpage_oiyk.js, from tools/sync_order_page.py oiyk).
