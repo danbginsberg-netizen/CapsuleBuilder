@@ -13,9 +13,9 @@
     --lav: #b8a9d9; --lav-soft: #efeaf8; --lav-ink: #5b4a8b; --ok: #2f7d4f; --warn: #a15c00; --bad: #b3261e;
     --r: 12px;
   }
-  /* v1.6.1: each line wears its own color. Retro Forever = red (its logo), Only If You Know = lavender. Line sheets keep their own accent. */
+  /* v1.6.1: each line wears its own color. Retro Forever = red (its logo), Only If You Know = lavender. Line sheets follow the line (RF red, OIYK lavender). */
   body.line-rf { --lav: #eaa99f; --lav-soft: #fcefec; --lav-ink: #b8392a; }
-  body.line-rf .sheet { --lav: #b8a9d9; --lav-soft: #efeaf8; --lav-ink: #5b4a8b; }
+  body.line-rf .sheet { --lav: #d0402e; --lav-soft: #fcefec; --lav-ink: #b8392a; } /* v1.6.2: RF line sheet in the logo red */
   input[type=range] { accent-color: var(--lav-ink); }
   .toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 10px); background: #1f1d24; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px; z-index: 80; opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s; max-width: min(560px, 92vw); text-align: center; }
   .toast.on { opacity: 1; transform: translate(-50%, 0); }
@@ -273,7 +273,7 @@
 <body>
 <div class="app">
   <aside>
-    <div class="brand"><img id="brandLogo" src="logo_rf.png" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.6.1</small></div></div>
+    <div class="brand"><img id="brandLogo" src="logo_rf.png" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.6.2</small></div></div>
     <div class="lines">
       <button class="on" id="lineRF" data-line="RF">Retro Forever</button>
       <button id="lineOIYK" data-line="OIYK">OIYK</button>
