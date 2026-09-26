@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your capsule</title>
+<style>
+  :root { --accent: #cf4331; --ink: #1f1d24; --muted: #6b6775; --line: #ebe3dc; --bg: #faf4ef; --card: #fff; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  #app { max-width: 1080px; margin: 0 auto; padding: 22px 16px 60px; }
+  .hd { text-align: center; padding: 8px 0 18px; }
+  .hd img { height: 64px; }
+  .hd .tag { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
+  h1 { font: 500 clamp(26px, 5vw, 38px)/1.15 Georgia, "Times New Roman", serif; margin: 8px 0 6px; }
+  .meta { color: var(--muted); font-size: 14px; }
+  .acts { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 16px 0 6px; }
+  .btn { display: inline-block; padding: 11px 18px; border-radius: 99px; border: 1px solid var(--line); background: #fff; color: var(--ink); font: 600 14px/1 inherit; text-decoration: none; cursor: pointer; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .small { font-size: 13px; color: var(--muted); margin: 6px 0; } .warn { color: #a15c00; }
+  .tot { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 4px 0 18px; }
+  .tot div { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px; min-width: 170px; text-align: center; }
+  .tot span { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .tot b { font-size: 22px; } .tot small { display: block; color: var(--muted); }
+  .grp h2, .whybox h2, .terms h2 { font: 500 22px/1.2 Georgia, serif; margin: 26px 0 12px; }
+  .grp h2 span { font: 600 12px/1 inherit; color: #fff; background: var(--accent); border-radius: 99px; padding: 3px 8px; vertical-align: middle; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+  .card.a { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .im { position: relative; aspect-ratio: 1 / 1; background: #fff; }
+  .im img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .yp { position: absolute; left: 8px; top: 8px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; border-radius: 99px; padding: 3px 8px; }
+  .b { padding: 10px 12px 12px; } .nm { font-weight: 600; } .sku { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .px { font-size: 13px; margin-top: 4px; } .why { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .whybox, .terms { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 4px 18px 14px; margin-top: 22px; }
+  .whybox h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); margin: 14px 0 4px; }
+  .whybox ul { margin: 4px 0; padding-left: 18px; } .whybox li { margin: 3px 0; }
+  dl { display: grid; grid-template-columns: 120px 1fr; gap: 6px 14px; margin: 0; } dt { font-weight: 700; } dd { margin: 0; }
+  @media (max-width: 520px) { dl { grid-template-columns: 1fr; } dd { margin-bottom: 6px; } .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } }
+  footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 26px; }
+  .empty { text-align: center; padding: 60px 10px; color: var(--muted); } .empty b { display: block; color: var(--ink); font-size: 18px; margin-bottom: 6px; }
+  @media print {
+    html, body { background: #fff; } #app { padding: 0; max-width: none; }
+    .acts, .hd .small, .tot small { display: none !important; }
+    .grid { grid-template-columns: repeat(4, 1fr); gap: 8px; } .card { break-inside: avoid; } .why { font-size: 11px; }
+    .whybox, .terms { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div id="app"><div class="empty">Loading your capsule…</div></div>
+<script src="config.js"></script>
+<script src="data_rf.js"></script>
+<script src="data_oiyk.js"></script>
+<script src="orderpage_rf.js"></script>
+<script src="orderpage_oiyk.js"></script>
+<script src="engine.js"></script>
+<script src="view.js"></script>
+</body>
+</html>
