@@ -231,9 +231,9 @@ window.CAPSULE_CONFIG = {
       // prefill.js fills its Dz / 6-pk / 3-pk / Pc boxes from that (app/orderpage_oiyk.js, from tools/sync_order_page.py oiyk).
       orderPage: { url: "https://onlyifyouknow.com/pages/oiyk-wholesale-orders", onlyListed: true, qtyIn: "pieces" },
       budgetPresets: [
-        // With a dozen per style, $750 is the realistic minimum: about 5 styles, and a necklace, earrings and a
-        // bracelet for 92 of 114 picks (Sept 2026 catalog). $250 bought one dozen of one style, so it was dropped.
-        { amount: 750, label: "$750", note: "Minimum opening order" },
+        // $500 is the minimum opening order (Dan, 26 Sep 2026). At a dozen per style it buys about 4 styles, with a
+        // necklace, earrings and a bracelet for 77 of 114 picks; for 21 high-priced picks it covers the pick alone.
+        { amount: 500, label: "$500", note: "Minimum opening order" },
         { amount: 1500, label: "$1,500", note: "Standard opening order" },
         { amount: 3000, label: "$3,000", note: "Collection / window" },
       ],
