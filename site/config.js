@@ -144,7 +144,9 @@ window.CAPSULE_CONFIG = {
   /* ---------- line sheet ---------- */
   lineSheet: {
     contactLine: "For inquiries 917-830-7220",
-    accent: "#B8A9D9",            // light lavender, accent only
+    // Accent per line (v1.6.2, Dan 26 Sep 2026): Retro Forever = the logo red, Only If You Know = light lavender.
+    accent: { RF: "#D0402E", OIYK: "#B8A9D9" },
+    accentSoft: { RF: "#FCEFEC", OIYK: "#EFEAF8" },   // Excel header fill
     markBuyerPick: true,          // small "Your pick" tag on the anchor(s)
     // Defaults for the line sheet composer (each can be changed in the Line sheet dialog)
     defaults: {
