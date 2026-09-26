@@ -230,12 +230,27 @@
     .sheet { box-shadow: none; break-after: page; page-break-after: always; }
     .sheet:last-child { break-after: auto; page-break-after: auto; }
   }
+
+  /* ---------- v1.6.0: why these pieces, send capsule, send to ---------- */
+  .why-body h4 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--lav-ink); }
+  .why-body ul { margin: 0 0 4px; padding-left: 18px; } .why-body li { margin: 3px 0; }
+  .send { display: grid; grid-template-columns: 1fr 230px; gap: 18px; }
+  @media (max-width: 700px) { .send { grid-template-columns: 1fr; } }
+  .send textarea, #sendDlg input[type=text] { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.45; }
+  .send .row .btn { margin-top: 8px; }
+  .send-side .qrbox { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .send-side .qrbox svg { width: 100%; height: auto; display: block; }
+  .link-out { word-break: break-all; }
+  .st-row { display: flex; gap: 14px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+  .st-row .st-t { flex: 1; min-width: 0; } .st-row .st-t .pill { margin-left: 8px; background: var(--lav-soft); color: var(--lav-ink); border-radius: 99px; padding: 1px 8px; font-size: 12px; }
+  .st-row .st-a { flex: 0 0 auto; display: flex; gap: 6px; } .st-row .st-a .btn { margin: 0; width: auto; white-space: nowrap; }
+  @media (max-width: 600px) { .st-row { flex-direction: column; align-items: stretch; } }
 </style>
 </head>
 <body>
 <div class="app">
   <aside>
-    <div class="brand"><img id="brandLogo" src="logo_rf.png" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.5.0</small></div></div>
+    <div class="brand"><img id="brandLogo" src="logo_rf.png" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.6.0</small></div></div>
     <div class="lines">
       <button class="on" id="lineRF" data-line="RF">Retro Forever</button>
       <button id="lineOIYK" data-line="OIYK">OIYK</button>
@@ -251,6 +266,9 @@
     </div>
 
     <h3>Buyer</h3>
+    <label class="f" for="repCode">Your rep code</label>
+    <input type="text" id="repCode" placeholder="e.g. SBG-01" maxlength="20" autocomplete="off" style="text-transform:uppercase">
+    <div class="note" id="repNote"></div>
     <label class="f" for="buyer">Buyer name</label>
     <input type="text" id="buyer" placeholder="e.g. Sea Breeze Boutique">
     <label class="f" for="capName">Capsule name</label>
@@ -289,11 +307,14 @@
 
     <button class="btn primary" id="buildBtn" disabled>Build capsule</button>
 
-    <h3>Export</h3>
+    <h3>Send &amp; export</h3>
+    <button class="btn primary" id="sendBtn" disabled>Send capsule…</button>
+    <button class="btn" id="sendToBtn" disabled>Send to… MarketTime · NuORDER · Faire</button>
     <button class="btn" id="sheetBtn" disabled>Line sheet (PDF)…</button>
     <button class="btn" id="orderPageBtn" disabled>Order page (pre-filled) ↗</button>
     <button class="btn" id="xlsxBtn" disabled>Order form (Excel)</button>
     <button class="btn" id="csvBtn" disabled>SKU list (CSV)</button>
+    <button class="btn" id="sendLogBtn">Send log (CSV)</button>
 
     <h3>Data</h3>
     <button class="btn" id="loadTagsBtn">Load reviewed tag CSV…</button>
@@ -306,7 +327,7 @@
   <main>
     <div class="top">
       <div><h1 id="boardTitle">Capsule Builder</h1><div class="meta" id="boardMeta">Pick the piece the buyer liked to start.</div></div>
-      <div class="row" style="flex:0 0 auto;gap:8px"><button class="btn" id="regenBtn" style="width:auto;margin:0" disabled>Regenerate</button><button class="btn" id="anotherBtn" style="width:auto;margin:0" disabled>Show another version</button></div>
+      <div class="row" style="flex:0 0 auto;gap:8px"><button class="btn soft" id="whyBtn" style="width:auto;margin:0" disabled title="How this capsule hangs together">&#9432; Why these pieces</button><button class="btn" id="regenBtn" style="width:auto;margin:0" disabled>Regenerate</button><button class="btn" id="anotherBtn" style="width:auto;margin:0" disabled>Show another version</button></div>
     </div>
     <div id="econ"></div>
     <div id="board"><div class="empty"><b>One piece in, a capsule out.</b>Search or browse for the buyer's favorite, then build — by number of pieces or by the buyer's budget.</div></div>
@@ -357,6 +378,28 @@
     </div>
     <div><div class="pvinfo" id="pvInfo"></div><div class="pv" id="sheetPreview"></div></div>
   </div></div></div>
+<div class="dlg" id="whyDlg"><div class="box" style="width:min(720px,100%)"><div class="hd"><h2>Why these pieces</h2><button class="x" data-close>✕</button></div><div class="why-body" id="whyBody"></div></div></div>
+<div class="dlg" id="sendDlg"><div class="box" style="width:min(820px,100%)"><div class="hd"><h2>Send capsule</h2><button class="x" data-close>✕</button></div>
+  <div class="send">
+    <div>
+      <label class="f" for="sdTo">Buyer's email (optional)</label><input type="text" id="sdTo" placeholder="buyer@store.com" autocomplete="off">
+      <label class="f" for="sdSubj">Subject</label><input type="text" id="sdSubj">
+      <label class="f" for="sdMsg">Message <span class="note">({capsule link} and {order link} are filled in when you send)</span></label><textarea id="sdMsg" rows="11"></textarea>
+      <label class="tog"><input type="checkbox" id="sdPrices"> Show wholesale prices on the capsule page</label>
+      <div class="row"><button class="btn primary" id="sdMail">Open in my email</button><button class="btn" id="sdShare">Share…</button></div>
+      <div class="row"><button class="btn" id="sdCopy">Copy message</button><button class="btn" id="sdCopyLink">Copy capsule link</button><button class="btn" id="sdOpen">Preview page ↗</button></div>
+      <div class="note" id="sdNote"></div>
+    </div>
+    <div class="send-side">
+      <div class="qrbox" id="sdQR"></div>
+      <div class="note">Scan to open the capsule on a phone: photos, why each piece was chosen, a printable line sheet and the order button.</div>
+      <div class="note link-out" id="sdLink"></div>
+      <div class="note" id="sdRep"></div>
+    </div>
+  </div></div></div>
+<div class="dlg" id="sendToDlg"><div class="box" style="width:min(820px,100%)"><div class="hd"><h2>Send to… the tools reps and buyers already use</h2><button class="x" data-close>✕</button></div>
+  <p class="note" style="margin-top:0">The capsule is built here; book it wherever the rep or buyer writes orders. Quantities are pieces at this order type. Nothing is uploaded from here — each file downloads to this device.</p>
+  <div id="stBody"></div><div class="note" id="stNote"></div></div></div>
 <div id="sheetWrap"></div>
 
 <script src="config.js"></script>
