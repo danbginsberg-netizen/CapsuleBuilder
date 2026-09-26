@@ -102,6 +102,12 @@
   .card .why { font-size: 13px; color: #3c3848; flex: 1; }
   .card .attrs { font-size: 11px; color: var(--muted); }
   .card .acts { display: flex; gap: 6px; margin-top: 6px; }
+  .card .half { margin-top: 6px; }
+  .card .half button { width: 100%; padding: 6px; border-radius: 8px; border: 1px dashed var(--line); background: #fff; font-size: 12px; font-weight: 600; color: var(--muted, #666); }
+  .card .half button.on { border-style: solid; background: #fff3e0; border-color: #f0b35a; color: #8a5300; }
+  .card .half button:disabled { opacity: .45; cursor: not-allowed; }
+  .card .half.only { font-size: 12px; font-weight: 600; color: #8a5300; background: #fff3e0; border-radius: 6px; padding: 3px 6px; }
+  .card .half.only.warn { color: var(--warn); }
   .card .acts button { flex: 1; padding: 7px; border-radius: 8px; border: 1px solid var(--line); background: #fff; font-size: 13px; font-weight: 600; }
   .card .acts button.on { background: var(--lav-soft); border-color: var(--lav); color: var(--lav-ink); }
   .score { font-variant-numeric: tabular-nums; }
@@ -229,7 +235,7 @@
 <body>
 <div class="app">
   <aside>
-    <div class="brand"><img id="brandLogo" src="logo_rf.png" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.4.6</small></div></div>
+    <div class="brand"><img id="brandLogo" src="logo_rf.png" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.5.0</small></div></div>
     <div class="lines">
       <button class="on" id="lineRF" data-line="RF">Retro Forever</button>
       <button id="lineOIYK" data-line="OIYK">OIYK</button>
