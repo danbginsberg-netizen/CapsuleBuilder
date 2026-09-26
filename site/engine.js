@@ -717,6 +717,84 @@
     return { anchors, counts, picks, short: {}, pool, opts, missing };
   };
 
+  /** "Why these pieces" (v1.6.0): a buyer-readable explanation of how a capsule hangs together, from its tags only.
+   *  items = every piece in the capsule (buyer's picks first); halves = Set of SKUs at a half dozen (dozen-sold lines).
+   *  Returns { family: [], colorways: [], sisters: [], balance: [] } — plain sentences, never prices or costs. */
+  Engine.prototype.explain = function (anchors, items, halves, opts) {
+    opts = opts || {};
+    halves = halves || new Set();
+    const N = items.length;
+    const nm = (it) => `${it.name} (${lab(it.dom)})`;
+    const count = (f) => { const m = new Map(); items.forEach((it) => [].concat(f(it) || []).forEach((k) => k && m.set(k, (m.get(k) || 0) + 1))); return [...m.entries()].sort((a, b) => b[1] - a[1]); };
+    const out = { family: [], colorways: [], sisters: [], balance: [] };
+    if (!N) return out;
+    // --- the family
+    const A = anchors[0];
+    if (A) out.family.push(anchors.length > 1
+      ? `Built around the buyer's two picks: ${nm(anchors[0])} and ${nm(anchors[1])}. Every other piece is scored against both.`
+      : `Built around the buyer's pick, ${nm(A)}. Every other piece was chosen to go with it.`);
+    const cols = count((it) => this.colorList(it).map((c) => c[0]).filter((c) => !this.metals.has(c)));
+    if (cols.length) {
+      const [c1, k1] = cols[0], c2 = cols[1];
+      out.family.push(c2 && c2[1] >= 2
+        ? `Color story: ${lab(c1)} runs through ${k1} of ${N} pieces, with ${lab(c2[0])} in ${c2[1]}.`
+        : `Color story: ${lab(c1)} runs through ${k1} of ${N} pieces.`);
+    }
+    const met = count((it) => (it.metal && it.metal !== "none" ? it.metal : null));
+    if (met.length && met[0][1] >= Math.ceil(N / 2)) out.family.push(`${cap(met[0][0])} tone on ${met[0][1]} of ${N} pieces, so the set reads as one family on the table.`);
+    const mats = count((it) => this.materialKey(it));
+    if (mats.length) out.family.push(mats.length > 1
+      ? `Texture: ${lab(mats[0][0])} leads (${mats[0][1]} pieces), with ${mats.slice(1, 3).map((m) => `${lab(m[0])} (${m[1]})`).join(" and ")} for contrast.`
+      : `Texture: ${lab(mats[0][0])} throughout (${mats[0][1]} pieces).`);
+    const sty = count((it) => it.style);
+    if (sty.length) out.family.push(sty[0][1] === N ? `One mood: every piece is ${lab(sty[0][0])}.` : `Mood: mostly ${lab(sty[0][0])} (${sty[0][1]} of ${N})${sty[1] ? `, with ${sty.slice(1, 3).map((s) => lab(s[0])).join(" and ")} pieces that sit well beside it` : ""}.`);
+    // --- colorways: the same design in another color
+    const byBase = new Map();
+    items.forEach((it) => { if (it.base) byBase.set(it.base, (byBase.get(it.base) || []).concat([it])); });
+    for (const grp of byBase.values()) if (grp.length > 1)
+      out.colorways.push(`${grp[0].name}: shown in ${grp.length} colorways (${grp.map((g) => lab(g.dom)).join(", ")}). Same design, fit and price; each customer can pick her color.`);
+    // --- sister pieces: made to be worn together
+    const used = new Map(), seen = new Set();
+    const addPair = (a, b, text) => {
+      const key = [a.sku, b.sku].sort().join("|");
+      if (seen.has(key) || (used.get(a.sku) || 0) >= 2 || (used.get(b.sku) || 0) >= 2 || out.sisters.length >= 6) return;
+      seen.add(key); used.set(a.sku, (used.get(a.sku) || 0) + 1); used.set(b.sku, (used.get(b.sku) || 0) + 1);
+      out.sisters.push(text);
+    };
+    const pairs = [];
+    for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) pairs.push([items[i], items[j]]);
+    pairs.forEach(([a, b]) => { if ((a.sisters || []).includes(b.sku) || (b.sisters || []).includes(a.sku)) addPair(a, b, `Sister pieces: ${nm(a)} + ${nm(b)}, designed to be worn together.`); });
+    pairs.forEach(([a, b]) => { if (a.collection && a.collection === b.collection && a.cat !== b.cat) addPair(a, b, `Same ${a.collection} collection: ${nm(a)} + ${nm(b)}.`); });
+    pairs.forEach(([a, b]) => {
+      if (a.cat === b.cat || a.metal !== b.metal) return;
+      const m = (a.motifs || []).find((x) => x && x !== "none" && (b.motifs || []).includes(x));
+      if (m) addPair(a, b, `Same ${lab(m)} motif: ${nm(a)} + ${nm(b)}, a matching ${a.cat} and ${b.cat}.`);
+    });
+    pairs.forEach(([a, b]) => {
+      if (a.cat === b.cat || a.metal !== b.metal || a.dom !== b.dom || this.materialKey(a) == null || this.materialKey(a) !== this.materialKey(b)) return;
+      addPair(a, b, `Same ${lab(a.dom)} ${lab(this.materialKey(a))} look: ${nm(a)} + ${nm(b)}, an easy ${a.cat}-and-${b.cat} pairing.`);
+    });
+    // --- balance and stock
+    const cc = { necklace: 0, bracelet: 0, earring: 0 };
+    items.forEach((it) => cc[it.cat]++);
+    const catTxt = CATS.filter((c) => cc[c]).map((c) => `${cc[c]} ${c}${cc[c] === 1 ? "" : "s"}`).join(", ");
+    out.balance.push(CATS.every((c) => cc[c]) ? `Balance: ${catTxt}, so the display has height (necklaces), a stack (bracelets) and an easy add-on (earrings).` : `Balance: ${catTxt}.`);
+    if (mats.length && N >= 6) out.balance.push(`Variety: no single material is more than ${Math.round((100 * mats[0][1]) / N)}% of the set, and no style repeats unless it is a colorway shown on purpose.`);
+    if (items.every((it) => it.mto)) out.balance.push("Made to order for this buyer.");
+    else {
+      const low = items.filter((it) => !this.inStock(it, opts.minQty));
+      out.balance.push(low.length ? `${low.length} piece${low.length > 1 ? "s are" : " is"} below the stock rule: ${low.map((it) => it.sku).join(", ")}.` : "In stock: every piece was in stock when the capsule was built.");
+    }
+    const H = this.halfTerms();
+    if (H) {
+      const hv = items.filter((it) => this.isHalf(it, halves));
+      out.balance.push(hv.length
+        ? `Sold by the dozen; ${hv.length} style${hv.length > 1 ? "s" : ""} at a half dozen on this first order: ${hv.map((it) => `${nm(it)}${this.halfOnly(it) ? ", fewer than a dozen left" : ""}`).join("; ")}.`
+        : "Sold by the dozen: every style is a full dozen.");
+    }
+    return out;
+  };
+
   const api = { Engine, CATS, label: lab };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.CapsuleEngine = api;
