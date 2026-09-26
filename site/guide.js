@@ -22,7 +22,7 @@ window.BUDGET_GUIDE = {
     ["2.2x–2.5x", "Markup for fashion / stone-set jewelry", "Eightx, Jun 2026", "https://eightx.co/blog/jewelry-brand-pricing-strategy"],
   ],
   ladders: {
-    RF: "Retro Forever at ~$5.70 wholesale, 6 per style: $100 ≈ 3 styles (18 pcs) · $200 ≈ 6 · $300 ≈ 9 · $500 ≈ 15 · $1,000 ≈ 24 styles (the tool's cap).",
-    OIYK: "OIYK is priced by quantity per style: the dozen price at 12+, and higher set prices at 6 and at 3 (the manufacturer prices it that way). At first-order units, around a pearl anchor: $250 ≈ 2 styles · $500 ≈ 4–5 · $1,000 ≈ 6–8 · $2,000 ≈ 9–12. A higher-priced anchor can use most of a small budget on its own (the Beaded Heart Locket is $312 at 6 pieces), so start those at $500.",
+    RF: "Retro Forever at ~$5.70 wholesale, by the dozen (up to 3 styles at a half dozen on a first order): $100 ≈ 3 styles, mostly half dozens · $200 ≈ 3–4 · $300 ≈ 5 · $500 ≈ 8 · $1,000 ≈ 15 styles.",
+    OIYK: "OIYK is priced by quantity per style: the dozen price at 12+, and higher set prices at 6 and at 3 (the manufacturer prices it that way). At first-order units (a dozen per style; 3 or 6 on the baroque pearl and scarf-wrapped set styles): $500 ≈ 3–4 styles · $1,500 ≈ 7–9 · $3,000 ≈ 10–13. A higher-priced anchor can use most of a small budget on its own (a dozen of the Beaded Heart Locket is $519), so start those at $1,500.",
   },
 };
