@@ -212,7 +212,7 @@ window.CAPSULE_CONFIG = {
           OYE0002GDPRL: 6, OYE0006GDPRL: 6, OYE0012GDPRL: 6,                               // baroque pearl drop earrings
         },
         reorderUnits: 12,        // every style, once the buyer has ordered before
-        orderMinimum: 100,
+        orderMinimum: 500,       // $500 minimum on a first order (Dan, 26 Sep 2026); Retro Forever stays $100
         tiered: true,            // OIYK prices by units per style, from the Product Master's columns:
                                  //   12+ = WS Dozen Price / 12 (same as WS 1-pcs Price), 6-11 = 6-pcs Price / 6,
                                  //   3-5 = 3-pcs Price / 3. Breaking a dozen costs more because the
