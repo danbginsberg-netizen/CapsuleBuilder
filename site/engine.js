@@ -29,6 +29,7 @@
     this.styleP = pairMap(cfg.stylePairs);
     this.motifP = pairMap(cfg.motifPairs);
     this.metals = new Set(["gold", "silver"]);
+    this.halfSet = new Set();   // styles the rep has switched to a half dozen on this capsule (lines with terms.halfDozen)
   }
 
   /* ------------------------------------------------ filters */
@@ -238,6 +239,7 @@
     const excl = new Set(opts.exclude || []);
     return this.items.filter((it) =>
       !anchorSkus.has(it.sku) && !excl.has(it.sku) && it.img && this.inStock(it, opts.minQty) && this.orderable(it) &&
+      !(opts.units === "reorder" && this.halfOnly(it)) &&   // a reorder is a dozen per style: skip styles with under a dozen left
       (!line || !it.line || it.line === line));
   };
 
@@ -291,6 +293,11 @@
     const anchorBases = new Set((opts.anchors || []).map((a) => a.base));
     if (anchorBases.has(C.base) && !story && !cfg.allowAnchorColorways) return false;
     if (chosen.filter((x) => x.base === C.base).length >= maxBase) return false;
+    // half-dozen cap: a style with under a dozen in stock can only go in at a half dozen, and a first order takes
+    // at most terms.halfDozen.maxStyles half-dozen styles
+    if (this.halfOnly(C) && opts.units !== "reorder" && this.halfCount(chosen, opts.halves) >= this.halfTerms().maxStyles) return false;
+    // ...and is only picked when nothing sold by the dozen fits (last pass): the builder leads with dozens
+    if (this.halfOnly(C) && level < 2) return false;
     if (level < 2) {
       const ss = chosen.filter((x) => x.style === C.style && x.sub === C.sub).length;
       if (ss >= cfg.maxPerStyleSubtype) return false;
@@ -429,19 +436,36 @@
     if (!(t.tiered && it.tiers)) return [{ units: lo, each: it.ws || 0 }];
     return [3, 6, 12].filter((u) => u >= lo && it.tiers[String(u)] != null).map((u) => ({ units: u, each: it.tiers[String(u)] }));
   };
-  // minimum pieces per style on a first order: the line's firstOrderUnits, or the style's entry in firstOrderExceptions
-  Engine.prototype.firstUnits = function (it) {
+  // Half dozens (Retro Forever, Dan 26 Sep 2026): styles are sold by the dozen; a first order may include a few styles at a
+  // half dozen. terms.halfDozen = {units, maxStyles, stockBelow}. A style is at a half dozen when it has under stockBelow
+  // pieces in stock (it can't be sold by the dozen) or when the rep switched it (halfSet / opts.halves).
+  Engine.prototype.halfTerms = function () { return (this.cfg.terms || {}).halfDozen || null; };
+  Engine.prototype.halfOnly = function (it) {
+    const h = this.halfTerms();
+    return !!h && !it.mto && it.avail !== "yes" && it.qty > 0 && it.qty < h.stockBelow;
+  };
+  Engine.prototype.isHalf = function (it, halves) {
+    return !!this.halfTerms() && (this.halfOnly(it) || (halves || this.halfSet).has(it.sku));
+  };
+  Engine.prototype.halfCount = function (items, halves) {
+    return this.halfTerms() ? items.filter((it) => this.isHalf(it, halves)).length : 0;
+  };
+  // minimum pieces per style on a first order: the line's firstOrderUnits, the style's entry in firstOrderExceptions,
+  // or a half dozen (see above)
+  Engine.prototype.firstUnits = function (it, halves) {
     const t = this.cfg.terms || {}, ex = t.firstOrderExceptions || {};
-    return ex[it.sku] != null ? ex[it.sku] : t.firstOrderUnits || 6;
+    if (ex[it.sku] != null) return ex[it.sku];
+    if (this.isHalf(it, halves)) return this.halfTerms().units;
+    return t.firstOrderUnits || 6;
   };
   // minimum pieces per style on a reorder (once the buyer has ordered before): a dozen on both lines
   Engine.prototype.reorderUnits = function () { return (this.cfg.terms || {}).reorderUnits || 12; };
   // units: a number (units per style), "first" (each style at its first-order minimum) or "reorder" (reorder minimum)
-  Engine.prototype.unitsFor = function (it, units) {
-    return units === "first" ? this.firstUnits(it) : units === "reorder" ? this.reorderUnits() : units;
+  Engine.prototype.unitsFor = function (it, units, halves) {
+    return units === "first" ? this.firstUnits(it, halves) : units === "reorder" ? this.reorderUnits() : units;
   };
-  Engine.prototype.lineCost = function (it, units) {
-    const u = this.unitsFor(it, units);
+  Engine.prototype.lineCost = function (it, units, halves) {
+    const u = this.unitsFor(it, units, halves);
     return { units: u, each: this.priceEach(it, u), total: this.priceEach(it, u) * u, retail: (it.msrp || 0) * u };
   };
   Engine.prototype.economics = function (items, units) {
@@ -453,6 +477,7 @@
       avgEach: ws.length ? ws.reduce((a, b) => a + b, 0) / ws.length : 0,
       minEach: Math.min(...ws), maxEach: Math.max(...ws),
       first: sum("first"), reorder: sum("reorder"), at6: sum(6), at12: sum(12), chosen: units != null ? sum(units) : null,
+      halves: this.halfCount(items), halfCap: this.halfTerms() ? this.halfTerms().maxStyles : 0,
       orderMinimum: (this.cfg.terms || {}).orderMinimum || 0,
       tiered: !!(this.cfg.terms || {}).tiered,
     };
@@ -470,7 +495,16 @@
     opts.anchors = anchors;
     const mix = opts.mix, tot = mix.necklace + mix.bracelet + mix.earring || 1;
     const share = { necklace: mix.necklace / tot, bracelet: mix.bracelet / tot, earring: mix.earring / tot };
-    const cost = (it) => this.lineCost(it, opts.units).total;
+    // half dozens (lines with terms.halfDozen, first orders only): the build spends in dozens and only puts a style at a
+    // half dozen when a category would otherwise stay empty; the rep's own switches carry over for the buyer's picks and
+    // locked pieces. Styles with under a dozen in stock are always a half dozen and count toward the cap.
+    const H = opts.units === "reorder" ? null : this.halfTerms();
+    const keepHalf = new Set(anchors.map((a) => a.sku).concat(opts.locked || []));
+    const halves = new Set([...(opts.halves || [])].filter((s) => keepHalf.has(s)));
+    opts.halves = halves;
+    const cost = (it) => this.lineCost(it, opts.units, halves).total;
+    const halfCost = (it) => this.lineCost(it, H.units).total;
+    const halfLeft = () => (H ? H.maxStyles - this.halfCount(chosen, halves) : 0);
     let spent = anchors.reduce((a, it) => a + cost(it), 0);
     // budgetMaxStyleShare: the most one added style may cost, as a share of the budget (OIYK, where a dozen of a
     // high-priced style can take most of a budget); unset = no cap
@@ -504,29 +538,42 @@
       // while categories are still empty, leave room for the cheapest decent piece of each of the others
       const coverFloor0 = this.cfg.budgetCoverageMinScore != null ? this.cfg.budgetCoverageMinScore : this.cfg.budgetMinScore || 0;
       let reserve = 0;
-      if (n[c] === 0) for (const x of open) {
-        if (x === c || n[x] > 0) continue;
-        const cheapest = pool.filter((e) => e.item.cat === x && !picks.includes(e) && e.score >= coverFloor0).reduce((m, e) => Math.min(m, cost(e.item)), Infinity);
+      const emptyOthers = n[c] === 0 ? open.filter((x) => x !== c && n[x] === 0) : [];
+      const halvesForOthers = H && halfLeft() > emptyOthers.length;   // room to put the other empty categories at a half dozen
+      for (const x of emptyOthers) {
+        const cheapest = pool.filter((e) => e.item.cat === x && !picks.includes(e) && e.score >= coverFloor0)
+          .reduce((m, e) => Math.min(m, halvesForOthers ? Math.min(cost(e.item), halfCost(e.item)) : cost(e.item)), Infinity);
         if (isFinite(cheapest)) reserve += cheapest;
       }
-      let got = null;
+      let got = null, gotHalf = false;
       const pickedItems = picks.map((p) => p.item);
-      for (const room of reserve ? [reserve, 0] : [0])
+      // an empty category may fall back to a half dozen (dozen first; keep room for the other empty categories if possible)
+      const tries = [];
+      for (const room of reserve ? [reserve, 0] : [0]) {
+        tries.push([room, false]);
+        if (H && n[c] === 0) tries.push([room, true]);
+      }
+      for (const [room, half] of tries) {
+        if (got) break;
+        if (half && halfLeft() <= 0) continue;
+        const cst = (it) => (half && !this.isHalf(it, halves) ? halfCost(it) : cost(it));
         for (let level = 0; level < 3 && !got; level++) {
           let bestV = -Infinity;
           for (const e of pool) {
             if (e.item.cat !== c || picks.includes(e)) continue;
-            if (spent + cost(e.item) + room > opts.budget + 1e-9) continue;
-            if (maxOne && cost(e.item) > maxOne) continue;   // one added style can't swallow the budget
+            if (spent + cst(e.item) + room > opts.budget + 1e-9) continue;
+            if (maxOne && cst(e.item) > maxOne) continue;   // one added style can't swallow the budget
             const v = e.score - this.redundancy(e.item, pickedItems, anchors);   // similar and complementary
             if (v <= bestV) continue;
             if (!this.canAdd(e.item, chosen, counts, opts, level)) continue;
-            got = e; bestV = v;
+            got = e; bestV = v; gotHalf = half;
           }
         }
+      }
       // don't spend budget on weak matches — but a category that is still empty takes a slightly lower bar
       const floor = n[c] === 0 ? (this.cfg.budgetCoverageMinScore != null ? this.cfg.budgetCoverageMinScore : this.cfg.budgetMinScore || 0) : this.cfg.budgetMinScore || 0;
       if (!got || got.score < floor) { done.add(c); continue; }
+      if (gotHalf && !this.isHalf(got.item, halves)) halves.add(got.item.sku);
       chosen.push(got.item); picks.push(got); n[c]++; spent += cost(got.item);
     }
     // Mix repair: if a category the mix asks for is still empty (the budget ran out on the others),
@@ -556,6 +603,44 @@
       } else {
         missingNote.push(c);
       }
+    }
+    // Half-dozen repair: a category still empty gets its best match at a half dozen if that fits (within the cap),
+    // making room if needed by putting the priciest unlocked pick at a half dozen too.
+    if (H) for (const c of missingNote.slice()) {
+      const cands = pool.filter((e) => e.item.cat === c && !picks.includes(e) && e.score >= coverFloor && this.canAdd(e.item, chosen, counts, opts, 2));
+      // leave room for the other empty categories at their cheapest half dozen
+      const others = missingNote.filter((x) => x !== c);
+      const roomFor = others.reduce((a, x) => a + pool.filter((e) => e.item.cat === x && !picks.includes(e) && e.score >= coverFloor)
+        .reduce((m, e) => Math.min(m, halfCost(e.item)), Infinity), 0);
+      let done1 = false;
+      for (const room of isFinite(roomFor) && roomFor > 0 ? [roomFor, 0] : [0]) {
+      if (done1) break;
+      const budget = opts.budget - room;
+      for (const e of cands) {
+        const add = this.isHalf(e.item, halves) ? cost(e.item) : halfCost(e.item);
+        const needSlots = this.isHalf(e.item, halves) ? 0 : 1;
+        if (halfLeft() >= needSlots && spent + add <= budget + 1e-9) {
+          if (needSlots) halves.add(e.item.sku);
+          chosen.push(e.item); picks.push(e); n[c]++; spent += add; done1 = true; break;
+        }
+        // free room: halve the priciest dozens already in the capsule, one at a time, while the cap allows
+        // (unlocked picks first, the buyer's pick last); undo if it still doesn't fit
+        const bigs = picks.map((p) => p.item).filter((it) => !lockedSet.has(it.sku) && !this.isHalf(it, halves)).sort((a, b) => cost(b) - cost(a))
+          .concat(anchors.filter((a) => !this.isHalf(a, halves)).sort((a, b) => cost(b) - cost(a)));
+        const tried = [];
+        let sp = spent;
+        for (const it of bigs) {
+          if (sp + add <= budget + 1e-9 || halfLeft() - tried.length <= needSlots) break;
+          sp -= cost(it) - halfCost(it); tried.push(it);
+        }
+        if (sp + add <= budget + 1e-9 && halfLeft() - tried.length >= needSlots) {
+          tried.forEach((it) => halves.add(it.sku)); spent = sp;
+          if (needSlots) halves.add(e.item.sku);
+          chosen.push(e.item); picks.push(e); n[c]++; spent += add; done1 = true; break;
+        }
+      }
+      }
+      if (done1) missingNote.splice(missingNote.indexOf(c), 1);
     }
     // Reach the order minimum: first try upgrading a pick to a pricier good match within budget,
     // then (only if needed) add the best piece that clears the minimum and say so.
@@ -590,6 +675,10 @@
       }
     }
     for (const e of picks) e.reason = e.story ? `Colorway story: the buyer's pick in ${lab(e.item.dom)}, so the style shows in more than one color.` : this.reason(anchors, e.item, e.sc);
+    const inCap = new Set(chosen.map((it) => it.sku));
+    for (const s of [...halves]) if (!inCap.has(s)) halves.delete(s);   // a traded-out piece doesn't keep its half dozen
+    const halvedForMix = chosen.filter((it) => halves.has(it.sku) && !this.halfOnly(it));
+    if (halvedForMix.length) note = (note ? note + " " : "") + `½ dozen on ${halvedForMix.map((it) => it.sku).join(", ")} so the budget covers every category.`;
     const n2 = { necklace: 0, bracelet: 0, earring: 0 };
     chosen.forEach((it) => n2[it.cat]++);
     Object.assign(n, n2);
@@ -603,7 +692,7 @@
       note = (note ? note + " " : "") + `No ${names}: ${why}.`;
     }
     if (!note && chosen.length >= opts.maxSize && spent < opts.budget) note = `Capped at ${opts.maxSize} styles; raise units per style to use the rest of the budget.`;
-    return { anchors, counts: finalCounts, picks, short: {}, pool, opts, budget: { budget: opts.budget, spent, remaining: opts.budget - spent, units: opts.units, note } };
+    return { anchors, counts: finalCounts, picks, short: {}, pool, opts, halves: [...halves], budget: { budget: opts.budget, spent, remaining: opts.budget - spent, units: opts.units, note } };
   };
 
   /** Rebuild a saved capsule exactly (same pieces, same order), with fresh scores and reasons. */
