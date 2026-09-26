@@ -180,10 +180,11 @@ window.CAPSULE_CONFIG = {
         retailNote: "Suggested retail 3.2–3.5x wholesale.",
         unitsNote: "6 pieces per style on a first order, a dozen on reorder — same price per piece either way.",
       },
-      // Wholesale order page: capsules only use styles listed there (app/orderpage_rf.js, from
+      // Wholesale order page (on onlyifyouknow.com; the Shopify page shows the GitHub Pages form full-screen and passes
+      // ?cart= through to it): capsules only use styles listed there (app/orderpage_rf.js, from
       // tools/sync_order_page.py), and "Order page (pre-filled)" / the line sheet's QR code open it
       // with the capsule's styles and quantities filled in.
-      orderPage: { url: "https://danbginsberg-netizen.github.io/RetroForeverWSorder/", onlyListed: true, qtyIn: "dozens" },
+      orderPage: { url: "https://onlyifyouknow.com/pages/retro-forever-wholesale-orders", onlyListed: true, qtyIn: "dozens" },
       // Budget presets for the budget-down builder (see README "Budget guide" for sources)
       budgetPresets: [
         { amount: 100, label: "$100", note: "Order minimum / test order" },
@@ -220,7 +221,7 @@ window.CAPSULE_CONFIG = {
       },
       // OIYK wholesale order page: same idea as RF. The link carries pieces per style (?cart=SKU:6,...); the page's
       // prefill.js fills its Dz / 6-pk / 3-pk / Pc boxes from that (app/orderpage_oiyk.js, from tools/sync_order_page.py oiyk).
-      orderPage: { url: "https://danbginsberg-netizen.github.io/OIYKwsorder/", onlyListed: true, qtyIn: "pieces" },
+      orderPage: { url: "https://onlyifyouknow.com/pages/oiyk-wholesale-orders", onlyListed: true, qtyIn: "pieces" },
       budgetPresets: [
         { amount: 250, label: "$250", note: "Test order" },
         { amount: 500, label: "$500", note: "Starter" },
