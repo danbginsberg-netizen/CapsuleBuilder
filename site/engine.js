@@ -422,19 +422,26 @@
     return it.ws || 0;
   };
   // the price breaks that apply to a piece: [{units, each}] from smallest order up (one entry on flat lines)
-  Engine.prototype.priceBreaks = function (it) {
+  // units: "first" (default) or "reorder" -- the breaks start at that order type's minimum for the style
+  Engine.prototype.priceBreaks = function (it, units) {
     const t = this.cfg.terms || {};
-    if (!(t.tiered && it.tiers)) return [{ units: this.firstUnits(it), each: it.ws || 0 }];
-    const lo = this.firstUnits(it);
+    const lo = this.unitsFor(it, units || "first");
+    if (!(t.tiered && it.tiers)) return [{ units: lo, each: it.ws || 0 }];
     return [3, 6, 12].filter((u) => u >= lo && it.tiers[String(u)] != null).map((u) => ({ units: u, each: it.tiers[String(u)] }));
   };
+  // minimum pieces per style on a first order: the line's firstOrderUnits, or the style's entry in firstOrderExceptions
   Engine.prototype.firstUnits = function (it) {
-    const t = this.cfg.terms || {};
-    return Math.min(t.firstOrderUnits || 6, it.minUnits || t.firstOrderUnits || 6);
+    const t = this.cfg.terms || {}, ex = t.firstOrderExceptions || {};
+    return ex[it.sku] != null ? ex[it.sku] : t.firstOrderUnits || 6;
   };
-  // units: a number (units per style) or "first" (each style at its first-order minimum)
+  // minimum pieces per style on a reorder (once the buyer has ordered before): a dozen on both lines
+  Engine.prototype.reorderUnits = function () { return (this.cfg.terms || {}).reorderUnits || 12; };
+  // units: a number (units per style), "first" (each style at its first-order minimum) or "reorder" (reorder minimum)
+  Engine.prototype.unitsFor = function (it, units) {
+    return units === "first" ? this.firstUnits(it) : units === "reorder" ? this.reorderUnits() : units;
+  };
   Engine.prototype.lineCost = function (it, units) {
-    const u = units === "first" ? this.firstUnits(it) : units;
+    const u = this.unitsFor(it, units);
     return { units: u, each: this.priceEach(it, u), total: this.priceEach(it, u) * u, retail: (it.msrp || 0) * u };
   };
   Engine.prototype.economics = function (items, units) {
@@ -445,7 +452,7 @@
       styles: items.length,
       avgEach: ws.length ? ws.reduce((a, b) => a + b, 0) / ws.length : 0,
       minEach: Math.min(...ws), maxEach: Math.max(...ws),
-      first: sum("first"), at6: sum(6), at12: sum(12), chosen: units != null ? sum(units) : null,
+      first: sum("first"), reorder: sum("reorder"), at6: sum(6), at12: sum(12), chosen: units != null ? sum(units) : null,
       orderMinimum: (this.cfg.terms || {}).orderMinimum || 0,
       tiered: !!(this.cfg.terms || {}).tiered,
     };
@@ -454,7 +461,7 @@
   /**
    * Budget-down build: keep adding the best-matching piece that still fits the budget,
    * keeping the category mix close to target, until nothing else fits (or maxSize).
-   * opts: {budget, units ("first" | 6 | 12 | n), mix, colorwayStory, minQty, locked, exclude, maxSize}
+   * opts: {budget, units ("first" | "reorder" | n), mix, colorwayStory, minQty, locked, exclude, maxSize}
    */
   Engine.prototype.buildBudget = function (anchorSkus, opts) {
     const anchors = anchorSkus.map((s) => this.bySku.get(s)).filter(Boolean);
@@ -465,6 +472,9 @@
     const share = { necklace: mix.necklace / tot, bracelet: mix.bracelet / tot, earring: mix.earring / tot };
     const cost = (it) => this.lineCost(it, opts.units).total;
     let spent = anchors.reduce((a, it) => a + cost(it), 0);
+    // budgetMaxStyleShare: the most one added style may cost, as a share of the budget (OIYK, where a dozen of a
+    // high-priced style can take most of a budget); unset = no cap
+    const maxOne = this.cfg.budgetMaxStyleShare ? this.cfg.budgetMaxStyleShare * opts.budget : 0;
     const pool = this.eligible(anchors, opts).map((C) => { const sc = this.score(anchors, C); return { item: C, score: sc.total, sc }; })
       .sort((a, b) => b.score - a.score);
     // provisional counts for the subtype-share rule, sized from the budget
@@ -507,6 +517,7 @@
           for (const e of pool) {
             if (e.item.cat !== c || picks.includes(e)) continue;
             if (spent + cost(e.item) + room > opts.budget + 1e-9) continue;
+            if (maxOne && cost(e.item) > maxOne) continue;   // one added style can't swallow the budget
             const v = e.score - this.redundancy(e.item, pickedItems, anchors);   // similar and complementary
             if (v <= bestV) continue;
             if (!this.canAdd(e.item, chosen, counts, opts, level)) continue;
