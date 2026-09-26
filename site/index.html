@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Capsule Builder</title>
+<style id="pageRule">@page { size: letter portrait; margin: .45in; }</style>
+<style>
+  :root {
+    --ink: #1f1d24; --muted: #6b6775; --line: #e6e2ee; --bg: #faf9fc; --card: #ffffff;
+    --lav: #b8a9d9; --lav-soft: #efeaf8; --lav-ink: #5b4a8b; --ok: #2f7d4f; --warn: #a15c00; --bad: #b3261e;
+    --r: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  button, input, select { font: inherit; }
+  button { cursor: pointer; }
+  .app { display: grid; grid-template-columns: 340px 1fr; min-height: 100vh; }
+  @media (max-width: 900px) { .app { grid-template-columns: 1fr; } }
+
+  /* ---------- side panel ---------- */
+  aside { background: #fff; border-right: 1px solid var(--line); padding: 18px 18px 40px; overflow-y: auto; max-height: 100vh; position: sticky; top: 0; }
+  @media (max-width: 900px) { aside { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--line); } }
+  .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .brand img { height: 44px; }
+  .brand b { font-size: 17px; letter-spacing: .2px; }
+  .brand small { display: block; color: var(--muted); font-size: 12px; }
+  .lines { display: flex; gap: 6px; margin-bottom: 14px; }
+  .lines button { flex: 1; padding: 7px; border: 1px solid var(--line); background: #fff; border-radius: 8px; }
+  .lines button.on { background: var(--lav-soft); border-color: var(--lav); color: var(--lav-ink); font-weight: 600; }
+  .lines button:disabled { opacity: .45; cursor: not-allowed; }
+  h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 18px 0 8px; }
+  label.f { display: block; font-size: 13px; color: var(--muted); margin: 8px 0 4px; }
+  input[type=text], input[type=number], input[type=search] { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  input:focus { outline: 2px solid var(--lav); border-color: var(--lav); }
+  .anchor-slot { position: relative; }
+  .anchor-chip { display: flex; gap: 10px; align-items: center; border: 1px solid var(--lav); background: var(--lav-soft); border-radius: 10px; padding: 6px; }
+  .anchor-chip img { width: 46px; height: 46px; object-fit: contain; background: #fff; border-radius: 6px; }
+  .anchor-chip .t { flex: 1; min-width: 0; font-size: 13px; }
+  .anchor-chip .t b { display: block; }
+  .anchor-chip .t span { color: var(--muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .x { border: 0; background: transparent; font-size: 18px; color: var(--muted); padding: 4px 8px; }
+  .results { position: absolute; z-index: 20; left: 0; right: 0; top: 100%; background: #fff; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 30px rgba(40,30,70,.12); max-height: 360px; overflow-y: auto; }
+  .results div { display: flex; gap: 10px; align-items: center; padding: 6px 8px; cursor: pointer; font-size: 13px; }
+  .results div:hover, .results div.hi { background: var(--lav-soft); }
+  .results img { width: 40px; height: 40px; object-fit: contain; background: #fff; }
+  .results .q { margin-left: auto; color: var(--muted); font-size: 12px; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row > * { flex: 1; }
+  .mix { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .mix label { font-size: 12px; color: var(--muted); text-align: center; }
+  .mix input { text-align: center; }
+  .note { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .warn { color: var(--warn); }
+  .tog { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 6px 0; }
+  .tog input { width: 18px; height: 18px; accent-color: var(--lav-ink); }
+  .btn { display: block; width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: #fff; margin-top: 8px; font-weight: 600; }
+  .btn.primary { background: var(--lav-ink); color: #fff; border-color: var(--lav-ink); }
+  .btn.soft { background: var(--lav-soft); border-color: var(--lav); color: var(--lav-ink); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .top .btn { white-space: nowrap; }
+  .status { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .status a { color: var(--lav-ink); }
+  input[type=file] { display: none; }
+  select { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  .lib { background: var(--lav-soft); border: 1px solid var(--lav); border-radius: 12px; padding: 10px; margin-bottom: 6px; }
+  .lib .row { margin-top: 6px; gap: 6px; }
+  .lib .row .btn { margin: 0; padding: 8px 6px; font-size: 13px; }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-bottom: 8px; }
+  .seg button { flex: 1; border: 0; background: #fff; padding: 8px; font-weight: 600; color: var(--muted); }
+  .seg button.on { background: var(--lav-ink); color: #fff; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+  .chips button { border: 1px solid var(--line); background: #fff; border-radius: 99px; padding: 5px 11px; font-size: 13px; }
+  .chips button.on { background: var(--lav-soft); border-color: var(--lav); color: var(--lav-ink); font-weight: 700; }
+  .chips button small { display: block; font-size: 10px; color: var(--muted); font-weight: 400; }
+  .hide { display: none !important; }
+  a.link { color: var(--lav-ink); cursor: pointer; text-decoration: underline; }
+
+  /* ---------- board ---------- */
+  main { padding: 22px 26px 60px; min-width: 0; }
+  .top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+  .top h1 { margin: 0; font-size: 24px; font-family: Georgia, "Times New Roman", serif; font-weight: 600; }
+  .top .meta { color: var(--muted); font-size: 13px; }
+  .empty { border: 2px dashed var(--line); border-radius: 16px; padding: 60px 20px; text-align: center; color: var(--muted); }
+  .empty b { color: var(--ink); display: block; font-size: 18px; margin-bottom: 6px; }
+  section.group { margin-top: 22px; }
+  section.group h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; display: flex; gap: 8px; align-items: center; }
+  section.group h2 .pill { background: var(--lav-soft); color: var(--lav-ink); border-radius: 99px; padding: 1px 8px; font-size: 12px; letter-spacing: 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; display: flex; flex-direction: column; }
+  .card.anchor { border: 2px solid var(--lav); box-shadow: 0 0 0 4px var(--lav-soft); }
+  .card .im { position: relative; aspect-ratio: 1 / 1; background: #f8f8f8; }
+  .card .im img { width: 100%; height: 100%; object-fit: contain; }
+  .tag { position: absolute; top: 8px; left: 8px; background: var(--lav-ink); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; border-radius: 99px; }
+  .tag.lock { left: auto; right: 8px; background: #fff; color: var(--lav-ink); border: 1px solid var(--lav); }
+  .tag.lr { top: auto; bottom: 8px; background: #fff3e0; color: var(--warn); }
+  .card .b { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  .card .sku { font-size: 12px; font-weight: 700; letter-spacing: .03em; color: var(--muted); display: flex; justify-content: space-between; }
+  .card .nm { font-weight: 600; font-size: 14px; }
+  .card .why { font-size: 13px; color: #3c3848; flex: 1; }
+  .card .attrs { font-size: 11px; color: var(--muted); }
+  .card .acts { display: flex; gap: 6px; margin-top: 6px; }
+  .card .acts button { flex: 1; padding: 7px; border-radius: 8px; border: 1px solid var(--line); background: #fff; font-size: 13px; font-weight: 600; }
+  .card .acts button.on { background: var(--lav-soft); border-color: var(--lav); color: var(--lav-ink); }
+  .score { font-variant-numeric: tabular-nums; }
+  .econ { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 6px 0 4px; }
+  .tile { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .tile .k { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+  .tile .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .tile .s { font-size: 12px; color: var(--muted); }
+  .tile.hl { border-color: var(--lav); background: var(--lav-soft); }
+  .tile .ok { color: var(--ok); } .tile .bad { color: var(--bad); }
+  .bar { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; margin-top: 6px; }
+  .bar i { display: block; height: 100%; background: var(--lav-ink); }
+  .ladder { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .ladder b { color: var(--ink); }
+  .card .px { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--lav-ink); background: var(--lav-soft); border-radius: 6px; padding: 3px 6px; }
+  .card .px.stale { background: #fff3e0; color: var(--warn); }
+  table.guide { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.guide th, table.guide td { border-bottom: 1px solid var(--line); padding: 6px 6px; text-align: left; vertical-align: top; }
+  table.guide th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .short { background: #fff3e0; border: 1px solid #f3d3a6; color: var(--warn); padding: 8px 12px; border-radius: 10px; font-size: 13px; margin-top: 10px; }
+
+  /* ---------- dialogs ---------- */
+  .dlg { position: fixed; inset: 0; background: rgba(30,25,45,.45); display: none; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+  .dlg.open { display: flex; }
+  .dlg .box { background: #fff; border-radius: 16px; width: min(980px, 100%); max-height: 92vh; overflow-y: auto; padding: 18px 20px 22px; }
+  .dlg .hd { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .dlg .hd h2 { margin: 0; font-size: 18px; }
+  .altnav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+  .altnav .btn { width: auto; margin: 0; }
+  .altnav span { font-size: 13px; color: var(--muted); text-align: center; }
+  .card .rank { position: absolute; top: 8px; right: 8px; background: #fff; color: var(--lav-ink); border: 1px solid var(--lav); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; }
+  .alts { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+  .filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .filters button { border: 1px solid var(--line); background: #fff; border-radius: 99px; padding: 5px 12px; font-size: 13px; }
+  .filters button.on { background: var(--lav-soft); border-color: var(--lav); color: var(--lav-ink); font-weight: 600; }
+  .browse { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+  .browse div { border: 1px solid var(--line); border-radius: 10px; padding: 6px; cursor: pointer; font-size: 12px; text-align: center; }
+  .browse div:hover { border-color: var(--lav); background: var(--lav-soft); }
+  .browse img { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #f8f8f8; }
+  .browse .out { opacity: .4; }
+  table.flags { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.flags td { border-bottom: 1px solid var(--line); padding: 6px 4px; vertical-align: top; }
+
+  /* ---------- line sheet composer ---------- */
+  .composer { display: grid; grid-template-columns: 270px 1fr; gap: 18px; min-height: 0; }
+  .composer .opts { max-height: calc(100vh - 150px); overflow: auto; padding-right: 6px; }
+  .composer .opts h4 { margin: 12px 0 6px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .composer .opts h4:first-child { margin-top: 0; }
+  .composer .opts .tog { font-size: 13px; margin: 4px 0; }
+  .composer .opts select, .composer .opts textarea { width: 100%; font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; }
+  .composer .opts textarea { min-height: 54px; resize: vertical; }
+  .composer .opts .two { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .composer .pv { max-height: calc(100vh - 150px); overflow: auto; background: #f1eff5; border-radius: 10px; padding: 14px 0; }
+  .composer .pv .pgwrap { margin: 0 auto 14px; }
+  .composer .pv .sheet { box-shadow: 0 6px 30px rgba(0,0,0,.18); transform-origin: top left; }
+  .composer .pvinfo { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
+  @media (max-width: 760px) { .composer { grid-template-columns: 1fr; } }
+
+  /* ---------- line sheet pages (print) ---------- */
+  #sheetWrap { display: none; }
+  .sheet { width: 7.6in; height: 10.1in; background: #fff; color: #222; display: flex; flex-direction: column; font-family: Helvetica, Arial, sans-serif; overflow: hidden; }
+  .sheet .sh-head { text-align: center; padding-bottom: .08in; }
+  .sheet .sh-head img { height: 1.15in; display: block; margin: 0 auto .05in; }
+  .sheet .sh-brand { margin-top: .06in; font-size: 9pt; letter-spacing: .28em; text-transform: uppercase; color: #555; }
+  .sheet .sh-title { font-family: Georgia, "Times New Roman", serif; font-size: 21pt; margin-top: .04in; }
+  .sheet .sh-for { font-size: 10pt; color: #555; margin-top: .02in; }
+  .sheet .sh-note { font-size: 9.5pt; color: #444; max-width: 5.6in; margin: .04in auto 0; line-height: 1.35; font-style: italic; }
+  .sheet .sh-rule { height: 2px; background: var(--lav); margin: .08in auto .12in; width: 1.6in; border-radius: 2px; }
+  .sheet .sh-mini { display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid var(--lav); padding-bottom: .06in; margin-bottom: .1in; }
+  .sheet .sh-mini img { height: .5in; }
+  .sheet .sh-mini .t { font-family: Georgia, "Times New Roman", serif; font-size: 13pt; text-align: right; }
+  .sheet .sh-mini .t small { display: block; font-family: Helvetica, Arial, sans-serif; font-size: 7.5pt; letter-spacing: .2em; text-transform: uppercase; color: #666; }
+  .sheet .sh-sec { font-size: 10pt; letter-spacing: .26em; text-transform: uppercase; color: #333; text-align: center; margin: 0 0 .1in; }
+  .sheet .sh-sec span { border-bottom: 2px solid var(--lav); padding: 0 .1in 2px; }
+  .sheet .sh-grid { flex: 1 1 0; min-height: 0; overflow: hidden; display: grid; gap: .12in .14in; align-content: stretch; }
+  .sheet .it { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 0; min-width: 0; }
+  .sheet .it .ph { position: relative; width: var(--ph); height: var(--ph); flex: 0 0 auto; }
+  .sheet .it .ph img { width: 100%; height: 100%; object-fit: contain; }
+  .sheet .it .yp { position: absolute; top: 2px; left: 2px; background: var(--lav); color: #fff; font-size: 6.5pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 1px 6px; border-radius: 99px; }
+  .sheet .it .tx { width: 100%; display: flex; flex-direction: column; align-items: center; }
+  .sheet .it .s { font-size: 8pt; font-weight: 700; letter-spacing: .04em; margin-top: .04in; }
+  .sheet .it .n { font-size: 8.5pt; color: #333; text-align: center; line-height: 1.2; max-width: 100%; }
+  .sheet .it .p { font-size: 8pt; color: var(--lav-ink); margin-top: 1px; text-align: center; line-height: 1.25; font-variant-numeric: tabular-nums; }
+  .sheet .it .p.m { color: #555; }
+  .sheet .it .u { font-size: 7.5pt; color: #666; margin-top: 1px; }
+  .sheet .sh-terms { border: 1px solid var(--lav); border-radius: 6px; padding: .06in .12in; margin-top: .1in; font-size: 8pt; color: #333; line-height: 1.35; display: grid; grid-template-columns: auto 1fr; gap: 1px .14in; }
+  .sheet .sh-terms b { letter-spacing: .12em; text-transform: uppercase; font-size: 6.8pt; color: #666; font-weight: 700; padding-top: 1px; }
+  .sheet .sh-order { display: flex; gap: .16in; align-items: center; border: 1px solid var(--lav); border-radius: 6px; padding: .08in .12in; margin-top: .08in; font-size: 8.5pt; color: #333; line-height: 1.4; }
+  .sheet .sh-order .qr { width: .95in; height: .95in; flex: 0 0 auto; }
+  .sheet .sh-order .qr svg { width: 100%; height: 100%; display: block; }
+  .sheet .sh-order b { display: block; font-size: 9.5pt; letter-spacing: .06em; margin-bottom: 1px; }
+  .sheet .sh-order a { color: var(--lav-ink); }
+  .sheet .sh-foot { border-top: 1.5px solid var(--lav); margin-top: .1in; padding-top: .07in; font-size: 9.5pt; color: #333; letter-spacing: .02em; display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline; }
+  .sheet .sh-foot .c { text-align: center; }
+  .sheet .sh-foot .l, .sheet .sh-foot .r { font-size: 7.5pt; color: #777; }
+  .sheet .sh-foot .r { text-align: right; }
+  /* cover */
+  .sheet .cv { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .sheet .cv img.logo { height: 1.6in; margin-bottom: .06in; }
+  .sheet .cv .sh-title { font-size: 30pt; margin-top: .12in; }
+  .sheet .cv .hero { display: flex; gap: .25in; justify-content: center; margin: .25in 0 .15in; }
+  .sheet .cv .hero img { width: var(--hero); height: var(--hero); object-fit: contain; }
+  .sheet .cv .cvmix { font-size: 9pt; letter-spacing: .2em; text-transform: uppercase; color: #555; }
+  /* order form */
+  .sheet .of-fields { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: .1in .2in; font-size: 8.5pt; color: #444; margin-bottom: .1in; }
+  .sheet .of-fields div { border-bottom: 1px solid #999; padding: .14in 0 2px; }
+  .sheet .of-body { flex: 1 1 0; min-height: 0; overflow: hidden; }
+  .sheet table.of { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+  .sheet table.of th { text-align: left; font-size: 7pt; letter-spacing: .12em; text-transform: uppercase; color: #555; border-bottom: 1.5px solid var(--lav); padding: 3px 4px; }
+  .sheet table.of td { border-bottom: 1px solid #e3e0ea; padding: 3px 4px; vertical-align: middle; font-variant-numeric: tabular-nums; }
+  .sheet table.of td.im img { width: .42in; height: .42in; object-fit: contain; display: block; }
+  .sheet table.of td.bl { width: .6in; }
+  .sheet table.of td.bl i { display: block; border-bottom: 1px solid #888; height: .18in; }
+  .sheet table.of td.num, .sheet table.of th.num { text-align: right; }
+  .sheet table.of tr.tot td { border-bottom: 0; font-weight: 700; padding-top: 6px; }
+  @media print {
+    html, body { background: #fff; }
+    .app, .dlg { display: none !important; }
+    #sheetWrap { display: block !important; }
+    .sheet { box-shadow: none; break-after: page; page-break-after: always; }
+    .sheet:last-child { break-after: auto; page-break-after: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand"><img id="brandLogo" src="logo_rf.png" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.4.1</small></div></div>
+    <div class="lines">
+      <button class="on" id="lineRF" data-line="RF">Retro Forever</button>
+      <button id="lineOIYK" data-line="OIYK">OIYK</button>
+    </div>
+
+    <div class="lib">
+      <label class="f" for="libSel" style="margin-top:0">Saved capsules</label>
+      <select id="libSel"></select>
+      <div class="row"><button class="btn primary" id="saveBtn" disabled>Save</button><button class="btn" id="saveNewBtn" disabled>Save as new</button><button class="btn" id="delBtn" disabled>Delete</button></div>
+      <div class="row"><button class="btn" id="expLibBtn">Back up…</button><button class="btn" id="impLibBtn">Restore…</button><button class="btn" id="newBtn">New</button></div>
+      <input type="file" id="libFile" accept=".json,application/json">
+      <div class="note" id="libNote"></div>
+    </div>
+
+    <h3>Buyer</h3>
+    <label class="f" for="buyer">Buyer name</label>
+    <input type="text" id="buyer" placeholder="e.g. Sea Breeze Boutique">
+    <label class="f" for="capName">Capsule name</label>
+    <input type="text" id="capName" placeholder="Curated for [buyer name]">
+
+    <h3>Anchor pieces</h3>
+    <label class="f">Pick 1 — the piece the buyer liked</label>
+    <div class="anchor-slot" id="slot0"></div>
+    <label class="f">Pick 2 — optional second favorite</label>
+    <div class="anchor-slot" id="slot1"></div>
+    <button class="btn soft" id="browseBtn">Browse the catalog…</button>
+
+    <h3>Build by</h3>
+    <div class="seg"><button id="modePieces" class="on">Number of pieces</button><button id="modeBudget">Budget</button></div>
+    <div id="piecesBox">
+      <label class="f" for="size">Styles: <b id="sizeOut">12</b></label>
+      <input type="range" id="size" min="6" max="24" value="12" style="width:100%">
+    </div>
+    <div id="budgetBox" class="hide">
+      <label class="f">Buyer's budget <a class="link" id="guideLink">what do buyers spend?</a></label>
+      <div class="chips" id="presetChips"></div>
+      <input type="number" id="budget" min="50" step="25" placeholder="$ custom">
+      <label class="f" for="units">Units per style</label>
+      <select id="units"></select>
+    </div>
+    <label class="f">Category mix</label>
+    <div class="mix">
+      <div><label for="mN">Necklaces</label><input type="number" id="mN" min="0" max="24"></div>
+      <div><label for="mB">Bracelets</label><input type="number" id="mB" min="0" max="24"></div>
+      <div><label for="mE">Earrings</label><input type="number" id="mE" min="0" max="24"></div>
+    </div>
+    <div class="note" id="mixNote"></div>
+    <label class="tog"><input type="checkbox" id="story"> Colorway story (add the buyer’s pick in 2 other colors)</label>
+    <label class="tog"><input type="checkbox" id="showScores"> Show scores (internal)</label>
+    <label class="f" id="minQtyRow" for="minQty">In stock = at least <input type="number" id="minQty" min="0" style="width:64px;display:inline-block;padding:4px 6px"> units</label>
+
+    <button class="btn primary" id="buildBtn" disabled>Build capsule</button>
+
+    <h3>Export</h3>
+    <button class="btn" id="sheetBtn" disabled>Line sheet (PDF)…</button>
+    <button class="btn" id="orderPageBtn" disabled>Order page (pre-filled) ↗</button>
+    <button class="btn" id="xlsxBtn" disabled>Order form (Excel)</button>
+    <button class="btn" id="csvBtn" disabled>SKU list (CSV)</button>
+
+    <h3>Data</h3>
+    <button class="btn" id="loadTagsBtn">Load reviewed tag CSV…</button>
+    <button class="btn" id="loadCatBtn">Load catalog export CSV…</button>
+    <input type="file" id="tagsFile" accept=".csv,text/csv">
+    <input type="file" id="catFile" accept=".csv,text/csv">
+    <div class="status" id="dataStatus"></div>
+  </aside>
+
+  <main>
+    <div class="top">
+      <div><h1 id="boardTitle">Capsule Builder</h1><div class="meta" id="boardMeta">Pick the piece the buyer liked to start.</div></div>
+      <div class="row" style="flex:0 0 auto;gap:8px"><button class="btn" id="regenBtn" style="width:auto;margin:0" disabled>Regenerate</button><button class="btn" id="anotherBtn" style="width:auto;margin:0" disabled>Show another version</button></div>
+    </div>
+    <div id="econ"></div>
+    <div id="board"><div class="empty"><b>One piece in, a capsule out.</b>Search or browse for the buyer's favorite, then build — by number of pieces or by the buyer's budget.</div></div>
+  </main>
+</div>
+
+<div class="dlg" id="altDlg"><div class="box"><div class="hd"><h2 id="altTitle">Swap</h2><button class="x" data-close>✕</button></div><div class="alts" id="alts"></div>
+  <div class="altnav"><button class="btn" id="altPrev">‹ Previous 3</button><span id="altInfo"></span><button class="btn" id="altNext">Next 3 ›</button></div></div></div>
+<div class="dlg" id="browseDlg"><div class="box"><div class="hd"><h2>Browse catalog</h2><button class="x" data-close>✕</button></div>
+  <input type="search" id="bq" placeholder="Search SKU or name" style="margin-bottom:10px">
+  <div class="filters" id="bfCat"></div><div class="filters" id="bfCol"></div>
+  <div class="browse" id="browseGrid"></div></div></div>
+<div class="dlg" id="flagDlg"><div class="box"><div class="hd"><h2>Data flags</h2><button class="x" data-close>✕</button></div><table class="flags" id="flagTable"></table></div></div>
+<div class="dlg" id="guideDlg"><div class="box"><div class="hd"><h2>Budget guide — what B2B jewelry buyers spend</h2><button class="x" data-close>✕</button></div><div id="guideBody"></div></div></div>
+<div class="dlg" id="sheetDlg"><div class="box" style="width:min(1180px,100%)"><div class="hd"><h2>Line sheet</h2><div class="row" style="flex:0 0 auto;gap:8px"><button class="btn primary" id="printBtn" style="width:auto;margin:0;white-space:nowrap">Print / Save as PDF</button><button class="x" data-close>✕</button></div></div>
+  <div class="composer">
+    <div class="opts" id="sheetOpts">
+      <h4>Layout</h4>
+      <select id="shLayout">
+        <option value="auto">One page — photos as large as fit</option>
+        <option value="2x2">4 per page (2 × 2)</option>
+        <option value="3x2">6 per page (3 × 2)</option>
+        <option value="3x3">9 per page (3 × 3)</option>
+        <option value="4x3">12 per page (4 × 3)</option>
+        <option value="4x4">16 per page (4 × 4)</option>
+      </select>
+      <div class="two" style="margin-top:6px">
+        <select id="shPaper"><option value="letter">Letter</option><option value="a4">A4</option></select>
+        <select id="shOrient"><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select>
+      </div>
+      <label class="tog"><input type="checkbox" id="shSections"> Sections by category</label>
+      <label class="tog"><input type="checkbox" id="shCover"> Cover page</label>
+      <label class="tog"><input type="checkbox" id="shPick"> Mark the buyer's pick</label>
+      <h4>Show on each piece</h4>
+      <label class="tog"><input type="checkbox" id="shSku"> SKU</label>
+      <label class="tog"><input type="checkbox" id="shName"> Product name</label>
+      <label class="tog"><input type="checkbox" id="showWS"> Wholesale price</label>
+      <label class="tog" id="shTiersRow"><input type="checkbox" id="shTiers"> Price breaks (3 / 6 / 12)</label>
+      <label class="tog"><input type="checkbox" id="shMsrp"> MSRP</label>
+      <label class="tog"><input type="checkbox" id="shUnits"> Minimum per style</label>
+      <h4>Pages</h4>
+      <label class="tog"><input type="checkbox" id="shTerms"> Terms block</label>
+      <label class="tog"><input type="checkbox" id="shOrder"> <span id="shOrderLabel">Order form page</span></label>
+      <label class="tog"><input type="checkbox" id="shPageNo"> Page numbers</label>
+      <h4>Note under the title</h4>
+      <textarea id="shNote" placeholder="Optional, e.g. Built around the buyer's favorite for spring"></textarea>
+      <p class="note" style="margin-top:10px">Prices never print unless you tick them. In the print dialog choose <b>Save as PDF</b>, turn <b>Headers and footers</b> off, and match the paper size.</p>
+    </div>
+    <div><div class="pvinfo" id="pvInfo"></div><div class="pv" id="sheetPreview"></div></div>
+  </div></div></div>
+<div id="sheetWrap"></div>
+
+<script src="config.js"></script>
+<script src="data_rf.js"></script>
+<script src="data_oiyk.js"></script>
+<script src="orderpage_rf.js"></script>
+<script src="orderpage_oiyk.js"></script>
+<script src="qrcode.js"></script>
+<script src="guide.js"></script>
+<script src="engine.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
