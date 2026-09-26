@@ -131,6 +131,16 @@ window.CAPSULE_CONFIG = {
   /* ---------- metal tone ---------- */
   metalMatch: { same: 1.0, mixed: 0.8, none: 0.6, clash: 0.1 },
 
+  /* ---------- sending a capsule (v1.6.0) ---------- */
+  // "View your capsule" page: an unlisted, noindexed Shopify page that shows the web copy's view.html full-screen and
+  // passes the link through. The capsule travels inside the link (line, SKUs, pieces, store, rep code, capsule ID);
+  // nothing is stored anywhere. Visits show in Shopify analytics with the full link, so opens can be counted by capsule ID.
+  capsulePage: { url: "https://onlyifyouknow.com/pages/capsule" },
+  // Rep codes (letters, numbers, dashes; up to 20). Any code a rep types is carried on the order link, QR code, capsule
+  // page, Excel and exports, and the order pages add it to the submitted order. List the codes you've issued here to get a
+  // warning when a rep mistypes theirs (leave empty to accept any code).
+  repCodes: [],
+
   /* ---------- line sheet ---------- */
   lineSheet: {
     contactLine: "For inquiries 917-830-7220",
