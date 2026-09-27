@@ -270,6 +270,10 @@
   /* v1.6.7: icon per destination; the sidebar button lists every destination */
   .st-row .st-ic { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 10px; background: var(--lav-soft); color: var(--lav-ink); display: flex; align-items: center; justify-content: center; }
   .st-row .st-ic svg { width: 22px; height: 22px; }
+  .st-row .st-logo { flex-basis: 96px; width: 96px; background: #fff; border: 1px solid var(--line); flex-direction: column; gap: 4px; padding: 4px 8px; box-sizing: border-box; }
+  .st-row .st-logo img { max-width: 100%; max-height: 22px; object-fit: contain; display: block; }
+  .st-row .st-logo.two img { max-height: 15px; }
+  #sendToDlg .tm { font-size: 11px; color: #8a8494; margin-top: 8px; }
   #sendToBtn small { display: block; font-size: 11.5px; font-weight: 400; line-height: 1.35; margin-top: 2px; opacity: .8; }
   @media (max-width: 600px) { .st-row { flex-direction: column; align-items: stretch; } .st-row .st-ic { display: none; } }
   /* v1.6.7: line sheet buttons wrap under the title on a phone */
@@ -279,12 +283,216 @@
   .trendnote b { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--lav-ink, #5b4a8f); }
   .trendnote span { flex:1 1 100%; }
   .trendnote small { color:#8a8494; font-size:11px; }
+
+  /* ================= v1.7.0 "In the store" ================= */
+  .mtabs { display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--line); margin: -6px 0 18px; flex-wrap: wrap; }
+  .mtabs button { background: none; border: 0; border-bottom: 2.5px solid transparent; padding: 9px 12px; font-weight: 600; color: var(--muted); }
+  .mtabs button.on { color: var(--lav-ink); border-bottom-color: var(--lav-ink); }
+  .mtabs button small { background: var(--lav-soft); color: var(--lav-ink); border-radius: 99px; padding: 0 7px; font-size: 11px; margin-left: 3px; }
+  .mtabs button small:empty { display: none; }
+  .mtabs .sp { flex: 1; }
+  .mtabs .gm { border: 1px solid var(--lav); border-radius: 99px; color: var(--lav-ink); background: var(--lav-soft); padding: 6px 14px; margin-bottom: 4px; }
+  .pane.hide, .hide { display: none !important; }
+  .eyebrow { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--lav-ink); font-weight: 700; }
+  .chip.safe { font-size: 11.5px; background: #eef7f1; color: var(--ok); border-radius: 99px; padding: 3px 10px; font-weight: 600; }
+  .panel { background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; }
+  .lede { color: var(--muted); font-size: 16px; max-width: 70ch; margin: 4px 0 12px; }
+  /* context on the board */
+  .ctxstrip { border: 1px dashed #c9c3d6; border-radius: 12px; padding: 10px 12px; margin: 0 0 16px; background: #fbfafd; }
+  .ctxstrip .h { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; font-size: 13px; margin-bottom: 8px; }
+  .ctxstrip .h span { color: var(--muted); flex: 1; }
+  .ctxstrip .tiles { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+  .ctxstrip .t { flex: 0 0 84px; text-align: center; font-size: 11px; color: var(--muted); }
+  .ctxstrip .t img, .ctxstrip .t svg { width: 84px; height: 84px; object-fit: cover; border-radius: 8px; background: #fff; border: 1px solid var(--line); display: block; }
+  .ctxstrip .t small { display: block; margin-top: 3px; line-height: 1.2; }
+  .card .ctxwhy { font-size: 12.5px; color: var(--lav-ink); background: var(--lav-soft); border-radius: 8px; padding: 3px 8px; margin-top: 6px; }
+  /* her store */
+  .sp-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+  .sp-head h1 { margin: 0 0 4px; font-size: 26px; } .sp-head .note { max-width: 80ch; }
+  .sp-add { display: grid; grid-template-columns: 1.1fr 1.3fr 1fr; gap: 14px; margin: 14px 0 8px; }
+  @media (max-width: 1250px) { .sp-add { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 700px) { .sp-add { grid-template-columns: 1fr; } }
+  .sp-add h4 { margin: 0 0 8px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .sp-add .sp-q h4 + * + h4 { margin-top: 14px; }
+  .drop { border: 2px dashed var(--lav); background: var(--lav-soft); border-radius: 14px; padding: 16px; text-align: center; display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+  .drop.over { background: #fff; border-color: var(--lav-ink); }
+  .drop b { font-size: 17px; color: var(--lav-ink); } .drop span { color: var(--muted); font-size: 13px; }
+  .drop .row, .sp-q .row, .sp-side .row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  .sp-q .row { justify-content: flex-start; }
+  .drop .btn, .sp-q .btn, .sp-side .btn { width: auto; margin: 0; }
+  .drop input[type=url] { flex: 1; min-width: 0; }
+  .standins { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
+  .standins button { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 4px 4px 6px; font-size: 11px; line-height: 1.2; color: var(--ink); }
+  .standins button:hover { border-color: var(--lav); }
+  .standins svg { width: 100%; height: 52px; display: block; }
+  .pals { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pals button { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+  .pal { display: inline-flex; border-radius: 4px; overflow: hidden; border: 1px solid #0002; } .pal i { width: 12px; height: 14px; display: block; }
+  .sp-body { display: grid; grid-template-columns: 1fr 360px; gap: 18px; margin-top: 10px; align-items: start; }
+  @media (max-width: 1100px) { .sp-body { grid-template-columns: 1fr; } }
+  .sp-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .cx-empty { grid-column: 1 / -1; border: 2px dashed var(--line); border-radius: 14px; padding: 40px 16px; text-align: center; color: var(--muted); }
+  .cx-empty b { display: block; color: var(--ink); font-size: 17px; margin-bottom: 4px; }
+  .cx { display: grid; grid-template-columns: 96px 1fr; gap: 10px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+  .cx.ask { border-color: var(--lav); box-shadow: 0 0 0 3px var(--lav-soft); }
+  .cx-v { position: relative; } .cx-v img, .cx-v svg { width: 96px; height: 96px; object-fit: cover; border-radius: 8px; background: #f7f6fa; display: block; }
+  .cx-sw { display: flex; margin-top: 4px; border-radius: 4px; overflow: hidden; } .cx-sw i { flex: 1; height: 8px; }
+  .cx-top { display: flex; gap: 6px; } .cx-top input { flex: 1; min-width: 0; padding: 5px 8px; font-weight: 600; }
+  .cx-top .x { border: 0; background: none; color: var(--muted); font-size: 16px; }
+  .cx-ask { font-size: 12.5px; color: var(--lav-ink); margin: 4px 0; font-weight: 600; }
+  .cx-row { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0; } .cx-row select { width: auto; max-width: 100%; padding: 4px 6px; font-size: 13px; }
+  .cx-cols { display: flex; flex-wrap: wrap; gap: 4px; }
+  .cx-cols button { width: 20px; height: 20px; border-radius: 50%; border: 1px solid #0003; background: var(--c); padding: 0; }
+  .cx-cols button.on { outline: 2.5px solid var(--lav-ink); outline-offset: 1.5px; }
+  .cx-picked { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .cx details { margin-top: 6px; font-size: 13px; } .cx summary { color: var(--lav-ink); cursor: pointer; }
+  .cx-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .cx-chips button { font-size: 12px; border: 1px solid var(--line); background: #fff; border-radius: 99px; padding: 2px 9px; }
+  .cx-chips button.on { background: var(--lav-soft); border-color: var(--lav); color: var(--lav-ink); font-weight: 700; }
+  .sp-side { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px; position: sticky; top: 12px; }
+  .sp-side h4 { margin: 0 0 8px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .sp-side h4:not(:first-child) { margin-top: 16px; }
+  .cx-bar { display: flex; height: 22px; border-radius: 6px; overflow: hidden; border: 1px solid #0002; margin-bottom: 6px; } .cx-bar i { display: block; }
+  .sp-side .seg { margin: 6px 0 10px; }
+  .cx-cat { margin-bottom: 8px; }
+  .cx-comp { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .cc { border: 1px solid var(--line); border-radius: 10px; padding: 6px; font-size: 12px; display: flex; flex-direction: column; gap: 3px; }
+  .cc img { width: 100%; aspect-ratio: 1; object-fit: contain; background: #fafafa; border-radius: 6px; }
+  .cc b { font-size: 12px; line-height: 1.25; } .cc small { color: var(--muted); line-height: 1.25; }
+  .cc-a { display: flex; flex-direction: column; gap: 4px; margin-top: auto; } .cc-a .btn { font-size: 11.5px; padding: 5px 6px; }
+  /* boards */
+  .bdp-h { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 14px; }
+  .bdp-h h1 { margin: 0 0 4px; font-size: 26px; } .bdp-h .row { display: flex; gap: 6px; flex-wrap: wrap; } .bdp-h .btn { width: auto; margin: 0; }
+  .bd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+  .bd { background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+  .bd.off { opacity: .6; }
+  .bd-im { display: grid; grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr 1fr; gap: 2px; height: 190px; background: var(--line); }
+  .bd-im img { width: 100%; height: 100%; object-fit: cover; background: #fff; min-height: 0; } .bd-im img.big { grid-row: 1 / 4; }
+  .bd-b { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  .bd-b h3 { margin: 2px 0 0; font-size: 19px; text-transform: none; letter-spacing: 0; color: var(--ink); font-family: Georgia, "Times New Roman", serif; font-weight: 400; } .bd-b p { margin: 0; color: var(--ink); font-size: 14px; }
+  .bd-tag { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--lav-ink); font-weight: 700; }
+  .bd-b .row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; padding-top: 8px; } .bd-b .btn { width: auto; margin: 0; font-size: 13px; }
+  /* market brief */
+  .bf { max-width: 1100px; } .bf h1 { font-family: Georgia, "Times New Roman", serif; font-size: 34px; margin: 6px 0 4px; font-weight: 400; }
+  .bf-top { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .bf-acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0 4px; } .bf-acts .btn { width: auto; margin: 0; } .bf-acts .tog { margin: 0 6px; }
+  .bf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 10px; } @media (max-width: 800px) { .bf-grid { grid-template-columns: 1fr; } }
+  .bf-grid h3, .bf-h { margin: 0 0 8px; font-size: 12.5px; color: var(--lav-ink); } .bf-grid h3:not(:first-child) { margin-top: 14px; }
+  .bf-grid ul { margin: 0; padding-left: 20px; } .bf-grid li { margin: 6px 0; }
+  .bf-h { margin-top: 22px; }
+  .bf-sigs { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin: 8px 0 12px; }
+  .sig p { margin: 6px 0 0; } .sig.hit { border-color: var(--lav); background: var(--lav-soft); }
+  .sig .meta { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); } .sig .dir { font-weight: 700; color: var(--lav-ink); text-transform: uppercase; letter-spacing: .06em; font-size: 11px; }
+  .dots { display: inline-flex; gap: 3px; } .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); } .dots i.on { background: var(--lav-ink); }
+  .sig .pill { background: #fff; border: 1px solid var(--lav); color: var(--lav-ink); border-radius: 99px; padding: 0 8px; font-size: 11px; }
+  /* extra line-sheet pages */
+  .sheet .sh-brief { flex: 1 1 0; min-height: 0; overflow: hidden; font-size: 9.6pt; line-height: 1.42; color: #222; }
+  .sheet .sh-brief .sh-title { text-align: center; } .sheet .sh-brief .lede { text-align: center; color: #555; font-size: 10pt; margin: .04in auto 0; max-width: 6in; }
+  .sheet .sh-brief .cols { display: grid; grid-template-columns: 1fr 1fr; gap: .25in; }
+  .sheet .sh-brief h5 { font-size: 7.5pt; letter-spacing: .16em; text-transform: uppercase; color: var(--lav-ink); margin: .12in 0 .04in; }
+  .sheet .sh-brief ul { margin: 0; padding-left: .18in; } .sheet .sh-brief li { margin: .03in 0; }
+  .sheet .sh-brief ul.sig li b { color: var(--lav-ink); font-weight: 600; }
+  .sheet .sh-brief .src { margin-top: .12in; font-size: 7.5pt; color: #777; text-align: center; }
+  .sheet .sh-ctx { flex: 1 1 0; min-height: 0; overflow: hidden; }
+  .sheet .sh-ctx h5 { font-size: 8pt; letter-spacing: .14em; text-transform: uppercase; color: var(--lav-ink); margin: .06in 0 .06in; }
+  .sheet .sh-ctx h5 span { text-transform: none; letter-spacing: 0; color: #777; font-weight: 400; font-size: 8pt; margin-left: 6px; }
+  .sheet .sh-ctx .theirs, .sheet .sh-ctx .ours { display: grid; grid-template-columns: repeat(6, 1fr); gap: .08in; margin-bottom: .1in; }
+  .sheet .sh-ctx .t { font-size: 7pt; line-height: 1.25; color: #333; text-align: center; }
+  .sheet .sh-ctx .t img, .sheet .sh-ctx .t svg { width: 100%; aspect-ratio: 1; object-fit: contain; display: block; background: #f7f6f9; border-radius: 4px; }
+  .sheet .sh-ctx .theirs .t img, .sheet .sh-ctx .theirs .t svg { filter: saturate(.9); border: 1px dashed #bbb; }
+  .sheet .pk-intro { font-size: 9pt; color: #333; margin-bottom: .08in; } .sheet .pk-intro p { margin: .04in 0 0; font-style: italic; }
+  .sheet .pk-body { flex: 1 1 0; min-height: 0; overflow: hidden; }
+  .sheet table.pk { width: 100%; border-collapse: collapse; font-size: 8.2pt; }
+  .sheet table.pk th { text-align: left; font-size: 6.8pt; letter-spacing: .12em; text-transform: uppercase; color: #555; border-bottom: 1.5px solid var(--lav); padding: 3px 4px; }
+  .sheet table.pk td { border-bottom: 1px solid #e3e0ea; padding: 3px 4px; vertical-align: middle; font-variant-numeric: tabular-nums; }
+  .sheet table.pk td.im img { width: .4in; height: .4in; object-fit: contain; display: block; }
+  .sheet table.pk .num { text-align: right; } .sheet table.pk .mt { color: #777; font-size: 7pt; }
+  .sheet .pk-terms { border: 1px solid var(--lav); border-radius: 6px; padding: .06in .12in; margin-top: .12in; font-size: 8pt; color: #333; line-height: 1.35; display: grid; grid-template-columns: auto 1fr; gap: 1px .14in; }
+  .sheet .pk-terms b { letter-spacing: .12em; text-transform: uppercase; font-size: 6.8pt; color: #666; }
+  /* guided mode */
+  body.guided-on { overflow: hidden; }
+  body.guided-on .app { display: none; }
+  #guided { display: none; }
+  #guided.g-on { display: flex; flex-direction: column; position: fixed; inset: 0; z-index: 60; background: var(--bg); overflow-y: auto; }
+  .g-hd { display: flex; align-items: center; gap: 14px; padding: 10px 18px; background: #fff; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 2; }
+  .g-hd img { height: 44px; user-select: none; -webkit-user-drag: none; }
+  .g-steps { display: flex; gap: 6px; flex: 1; justify-content: center; flex-wrap: wrap; }
+  .g-steps button { background: none; border: 0; display: flex; align-items: center; gap: 7px; padding: 6px 10px; border-radius: 99px; color: var(--muted); font-weight: 600; }
+  .g-steps button i { font-style: normal; width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: 1.5px solid var(--line); }
+  .g-steps button.on { color: var(--lav-ink); background: var(--lav-soft); } .g-steps button.on i { background: var(--lav-ink); border-color: var(--lav-ink); color: #fff; }
+  .g-steps button.done i { border-color: var(--lav); color: var(--lav-ink); } .g-steps button:disabled { opacity: .5; cursor: default; }
+  .g-card-rep a.btn { color: inherit; } .g-card-rep a.btn.primary { color: #fff; }
+  .g-tools { display: flex; gap: 8px; align-items: center; }
+  .g-tools button { border: 1px solid var(--line); background: #fff; border-radius: 99px; padding: 7px 14px; font-weight: 600; }
+  .g-tools .g-pr.on { background: var(--lav-soft); border-color: var(--lav); color: var(--lav-ink); }
+  .g-tools .pill { background: var(--lav-soft); color: var(--lav-ink); border-radius: 99px; padding: 3px 10px; font-size: 12px; font-weight: 700; }
+  .g-wrap { display: flex; gap: 18px; padding: 18px; flex: 1; align-items: flex-start; }
+  .g-body { flex: 1; min-width: 0; max-width: 1200px; margin: 0 auto; }
+  .g-coach { flex: 0 0 300px; background: #fff; border: 1px solid var(--lav); border-radius: 14px; padding: 14px 16px; position: sticky; top: 84px; font-size: 14px; }
+  .g-coach h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--lav-ink); }
+  @media (max-width: 900px) { .g-wrap { flex-direction: column-reverse; } .g-coach { position: static; flex-basis: auto; width: 100%; } }
+  .g-q { text-align: center; margin: 4px auto 14px; max-width: 760px; }
+  .g-q h1 { font-family: Georgia, "Times New Roman", serif; font-weight: 400; font-size: clamp(26px, 4vw, 40px); margin: 0 0 6px; }
+  .g-q p { color: var(--muted); font-size: 17px; margin: 0; }
+  .g-f { display: flex; flex-direction: column; gap: 8px; align-items: center; margin-bottom: 14px; }
+  .g-f .chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; } .g-f .chips button { font-size: 16px; padding: 8px 16px; }
+  .g-sw { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  .g-sw button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: #fff; border-radius: 99px; padding: 5px 11px; font-size: 14px; }
+  .g-sw button.on { border-color: var(--lav-ink); background: var(--lav-soft); color: var(--lav-ink); font-weight: 700; }
+  .g-sw i { width: 14px; height: 14px; border-radius: 50%; border: 1px solid #0003; }
+  .g-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+  .g-tile { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 8px 8px 12px; display: flex; flex-direction: column; gap: 6px; text-align: center; transition: transform .1s; }
+  .g-tile:active { transform: scale(.98); } .g-tile.on { border-color: var(--lav-ink); box-shadow: 0 0 0 3px var(--lav-soft); }
+  .g-tile img { width: 100%; aspect-ratio: 1; object-fit: contain; background: #fafafa; border-radius: 10px; }
+  .g-tile b { font-size: 14px; font-weight: 600; line-height: 1.25; } .g-tile small { color: var(--lav-ink); }
+  .g-pick { display: inline-flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--line); border-radius: 99px; padding: 6px 18px 6px 6px; margin-bottom: 12px; text-align: left; font-size: 14px; }
+  .g-pick img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; background: #fafafa; }
+  .g-budget { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; max-width: 1000px; margin: 0 auto; }
+  .g-big { background: #fff; border: 1.5px solid var(--line); border-radius: 16px; padding: 18px 14px; display: flex; flex-direction: column; gap: 4px; text-align: center; }
+  .g-big:hover { border-color: var(--lav); } .g-big b { font-size: 24px; color: var(--lav-ink); } .g-big small { color: var(--muted); font-size: 13.5px; line-height: 1.3; }
+  .g-sub { text-align: center; margin: 22px 0 10px; font-size: 15px; color: var(--muted); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+  .g-own { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 22px 0; }
+  .g-own label { display: flex; align-items: center; gap: 6px; font-size: 16px; } .g-own input { width: 130px; font-size: 18px; padding: 8px 10px; } .g-own .btn { width: auto; margin: 0; padding: 10px 16px; }
+  .g-eco { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 800px; margin: 0 auto 14px; }
+  .g-eco div { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px; text-align: center; } .g-eco small { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; } .g-eco b { font-size: 22px; }
+  .g-cap { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+  .g-card { position: relative; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 8px 8px 12px; text-align: center; display: flex; flex-direction: column; gap: 5px; }
+  .g-card.anchor { border-color: var(--lav-ink); } .g-card img { width: 100%; aspect-ratio: 1; object-fit: contain; background: #fafafa; border-radius: 10px; }
+  .g-card .tag { position: absolute; top: 14px; left: 14px; background: var(--lav-ink); color: #fff; font-size: 11px; font-weight: 700; border-radius: 99px; padding: 2px 9px; text-transform: uppercase; letter-spacing: .06em; }
+  .g-card b { font-size: 14px; font-weight: 600; line-height: 1.25; } .g-card small { color: var(--lav-ink); font-size: 12.5px; }
+  .g-why { display: none; font-size: 13px; color: var(--ink); background: var(--lav-soft); border-radius: 10px; padding: 7px 9px; text-align: left; line-height: 1.35; }
+  .g-card.open .g-why { display: block; }
+  .g-acts { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 22px 0 30px; } .g-acts .btn { width: auto; margin: 0; padding: 12px 18px; font-size: 16px; }
+  .g-end { display: flex; gap: 26px; justify-content: center; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }
+  .g-qr { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 18px; text-align: center; width: 260px; } .g-qr.big { width: 320px; }
+  .g-qr svg { width: 100%; height: auto; display: block; } .g-qr small { display: block; margin-top: 8px; color: var(--muted); font-size: 14px; }
+  .g-card-rep { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; max-width: 460px; flex: 1 1 320px; font-size: 15px; }
+  .g-card-rep h3, .g-train h3 { margin: 0 0 6px; text-transform: none; letter-spacing: 0; color: var(--ink); font-size: 18px; } .g-card-rep label { display: block; font-size: 14px; color: var(--muted); margin: 8px 0; } .g-card-rep label input { margin-top: 4px; font-size: 17px; }
+  .g-card-rep .btn { width: auto; margin: 4px 0; padding: 11px 16px; font-size: 16px; text-decoration: none; display: inline-block; }
+  .g-col { display: flex; flex-direction: column; gap: 6px; } .g-col .btn { width: 100%; }
+  .g-card-rep ul { padding-left: 20px; margin: 0 0 10px; } .g-card-rep li { margin: 6px 0; }
+  .g-card-rep .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .g-train { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; } .g-train ol { padding-left: 20px; margin: 6px 0 0; } .g-train li { margin: 6px 0; } .g-train li.done { color: var(--ok); } .g-train li.done b::after { content: " ✓"; }
+  .g-confirm { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #1f1d24; color: #fff; border-radius: 14px; padding: 10px 14px; display: flex; gap: 10px; align-items: center; z-index: 3; }
+  .g-confirm .btn { width: auto; margin: 0; }
+  /* guided launcher */
+  .gm-row { display: flex; gap: 12px; align-items: center; border-top: 1px solid var(--line); padding: 10px 0; }
+  .gm-row > div:first-child { flex: 1; min-width: 0; } .gm-a { display: flex; gap: 6px; } .gm-a .btn { width: auto; margin: 0; white-space: nowrap; }
+  .gm-link { font: 12px ui-monospace, Menlo, Consolas, monospace; color: var(--muted); word-break: break-all; margin-top: 3px; }
+  @media (max-width: 600px) { .gm-row { flex-direction: column; align-items: stretch; } }
+  @media (max-width: 700px) {
+    .g-steps span { display: none; } .g-steps { flex-wrap: nowrap; gap: 2px; } .g-steps button { padding: 4px; }
+    .g-hd { gap: 8px; padding: 8px 10px; } .g-hd img { height: 34px; } .g-tools { gap: 5px; } .g-tools button { padding: 6px 10px; font-size: 13px; } .g-tools .pill { display: none; }
+    .g-wrap { padding: 12px; } .g-grid, .g-cap { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .g-eco { grid-template-columns: repeat(2, 1fr); } .g-budget { grid-template-columns: 1fr 1fr; } .g-big b { font-size: 20px; }
+    .g-qr.big { width: 100%; max-width: 320px; }
+  }
 </style>
 </head>
 <body>
 <div class="app">
   <aside>
-    <div class="brand"><img id="brandLogo" src="logo_rf.png" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.6.7</small></div></div>
+    <div class="brand"><img id="brandLogo" src="logo_rf.png" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.7.0</small></div></div>
     <div class="lines">
       <button class="on" id="lineRF" data-line="RF">Retro Forever</button>
       <button id="lineOIYK" data-line="OIYK">OIYK</button>
@@ -305,6 +513,10 @@
     <div class="note" id="repNote"></div>
     <label class="f" for="buyer">Buyer name</label>
     <input type="text" id="buyer" placeholder="e.g. Sea Breeze Boutique">
+    <label class="f" for="storeSize">Store size <span class="note">sets the budget</span></label>
+    <select id="storeSize"></select>
+    <input type="number" id="storeSales" class="hide" min="0" step="100" placeholder="Her jewelry sales a month, $" style="margin-top:6px">
+    <div class="note" id="storeNote"></div>
     <label class="f" for="capName">Capsule name</label>
     <input type="text" id="capName" placeholder="Curated for [buyer name]">
     <label class="f" for="units">Order type</label>
@@ -343,7 +555,7 @@
 
     <h3>Send &amp; export</h3>
     <button class="btn primary" id="sendBtn" disabled>Send capsule…</button>
-    <button class="btn" id="sendToBtn" disabled>Send to…<small>Order page · MarketTime · NuORDER · Faire · RepZio · JOOR · Universal file</small></button>
+    <button class="btn" id="sendToBtn" disabled>Send to…<small>Shopify order page · MarketTime · NuORDER · Faire · RepZio · JOOR · Universal file</small></button>
     <button class="btn" id="sheetBtn" disabled>Line sheet (PDF)…</button>
     <button class="btn" id="orderPageBtn" disabled>Order page (pre-filled) ↗</button>
     <button class="btn" id="xlsxBtn" disabled>Order form (Excel)</button>
@@ -359,12 +571,18 @@
   </aside>
 
   <main>
+    <nav class="mtabs" id="mtabs"><button data-pane="capsule" class="on">Capsule</button><button data-pane="store">Her store <small></small></button><button data-pane="boards">Boards</button><button data-pane="brief">Market brief</button><span class="sp"></span><button class="gm" id="guidedBtn" title="Booth, kiosk, training and recruiting demo">▶ Guided mode</button></nav>
+    <div id="paneCapsule" class="pane">
     <div class="top">
       <div><h1 id="boardTitle">Capsule Builder</h1><div class="meta" id="boardMeta">Pick the piece the buyer liked to start.</div></div>
       <div class="row" style="flex:0 0 auto;gap:8px"><button class="btn soft" id="whyBtn" style="width:auto;margin:0" disabled title="How this capsule hangs together">&#9432; Why these pieces</button><button class="btn" id="anotherBtn" style="width:auto;margin:0" disabled title="A different set of pieces for the same pick and settings. Locked pieces stay.">Show another version</button><button class="btn" id="regenBtn" style="width:auto;margin:0" disabled title="Return to the top-ranked capsule for this pick and settings. Locked pieces stay.">Back to best match</button></div>
     </div>
     <div id="econ"></div>
     <div id="board"><div class="empty"><b>One piece in, a capsule out.</b>Search or browse for the buyer's favorite, then build — by number of pieces or by the buyer's budget.</div></div>
+    </div>
+    <div id="paneStore" class="pane hide"></div>
+    <div id="paneBoards" class="pane hide"></div>
+    <div id="paneBrief" class="pane hide"></div>
   </main>
 </div>
 
@@ -407,6 +625,13 @@
       <label class="tog"><input type="checkbox" id="shTerms"> Terms block</label>
       <label class="tog"><input type="checkbox" id="shOrder"> <span id="shOrderLabel">Order form page</span></label>
       <label class="tog"><input type="checkbox" id="shPageNo"> Page numbers</label>
+      <h4>Extra pages</h4>
+      <label class="tog" id="shBriefRow"><input type="checkbox" id="shBrief"> Market brief (In the Know, this line)</label>
+      <label class="tog"><input type="checkbox" id="shCtxPage"> Shown with her store (context only)</label>
+      <label class="tog"><input type="checkbox" id="shPacket"> Buyer packet: item facts for a reviewer</label>
+      <label class="tog" style="padding-left:28px"><input type="checkbox" id="shCommittee"> Head it “For review committee”</label>
+      <label class="f" for="shRepContact" style="padding-left:28px">Your name and phone on the packet</label>
+      <input type="text" id="shRepContact" placeholder="e.g. Jane Doe · 555-123-4567" maxlength="80" style="margin-left:28px;width:calc(100% - 28px)">
       <h4>Note under the title</h4>
       <textarea id="shNote" placeholder="Optional, e.g. Built around the buyer's favorite for spring"></textarea>
       <p class="note" style="margin-top:10px">Prices never print unless you tick them. <b>Email as PDF</b> makes the PDF and hands it to your email app (on a phone or Windows it attaches itself; elsewhere it saves to Downloads and opens an email draft to attach it to). <b>Download PDF</b> just saves it. With <b>Print</b>, choose <b>Save as PDF</b>, turn <b>Headers and footers</b> off, and match the paper size.</p>
@@ -421,6 +646,7 @@
       <label class="f" for="sdSubj">Subject</label><input type="text" id="sdSubj">
       <label class="f" for="sdMsg">Message <span class="note">({capsule link} and {order link} are filled in when you send)</span></label><textarea id="sdMsg" rows="11"></textarea>
       <label class="tog"><input type="checkbox" id="sdPrices"> Show wholesale prices on the capsule page</label>
+      <label class="tog" id="sdBriefRow"><input type="checkbox" id="sdBrief"> Add the market brief (In the Know) to the message</label>
       <div class="row"><button class="btn primary" id="sdMail">Open in my email</button><button class="btn" id="sdShare">Share…</button></div>
       <div class="row"><button class="btn" id="sdCopy">Copy message</button><button class="btn" id="sdCopyLink">Copy capsule link</button><button class="btn" id="sdOpen">Preview page ↗</button></div>
       <div class="note" id="sdNote"></div>
@@ -434,9 +660,20 @@
   </div></div></div>
 <div class="dlg" id="sendToDlg"><div class="box" style="width:min(820px,100%)"><div class="hd"><h2>Send to… the tools reps and buyers already use</h2><button class="x" data-close>✕</button></div>
   <p class="note" style="margin-top:0">The capsule is built here; book it wherever the rep or buyer writes orders. Quantities are pieces at this order type. Nothing is uploaded from here — each file downloads to this device.</p>
-  <div id="stBody"></div><div class="note" id="stNote"></div></div></div>
+  <div id="stBody"></div><div class="note" id="stNote"></div><div class="tm">Platform names and logos are their owners' trademarks, shown only to identify where each file goes. No partnership is implied.</div></div></div>
 <div class="dlg" id="faireDlg"><div class="box" style="width:min(860px,100%)"><div class="hd"><h2>Faire Direct order helper</h2><button class="x" data-close>✕</button></div>
   <div id="fdBody"></div></div></div>
+<div class="dlg" id="boardDlg"><div class="box" style="width:min(560px,100%)"><div class="hd"><h2>Save as a board</h2><button class="x" data-close>✕</button></div>
+  <label class="f" for="bdName">Board name</label><input type="text" id="bdName" maxlength="60" placeholder="e.g. Holiday gift counter">
+  <label class="f" for="bdTheme">Theme line (buyer-facing)</label><input type="text" id="bdTheme" maxlength="140" placeholder="e.g. Red, green and gold for the November floor">
+  <label class="f" for="bdWindow">Delivery window</label><input type="text" id="bdWindow" maxlength="80" placeholder="e.g. Ships now for November floors">
+  <label class="tog"><input type="checkbox" id="bdKeep" checked> Keep these exact pieces (off: rebuild fresh around the anchor each time)</label>
+  <div class="row"><button class="btn primary" id="bdSaveGo">Save board</button></div>
+  <p class="note">Boards are saved in this browser. "Export my boards" makes a file to add them to everyone's builder.</p></div></div>
+<div class="dlg" id="gmDlg"><div class="box" style="width:min(760px,100%)"><div class="hd"><h2>Guided mode</h2><button class="x" data-close>✕</button></div>
+  <p class="note" style="margin-top:0">One four-step flow on an iPad or phone: pick the piece, pick a budget or store size, see the capsule, take it away. Your settings and saved lists stay hidden.</p>
+  <div id="gmBody"></div><div class="note" id="gmNote"></div></div></div>
+<div id="guided"></div>
 <div id="sheetWrap"></div>
 
 <script src="config.js"></script>
@@ -451,5 +688,9 @@
 <script src="guide.js"></script>
 <script src="engine.js"></script>
 <script src="ui.js"></script>
+<script src="boards.js"></script>
+<script src="context.js"></script>
+<script src="instore.js"></script>
+<script src="guided.js"></script>
 </body>
 </html>

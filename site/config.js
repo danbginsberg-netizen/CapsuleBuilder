@@ -47,6 +47,26 @@ window.CAPSULE_CONFIG = {
   diversityWeights: { color: 2, material: 4, style: 2, subtype: 2, anchorFactor: 0.5 },
   materialFamilies: { "mother-of-pearl": "pearl", shell: "pearl", "seed bead": "bead", "glass bead": "bead" },
 
+  /* ---------- v1.7.0: store size pre-fills the budget ---------- */
+  // Opening order ~ 38% of one month's jewelry sales (markup 2.5x, 2.5 turns a year, our share of the jewelry wall 20%).
+  // Budgets sit inside the research ranges ($250-$380, $380-$960, $960-$1,900, $1,900+) and never go below the line's
+  // first-order minimum. The customers-a-day column is an assumption to tune after 20-30 orders.
+  storeSizes: {
+    pctOfMonthly: 0.38,
+    sizes: [
+      { id: "S", label: "Small", sales: "under $1,000 a month in jewelry", traffic: "under 30 customers a day", budget: 300 },
+      { id: "M", label: "Medium", sales: "$1,000-$2,500 a month", traffic: "30-80 a day", budget: 650 },
+      { id: "L", label: "Large", sales: "$2,500-$5,000 a month", traffic: "80-150 a day", budget: 1400 },
+      { id: "XL", label: "Very large", sales: "over $5,000 a month", traffic: "over 150 a day", budget: 2000, note: "split it across deliveries" },
+    ],
+  },
+
+  /* ---------- v1.7.0: her store (context) ---------- */
+  // Other brands' pieces and her own apparel never enter a capsule or an order; they only nudge our picks.
+  // A piece that suits her store perfectly gains up to max/2 x strength points, a poor fit loses up to max/2 x strength.
+  // (Light 0.5, Medium 1, Strong 1.6.) The anchor's own match is worth up to 100, so the anchor still leads.
+  contextPull: { max: 12 },
+
   /* ---------- two anchors ---------- */
   twoAnchorBlend: { low: 0.6, high: 0.4 },   // score = 0.6 x weaker match + 0.4 x stronger match
 
@@ -136,6 +156,8 @@ window.CAPSULE_CONFIG = {
   // passes the link through. The capsule travels inside the link (line, SKUs, pieces, store, rep code, capsule ID);
   // nothing is stored anywhere. Visits show in Shopify analytics with the full link, so opens can be counted by capsule ID.
   capsulePage: { url: "https://onlyifyouknow.com/pages/capsule" },
+  builderPage: { url: "https://onlyifyouknow.com/pages/capsule-builder" },   // v1.7.0: guided-mode links
+  programPage: { url: "https://onlyifyouknow.com/pages/wholesale" },        // v1.7.0: "Rep this line" in the recruiting demo
   // Rep codes (letters, numbers, dashes; up to 20). Any code a rep types is carried on the order link, QR code, capsule
   // page, Excel and exports, and the order pages add it to the submitted order. List the codes you've issued here to get a
   // warning when a rep mistypes theirs (leave empty to accept any code).
@@ -201,6 +223,7 @@ window.CAPSULE_CONFIG = {
       // tools/sync_order_page.py), and "Order page (pre-filled)" / the line sheet's QR code open it
       // with the capsule's styles and quantities filled in.
       orderPage: { url: "https://onlyifyouknow.com/pages/retro-forever-wholesale-orders", onlyListed: true, qtyIn: "dozens" },
+      contactEmail: "dan@retroforeverllc.com",   // v1.7.0: kiosk "Request this capsule" and the buyer packet (as published on the RF order page)
       // Budget presets for the budget-down builder (see README "Budget guide" for sources)
       budgetPresets: [
         { amount: 100, label: "$100", note: "Order minimum / test order" },
@@ -246,6 +269,7 @@ window.CAPSULE_CONFIG = {
       // OIYK wholesale order page: same idea as RF. The link carries pieces per style (?cart=SKU:6,...); the page's
       // prefill.js fills its Dz / 6-pk / 3-pk / Pc boxes from that (app/orderpage_oiyk.js, from tools/sync_order_page.py oiyk).
       orderPage: { url: "https://onlyifyouknow.com/pages/oiyk-wholesale-orders", onlyListed: true, qtyIn: "pieces" },
+      contactEmail: "dan@onlyifyouknow.com",
       budgetPresets: [
         // $500 is the minimum opening order (Dan, 26 Sep 2026). At a dozen per style it buys about 4 styles, with a
         // necklace, earrings and a bracelet for 77 of 114 picks; for 21 high-priced picks it covers the pick alone.

@@ -1,4 +1,4 @@
-/* Capsule Builder UI — runs offline from the local folder. v1.6.0 */
+/* Capsule Builder UI — runs offline from the local folder. v1.6.0; v1.7.0 adds hooks for app/instore.js (her store, boards, market brief, guided mode) */
 (function () {
   "use strict";
   const BASE = window.CAPSULE_CONFIG;
@@ -128,11 +128,13 @@
       if (off.length) runtimeFlags.push({ sku: `(${off.length} SKUs)`, issue: `Not on the wholesale order page, so capsules don't pick them (a buyer's own pick still works but can't be pre-filled): ${off.join(", ")}. Add them to the order page, then re-run tools/sync_order_page.py.` });
     }
     engine = new Engine(catalog, cfg);
+    if (state) applyContext();
     $("brandLogo").src = cfg.logo;
     $("orderPageBtn").classList.toggle("hide", !cfg.orderPage);
     $("shOrderLabel").textContent = cfg.orderPage ? "Order link + QR code (opens our order page pre-filled)" : "Order form page";
     document.querySelectorAll(".lines button").forEach((b) => b.classList.toggle("on", b.dataset.line === L));
     store.set("capsule_line", L);
+    if (state) runHooks("line", L);
   }
 
   /* ================================================= rep code + capsule ID (v1.6.0) */
@@ -152,7 +154,13 @@
     sheet: sheetDefaults(saved.sheet, saved.markPick),
     capsule: null, locked: new Set(), halves: new Set(), lastMs: 0, loadedId: null,
     rep: cleanRep(store.get("capsule_rep", "")), tmpId: null,
+    // v1.7.0: her store (context: never ordered) and the store size that pre-filled the budget
+    context: normCtx(saved.context), storeSize: saved.storeSize || "",
   };
+  function normCtx(c) { c = c || {}; return { items: Array.isArray(c.items) ? c.items : [], on: c.on !== false, strength: c.strength || "medium" }; }
+  const HOOKS = { board: [], sheetPages: [], context: [], record: [], restore: [], line: [], sendText: [], sheetOpts: [] };
+  const runHooks = (k, ...a) => HOOKS[k].forEach((f) => { try { f(...a); } catch (e) { console.error(e); } });
+  function applyContext() { if (engine) engine.setContext(state.context.on ? state.context : null); }
   function sheetDefaults(s, markPick) {
     const d = JSON.parse(JSON.stringify(BASE.lineSheet.defaults || {}));
     d.markPick = markPick != null ? markPick : BASE.lineSheet.markBuyerPick; d.note = "";
@@ -164,6 +172,7 @@
   const persist = () => store.set("capsule_ui", {
     buyer: state.buyer, capName: state.capName, capNameEdited: state.capNameEdited, mode: state.mode, size: state.size,
     budget: state.budget, units: state.units, story: state.story, showScores: state.showScores, sheet: state.sheet,
+    context: state.context, storeSize: state.storeSize,
     [`anchors_${line}`]: state.anchors, [`counts_${line}`]: state.counts, [`minQty_${line}`]: state.minQty,
   });
   const anchorItems = () => state.anchors.filter(Boolean).map((s) => engine.bySku.get(s)).filter(Boolean);
@@ -297,7 +306,7 @@
     if (!state.anchors[0]) return;
     if (!anchorsFit(state.counts)) { drawMix(); return; }
     const t0 = performance.now();
-    syncHalves();
+    syncHalves(); applyContext();
     const common = { colorwayStory: state.story, minQty: state.minQty, locked: [...state.locked], units: state.units };
     if (state.mode === "budget") {
       state.capsule = engine.buildBudget(state.anchors.filter(Boolean), Object.assign({ budget: state.budget || 300, mix: mixShares(), halves: [...state.halves] }, common, extra || {}));
@@ -339,9 +348,10 @@
     const why = isAnchor ? (anchorItems().length > 1 ? `Buyer's pick ${idx + 1}.` : "The buyer's pick — everything else is chosen to go with it.") : e.reason;
     const locked = !isAnchor && state.locked.has(it.sku);
     const stale = e && e.stale ? `<div class="px stale">No longer passes the stock rule — swap it</div>` : "";
+    const cx = !isAnchor && e && e.sc && e.sc.ctx && e.sc.ctx.why && e.sc.ctx.pts > 0.5 && state.context.on ? `<div class="ctxwhy">Her store: goes with her ${esc(e.sc.ctx.why.item)}</div>` : "";
     return `<div class="card ${isAnchor ? "anchor" : ""}" data-sku="${esc(it.sku)}">
       <div class="im"><img src="${esc(it.img)}" alt="${esc(it.name)}" loading="lazy">${isAnchor ? `<span class="tag">${anchorItems().length > 1 ? "Pick " + (idx + 1) : "Anchor"}</span>` : ""}${locked ? `<span class="tag lock">Locked</span>` : ""}${it.lowres ? `<span class="tag lr">Low-res image</span>` : ""}</div>
-      <div class="b"><div class="sku"><span>${esc(it.sku)}</span>${scoreBit}</div><div class="nm">${esc(it.name)}</div><div class="px">${priceLine(it)}</div>${stale}<div class="why">${esc(why)}</div>${attrs}
+      <div class="b"><div class="sku"><span>${esc(it.sku)}</span>${scoreBit}</div><div class="nm">${esc(it.name)}</div><div class="px">${priceLine(it)}</div>${stale}<div class="why">${esc(why)}</div>${cx}${attrs}
       ${halfHTML(it)}
       ${isAnchor ? "" : `<div class="acts"><button data-act="swap">Swap</button><button data-act="lock" class="${locked ? "on" : ""}">${locked ? "Unlock" : "Lock"}</button></div>`}</div></div>`;
   }
@@ -418,11 +428,19 @@
     const sh = Object.entries(cap.short || {});
     if (sh.length) h += `<div class="short">Not enough matches to fill: ${sh.map(([c, n]) => `${n} ${c}${n > 1 ? "s" : ""}`).join(", ")}. Lower the stock rule, change the mix, or turn on Colorway story.</div>`;
     if (cap.missing && cap.missing.length) h += `<div class="short">No longer in the catalog: ${esc(cap.missing.join(", "))}.</div>`;
-    $("board").innerHTML = trendNoteHTML() + h;
+    $("board").innerHTML = trendNoteHTML() + ctxStripHTML() + h;
     $("board").querySelectorAll(".card [data-act]").forEach((b) => {
       const sku = b.closest(".card").dataset.sku;
       b.onclick = () => (b.dataset.act === "swap" ? openSwap(sku) : b.dataset.act === "half" ? toggleHalf(sku) : toggleLock(sku));
     });
+    runHooks("board");
+  }
+  // v1.7.0: her store beside the capsule. Context only: never ordered, never totaled.
+  function ctxThumb(x) { return x.thumb ? `<img src="${esc(x.thumb)}" alt="">` : (window.CB_SILHOUETTE ? window.CB_SILHOUETTE(x) : ""); }
+  function ctxStripHTML() {
+    const L = state.context.items;
+    if (!L.length) return "";
+    return `<div class="ctxstrip"><div class="h"><b>Her store</b><span>Not ours · for context · never on the order${state.context.on ? "" : " · not used in matching"}</span><a class="link" data-pane="store">Edit</a></div><div class="tiles">${L.map((x) => `<div class="t" title="${esc(x.name || x.type || "")}">${ctxThumb(x)}<small>${esc(x.name || x.type || "")}</small></div>`).join("")}</div></div>`;
   }
   function toggleLock(sku) { state.locked.has(sku) ? state.locked.delete(sku) : state.locked.add(sku); renderBoard(); }
   function toggleHalf(sku) {
@@ -508,6 +526,7 @@
       picks: state.capsule.picks.map((p) => p.item.sku), locked: [...state.locked], halves: [...state.halves], mode: state.mode, size: state.size,
       counts: state.counts, budget: state.budget, units: state.units, story: state.story, minQty: state.minQty,
       savedAt: new Date().toISOString(), summary: summaryOf(), sheet: JSON.parse(JSON.stringify(state.sheet)),
+      context: state.context.items.length ? JSON.parse(JSON.stringify(state.context)) : undefined, storeSize: state.storeSize || undefined,
     };
   }
   function saveCapsule(asNew) {
@@ -553,6 +572,7 @@
     state.locked = new Set(r.locked || []);
     state.halves = new Set(r.halves || []); syncHalves();
     if (r.sheet) state.sheet = Object.assign(sheetDefaults(), r.sheet, { fields: Object.assign(sheetDefaults().fields, r.sheet.fields || {}) });
+    state.context = normCtx(r.context); state.storeSize = r.storeSize || ""; applyContext(); runHooks("context");
     $("buyer").value = state.buyer; $("capName").value = state.capName; $("story").checked = state.story; $("minQty").value = state.minQty;
     $("minQtyRow").classList.toggle("hide", line === "OIYK");
     $("modePieces").classList.toggle("on", state.mode === "pieces"); $("modeBudget").classList.toggle("on", state.mode === "budget");
@@ -570,6 +590,7 @@
   function newCapsule() {
     state.loadedId = null; state.tmpId = null; state.buyer = ""; state.capName = ""; state.capNameEdited = false;
     state.anchors = [null, null]; state.locked.clear(); state.halves = new Set(); syncHalves(); state.sheet.note = "";
+    state.context = normCtx(); state.storeSize = ""; applyContext(); runHooks("context");
     $("buyer").value = ""; $("capName").value = ""; $("capName").placeholder = capTitle();
     renderSlot(0); renderSlot(1); resetMix(true); persist(); renderLib(); clearBoard();
   }
@@ -795,6 +816,8 @@
         }
       }
     }
+    // v1.7.0: extra pages (market brief, shown with her store, buyer packet) from app/instore.js
+    runHooks("sheetPages", { add, newPage, miniHead, fullHead, S, items, pageDims, esc, money, qtyWord, minFor, termsRows, activeUnits });
     // footers: page x of y + title/date on multi-page sheets
     pages.forEach((pg, k) => {
       if (pages.length > 1) {
@@ -818,6 +841,10 @@
     $("shMsrp").checked = S.fields.msrp; $("shUnits").checked = S.fields.units;
     $("shTerms").checked = S.terms; $("shOrder").checked = S.orderForm; $("shPageNo").checked = S.pageNumbers;
     $("shNote").value = S.note || "";
+    ["shBrief", "shCtxPage", "shPacket", "shCommittee"].forEach((id) => { const k = { shBrief: "brief", shCtxPage: "ctxPage", shPacket: "packet", shCommittee: "committee" }[id]; if ($(id)) $(id).checked = !!S[k]; });
+    if ($("shCommittee")) $("shCommittee").disabled = !S.packet;
+    if ($("shRepContact")) $("shRepContact").value = store.get("capsule_rep_contact", "");
+    runHooks("sheetOpts", S);
   }
   function openSheet() {
     drawSheetOpts();
@@ -928,6 +955,12 @@
     $("shTerms").onchange = upd(() => (S().terms = $("shTerms").checked));
     $("shOrder").onchange = upd(() => (S().orderForm = $("shOrder").checked));
     $("shPageNo").onchange = upd(() => (S().pageNumbers = $("shPageNo").checked));
+    $("shBrief").onchange = upd(() => (S().brief = $("shBrief").checked));
+    $("shCtxPage").onchange = upd(() => (S().ctxPage = $("shCtxPage").checked));
+    $("shPacket").onchange = upd(() => (S().packet = $("shPacket").checked));
+    $("shCommittee").onchange = upd(() => (S().committee = $("shCommittee").checked));
+    let rc = null;
+    $("shRepContact").oninput = () => { store.set("capsule_rep_contact", $("shRepContact").value.slice(0, 80)); clearTimeout(rc); rc = setTimeout(renderSheetPreview, 300); };
     let t = null;
     $("shNote").oninput = () => { S().note = $("shNote").value; persist(); clearTimeout(t); t = setTimeout(renderSheetPreview, 250); };
   }
@@ -935,12 +968,12 @@
   /* ---------- order form as a real Excel workbook (.xlsx), written locally with no library ---------- */
   const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
   const crc32 = (b) => { let c = 0xffffffff; for (let i = 0; i < b.length; i++) c = CRC_T[(c ^ b[i]) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
-  function zipStore(files) {   // files: [{name, text}] -> Uint8Array (stored, no compression)
+  function zipStore(files) {   // files: [{name, text} or {name, bytes}] -> Uint8Array (stored, no compression)
     const enc = new TextEncoder(), parts = [], central = [];
     let off = 0;
     const u16 = (v) => [v & 255, (v >>> 8) & 255], u32 = (v) => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
     for (const f of files) {
-      const name = enc.encode(f.name), data = enc.encode(f.text), crc = crc32(data);
+      const name = enc.encode(f.name), data = f.bytes || enc.encode(f.text), crc = crc32(data);
       const head = [0x50, 0x4b, 3, 4, ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(data.length), ...u32(data.length), ...u16(name.length), ...u16(0)];
       parts.push(new Uint8Array(head), name, data);
       central.push([0x50, 0x4b, 1, 2, ...u16(20), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(data.length), ...u32(data.length), ...u16(name.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(off)], name);
@@ -1078,6 +1111,7 @@
 
   /* ---------- send log: every send, share, copy or platform export (for the monthly capsule report) ---------- */
   function logSend(channel, extra) {
+    if (!state.capsule) return;   // v1.7.0: guided mode and the market brief can act before a capsule exists
     const s = summaryOf(), l = store.get(SEND_LOG, []);
     l.push(Object.assign({ sent_at: new Date().toISOString(), capsule_id: capId(), line, store: state.buyer.trim(), capsule: capTitle(), rep_code: state.rep,
       anchors: state.capsule.anchors.map((a) => a.sku).join(" "), styles: s.styles, total: s.total, order_type: activeUnits(), channel }, extra || {}));
@@ -1113,7 +1147,9 @@
   }
   function sendText() {
     const cl = capsuleLink($("sdPrices").checked), ol = orderLink();
-    return $("sdMsg").value.replace("{capsule link}", cl || "").replace("{order link}", ol ? ol.url : "");
+    let t = $("sdMsg").value.replace("{capsule link}", cl || "").replace("{order link}", ol ? ol.url : "");
+    const box = { text: t }; runHooks("sendText", box);   // v1.7.0: the market brief can ride along
+    return box.text;
   }
   function drawSendSide() {
     const cl = capsuleLink($("sdPrices").checked);
@@ -1142,7 +1178,7 @@
   }
 
   /* ---------- Send to…: files for the platforms reps and buyers already use ---------- */
-  function simpleXLSX(fileName, sheetName, header, rows) {
+  function simpleXLSX(fileName, sheetName, header, rows, asBytes) {   // asBytes (v1.7.0): return the file instead of downloading it
     const x = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
     const col = (n) => { let s = ""; n++; while (n) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; };
     const cell = (v, ref, st) => (typeof v === "number" && isFinite(v) ? `<c r="${ref}"${st}><v>${v}</v></c>` : v === "" || v == null ? `<c r="${ref}"${st}/>` : `<c r="${ref}"${st} t="inlineStr"><is><t>${x(v)}</t></is></c>`);
@@ -1158,6 +1194,7 @@
       { name: "xl/worksheets/sheet1.xml", text: sheet },
       { name: "xl/styles.xml", text: styles },
     ]);
+    if (asBytes) return bytes;
     download(fileName, bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   }
   // one row per style: pieces at this order type; SKUs always go out as text
@@ -1166,12 +1203,13 @@
     return orderedItems().map((o) => { const c = engine.lineCost(o.it, u); return { it: o.it, units: c.units, each: Math.round(c.each * 100) / 100, total: Math.round(c.total * 100) / 100 }; });
   }
   const SEND_TO = [
-    { id: "order", short: ["Order page"], name: "Our order page (Shopify)", tag: "Default", what: "Every account. Opens onlyifyouknow.com with the capsule filled in; the rep code and capsule ID ride along into the order.", acts: [["Open ↗", () => { openOrderPage(); logSend("order-page"); }], ["Copy link", () => { const l = orderLink(); if (l) { copyText(l.url, "stNote", "Order link"); logSend("copy-order-link"); } }]] },
+    { id: "order", short: ["Shopify order page"], name: "Our order page (Shopify)", tag: "Default", what: "Every account. Opens onlyifyouknow.com with the capsule filled in; the rep code and capsule ID ride along into the order.", acts: [["Open ↗", () => { openOrderPage(); logSend("order-page"); }], ["Copy link", () => { const l = orderLink(); if (l) { copyText(l.url, "stNote", "Order link"); logSend("copy-order-link"); } }]] },
     { id: "markettime", short: ["MarketTime"], name: "MarketTime", what: "Quick Import file (.xlsx): Item Number + Quantity in pieces. In MarketTime: Basket → Quick Import. Works once the rep's agency has loaded our line with the same item numbers (agency-managed, no cost to us).", acts: [["Download .xlsx", () => { simpleXLSX(`${fileSafe(capTitle())}_MarketTime_QuickImport.xlsx`, "Quick Import", ["Item Number", "Quantity"], exportLines().map((r) => [r.it.sku, r.units])); logSend("export-markettime"); }]] },
     { id: "nuorder", short: ["NuORDER"], name: "NuORDER", what: "Order import file (.xlsx): Style Number, Season \"Core\", Color \"Multi\", Size \"One Size\", Quantity. In NuORDER: Working Order → Import. Only when the line is on NuORDER.", acts: [["Download .xlsx", () => { simpleXLSX(`${fileSafe(capTitle())}_NuORDER_import.xlsx`, "Order", ["Style Number", "Season", "Color", "Size", "Quantity"], exportLines().map((r) => [r.it.sku, "Core", "Multi", "One Size", r.units])); logSend("export-nuorder"); }]] },
     { id: "faire", short: ["Faire"], lines: ["RF"], name: "Faire (Faire Direct order)", what: "Faire has no order import: you write the order in Faire's brand portal and add each style by searching its SKU. The helper lists every style with its Faire SKU, quantity in Faire case packs and whether it's live on Faire, with a copy button per line and a checklist. The retailer then reviews and approves the order. Faire Direct orders from our own accounts carry 0% Faire commission.", acts: [["Faire order helper…", () => openFaire()]] },
     { id: "repzio", short: ["RepZio", "JOOR"], name: "RepZio · JOOR", what: "Neither takes an order file. Send the line sheet with SKUs showing and key the styles in; the order link above still works for the buyer.", acts: [["Line sheet…", () => { closeDlg("sendToDlg"); openSheet(); logSend("line-sheet"); }]] },
     { id: "upc", short: ["RepSpark"], name: "UPC + quantity (RepSpark, scanners)", what: "Needs UPCs, and the builder has none on file yet. Add a UPC column to the catalog data to turn this on.", acts: [] },
+    { id: "repkit", lines: ["RF"], short: ["Rep kit"], name: "Rep kit: load our line on MarketTime or RepZio", what: "For a rep's agency that writes on MarketTime or RepZio: the whole Retro Forever line as an item file for each platform (per-piece price, minimum 6, order multiple 6, the dozen rule in the description) plus every official photo named SKU.jpg, in one .zip. The agency uploads it (MarketTime Items → Import; RepZio WebManager → Manage Data); no license on our side. OIYK stays off both platforms until 1Q 2027.", acts: [["Download rep kit .zip", () => window.CB_REPKIT && window.CB_REPKIT()]] },
     { id: "universal", short: ["Universal file"], name: "Universal order file", what: "Every column the platforms ask for, one row per style (.xlsx): item and style number, name, category, wholesale and retail price, pack, minimum, quantity, line total, image file, store, PO, date, rep code, capsule ID.", acts: [["Download .xlsx", () => {
       const u = activeUnits(), H = HT();
       const rows = exportLines().map((r) => [cfg.name, r.it.sku, r.it.sku, r.it.name, CAT_LABEL[r.it.cat].replace(/s$/, ""), label(r.it.dom), "One Size", "Core", "", r.each, r.it.msrp || "",
@@ -1179,7 +1217,9 @@
       simpleXLSX(`${fileSafe(capTitle())}_order_universal.xlsx`, "Order", ["Brand", "Item Number", "Style Number", "Item Name", "Category", "Color", "Size", "Season", "UPC", "Wholesale Price", "Retail Price", "Case Pack", "Minimum Qty", "Quantity", "Line Total", "Image File", "Store Name", "PO Number", "Order Date", "Rep Code", "Capsule ID"], rows);
       logSend("export-universal"); }]] },
   ];
-  /* v1.6.7: a generic icon per destination (our own simple glyphs, not the platforms' logos) */
+  /* v1.6.7: a generic icon per destination; v1.7.0: the platforms' own logos where Dan's store holds them
+     (the same files as the "Works with" row on onlyifyouknow.com/pages/wholesale, loaded from his Shopify Files;
+     each is its owner's trademark). No logo on file -> the plain glyph. */
   const ST_ICON = {
     order: '<path d="M4 9h16l-1.5 10.5a1 1 0 0 1-1 .5h-11a1 1 0 0 1-1-.5z"/><path d="M8.5 9V7a3.5 3.5 0 0 1 7 0v2"/>',
     markettime: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 10v10"/><path d="M14.5 13.5v4M12.8 15.8l1.7 1.7 1.7-1.7"/>',
@@ -1187,9 +1227,23 @@
     faire: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8a3 3 0 0 1 6 0"/><path d="M9.5 13.5l1.8 1.8 3.4-3.6"/>',
     repzio: '<rect x="5" y="3" width="14" height="18" rx="1.5"/><rect x="8" y="6.5" width="3.5" height="3.5"/><rect x="12.5" y="6.5" width="3.5" height="3.5"/><path d="M8 13.5h8M8 16.5h8"/>',
     upc: '<path d="M4 6v12M7 6v12M9.5 6v12M13 6v12M15 6v12M18 6v12M20 6v12"/>',
+    repkit: '<path d="M4 8h16v12H4z"/><path d="M9 8V5h6v3"/><path d="M4 13h16"/>',
     universal: '<path d="M12 3l8 4-8 4-8-4z"/><path d="M4 12l8 4 8-4"/><path d="M4 16.5l8 4 8-4"/>',
   };
-  const stIcon = (id) => `<span class="st-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ST_ICON[id] || ""}</svg></span>`;
+  const LOGO_BASE = "https://cdn.shopify.com/s/files/1/0702/5777/0723/files/";
+  const ST_LOGOS = {
+    order: ["logo-shopify.svg?v=1790459611"], markettime: ["logo-markettime.svg?v=1790459611"], nuorder: ["logo-nuorder.svg?v=1790459611"],
+    faire: ["logo-faire.svg?v=1790459611"], repzio: ["logo-repzio.png?v=1790459610", "logo-joor.svg?v=1790459611"],
+  };
+  const glyph = (id) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ST_ICON[id] || ""}</svg>`;
+  const stIcon = (id) => {
+    const L = ST_LOGOS[id];
+    if (!L) return `<span class="st-ic" aria-hidden="true">${glyph(id)}</span>`;
+    return `<span class="st-ic st-logo${L.length > 1 ? " two" : ""}" aria-hidden="true" data-g="${id}">${L.map((f) => `<img src="${LOGO_BASE}${f}" alt="" loading="lazy">`).join("")}</span>`;
+  };
+  function stLogoFallback(root) {   // a logo that fails to load (offline) falls back to the glyph
+    root.querySelectorAll(".st-logo img").forEach((im) => (im.onerror = () => { const t = im.closest(".st-logo"); if (t && !t.dataset.fb) { t.dataset.fb = 1; t.className = "st-ic"; t.innerHTML = glyph(t.dataset.g); } }));
+  }
   // the sidebar button names every destination that has an action on this line
   function sendToLabel() {
     const names = SEND_TO.filter((p) => (!p.lines || p.lines.includes(line)) && p.acts.length).flatMap((p) => p.short);
@@ -1199,6 +1253,7 @@
     if (!state.capsule) return;
     $("stBody").innerHTML = SEND_TO.map((p, i) => p.lines && !p.lines.includes(line) ? "" : `<div class="st-row">${stIcon(p.id)}<div class="st-t"><b>${esc(p.name)}</b>${p.tag ? `<span class="pill">${esc(p.tag)}</span>` : ""}<div class="note">${esc(p.what)}</div></div><div class="st-a">${p.acts.length ? p.acts.map((a, k) => `<button class="btn" data-p="${i}" data-k="${k}">${esc(a[0])}</button>`).join("") : '<span class="note">Not available</span>'}</div></div>`).join("");
     $("stBody").querySelectorAll("button[data-p]").forEach((b) => (b.onclick = () => SEND_TO[+b.dataset.p].acts[+b.dataset.k][1]()));
+    stLogoFallback($("stBody"));
     $("stNote").innerHTML = ""; openDlg("sendToDlg");
   }
   /* ---- v1.6.1: Faire Direct order helper (RF only; OIYK is never on Faire) ---- */
@@ -1416,5 +1471,37 @@
   $("buildBtn").disabled = !state.anchors[0];
   renderStatus(); renderLib();
   if (state.anchors[0]) build(); else clearBoard();
+  // v1.7.0: the API app/instore.js builds on (her store, boards, market brief, guided mode, buyer packet, rep kit)
+  window.__cb = {
+    state, hooks: HOOKS, store, esc, money, money0, label, CATS, CAT_LABEL, VOCAB, $,
+    line: () => line, cfg: () => cfg, engine: () => engine, catalog: () => catalog,
+    build, renderBoard, setAnchor, switchLine, setMode, setBudget, drawPresets, persist, applyContext, normCtx,
+    orderLink, capsuleLink, capId, capTitle, qrSVG, orderedItems, allItems, explainNow, trendNow, fmtDay, activeUnits, unitsLabel, qtyWord, minFor, wsShort, priceLine,
+    buildSheet: () => { setPageRule(); return buildSheet(); }, sheetPDF, openSheet, renderSheetPreview, openSend, openDlg, closeDlg, flash, toast, copyText, logSend, download, zipStore, simpleXLSX, fileSafe, parseCSV, csvCell,
+    newCapsule, openRecord, lib, saveCapsule, recordFromState, restoreBoard: (b) => restoreBoard(b), HT, sheetMailText,
+    setSize: (n) => { state.size = n; if (state.mode !== "pieces") { state.mode = "pieces"; $("modePieces").classList.add("on"); $("modeBudget").classList.remove("on"); $("piecesBox").classList.remove("hide"); $("budgetBox").classList.add("hide"); } resetMix(true); persist(); if (state.anchors[0]) build(); },
+  };
+  function restoreBoard(b) {   // open a board: its anchors, and its picks if it has them (else a fresh build at its size or budget)
+    if (b.line && b.line !== line) loadLine(b.line);
+    state.loadedId = null; state.tmpId = null;
+    state.anchors = [b.anchors[0] || null, b.anchors[1] || null].map((x) => (x && engine.bySku.has(x) ? x : null));
+    if (!state.anchors[0]) return false;
+    state.capName = b.name || ""; state.capNameEdited = !!b.name; $("capName").value = state.capName;
+    state.locked.clear(); state.halves = new Set(); syncHalves();
+    if (b.budget) { state.mode = "budget"; state.budget = b.budget; } else { state.mode = "pieces"; state.size = b.size || BASE.defaultSize; state.counts = null; }
+    $("modePieces").classList.toggle("on", state.mode === "pieces"); $("modeBudget").classList.toggle("on", state.mode === "budget");
+    $("piecesBox").classList.toggle("hide", state.mode !== "pieces"); $("budgetBox").classList.toggle("hide", state.mode !== "budget");
+    renderSlot(0); renderSlot(1); drawPresets(); resetMix(true); $("buildBtn").disabled = false;
+    if (b.picks && b.picks.length) {
+      applyContext();
+      state.capsule = engine.restore(state.anchors.filter(Boolean), b.picks, { colorwayStory: state.story, minQty: state.minQty });
+      if (state.mode === "budget") { state.capsule.budget = { budget: state.budget, units: state.units }; recalcBudget(); }
+      state.alt = true;
+      ["regenBtn", "anotherBtn", "sheetBtn", "xlsxBtn", "orderPageBtn", "csvBtn", "saveBtn", "saveNewBtn", "sendBtn", "sendToBtn", "whyBtn"].forEach((x) => ($(x).disabled = false));
+      renderBoard();
+    } else build();
+    persist(); renderLib();
+    return true;
+  }
   window.__capsule = { orderLink, state, engine: () => engine, build, buildSheet: () => { setPageRule(); return buildSheet(); }, openSheet, exportXLSX, setSheet: (o) => { Object.assign(state.sheet, o, { fields: Object.assign(state.sheet.fields, (o || {}).fields || {}) }); persist(); }, orderedItems, setAnchor, switchLine, setMode, setBudget, saveCapsule, openRecord, lib, line: () => line, capsuleLink, capId, explain: explainNow, sendText, openSend, openSendTo, exportLines, SEND_TO, openFaire, faireInfo, setRep: (v) => { state.rep = cleanRep(v); store.set("capsule_rep", state.rep); } };
 })();
