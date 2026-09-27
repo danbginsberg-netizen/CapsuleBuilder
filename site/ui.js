@@ -385,6 +385,18 @@
     $("econ").querySelectorAll("a[data-amt]").forEach((a) => (a.onclick = () => setBudget(+a.dataset.amt)));
     $("guideLink2").onclick = openGuide;
   }
+  /* ---------- v1.6.5: trend notes from In the Know (line-locked, 60-day expiry, shown only when pieces match) ---------- */
+  function trendNow() {
+    if (!state.capsule || !window.TREND_SIGNALS) return { notes: [] };
+    return engine.trendNotes(window.TREND_SIGNALS[line], orderedItems().map((o) => o.it), new Date().toISOString().slice(0, 10));
+  }
+  const fmtDay = (d) => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  function trendNoteHTML() {
+    const r = trendNow();
+    if (!r.notes.length) return "";
+    return `<div class="trendnote" title="From In the Know, ${esc(fmtDay(r.asOf))}. Shown because pieces in this capsule match; hidden after ${esc(fmtDay(r.expires))}.">` +
+      `<b>Market note</b>${r.notes.map((n) => `<span>${esc(n.text)}</span>`).join("")}<small>In the Know · ${esc(fmtDay(r.asOf))}</small></div>`;
+  }
   function renderBoard() {
     const cap = state.capsule;
     syncHalves();
@@ -405,7 +417,7 @@
     const sh = Object.entries(cap.short || {});
     if (sh.length) h += `<div class="short">Not enough matches to fill: ${sh.map(([c, n]) => `${n} ${c}${n > 1 ? "s" : ""}`).join(", ")}. Lower the stock rule, change the mix, or turn on Colorway story.</div>`;
     if (cap.missing && cap.missing.length) h += `<div class="short">No longer in the catalog: ${esc(cap.missing.join(", "))}.</div>`;
-    $("board").innerHTML = h;
+    $("board").innerHTML = trendNoteHTML() + h;
     $("board").querySelectorAll(".card [data-act]").forEach((b) => {
       const sku = b.closest(".card").dataset.sku;
       b.onclick = () => (b.dataset.act === "swap" ? openSwap(sku) : b.dataset.act === "half" ? toggleHalf(sku) : toggleLock(sku));
@@ -976,6 +988,10 @@
     h += `<h4>Sister pieces</h4><p class="note">Pieces made to be worn together: the lookbook's sister pieces, the same collection, or the same motif or material across categories.</p>`;
     h += x.sisters.length ? ul(x.sisters) : `<p class="note">No matching pairs in this capsule.</p>`;
     h += `<h4>Balance</h4>${ul(x.balance)}`;
+    const t = trendNow();
+    h += `<h4>Market notes</h4><p class="note">From In the Know, our market read of the ${line === "RF" ? "fashion jewelry field" : "premium peers"}. A note shows only on ${esc(cfg.name)} capsules whose pieces match it, and disappears 60 days after the read.</p>`;
+    h += t.notes.length ? `<ul>${t.notes.map((n) => `<li>${esc(n.text)} <span class="note">Matching pieces: ${n.pieces.map(esc).join(", ")}. Read ${esc(fmtDay(n.asOf))}; shown until ${esc(fmtDay(n.expires))}.</span></li>`).join("")}</ul>`
+      : `<p class="note">${window.TREND_SIGNALS && window.TREND_SIGNALS[line] ? (t.hiddenStale ? "The last market read is more than 60 days old, so no notes show until the next one." : "No current market note matches the pieces in this capsule.") : "No market notes are loaded."}</p>`;
     return h;
   }
   function explainNow() { return engine.explain(state.capsule.anchors, allItems(), state.halves, { minQty: state.minQty }); }
