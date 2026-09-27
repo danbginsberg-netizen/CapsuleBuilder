@@ -1,3 +1,7 @@
+/* Trend notes from In the Know (built by tools/build_trends.py; do not edit by hand). */
+(function (root) { var T = {"RF":{"line":"RF","edition":"2026-09-27","source":"itk-RF-curation-2026-09-27.json","maxAgeDays":60,"rule":"Show a signal's buyerLine only on RF capsules whose pieces meet its match rule; hide after 60 days from asOf.","signals":[{"id":"fall-warm-neutrals","trend":"Warm neutrals lead fall drops","direction":"Rising","tags":{"materials":["resin/epoxy","glass bead"],"motifs":["animal print"],"colorFamilies":["neutral","ivory/pearl"],"categories":["necklace","bracelet","earring"],"styleFamilies":[]},"match":{"any":{"colorFamilies":["neutral"],"motifs":["animal print"],"nameAny":["tortoise","leopard","mocha","marble"]},"minPieces":2},"buyerLine":"Warm neutrals, from cream to mocha and tortoise, are leading this fall's new jewelry.","confidence":3,"asOf":"2026-09-27"},{"id":"resin-chunky-beads","trend":"Resin and chunky beads","direction":"Rising","tags":{"materials":["resin/epoxy","acrylic","glass bead"],"motifs":[],"colorFamilies":[],"categories":["necklace","bracelet"],"styleFamilies":["statement"]},"match":{"any":{"materials":["resin/epoxy","acrylic"]},"all":{"categories":["necklace","bracelet","earring"]},"minPieces":2},"buyerLine":"Chunky resin and bold bead strands are the statement pieces in this season's new arrivals.","confidence":3,"asOf":"2026-09-27"},{"id":"natural-stone-beads","trend":"Natural-stone bead strands","direction":"Rising","tags":{"materials":["gemstone"],"motifs":[],"colorFamilies":["neutral","turquoise","emerald/green"],"categories":["necklace","earring"],"styleFamilies":["boho"]},"match":{"all":{"materials":["gemstone"],"categories":["necklace","bracelet","earring"]},"minPieces":3},"buyerLine":"Natural-stone bead strands in earthy tones are replacing plain chain as the everyday necklace.","confidence":3,"asOf":"2026-09-27"},{"id":"bracelet-stacks-sets","trend":"Pre-built bracelet stacks and sets","direction":"Rising","tags":{"materials":["seed bead","glass bead","cord/thread"],"motifs":[],"colorFamilies":[],"categories":["bracelet"],"styleFamilies":["playful","boho"]},"match":{"all":{"categories":["bracelet"]},"any":{"materials":["seed bead","glass bead","cord/thread","gemstone"]},"minPieces":3},"buyerLine":"Bracelets now arrive as ready-made stacks of three or more, merchandised together on one card.","confidence":3,"asOf":"2026-09-27"},{"id":"game-day-team-colors","trend":"Game day and hobby motifs","direction":"Rising","tags":{"materials":["glass bead","enamel"],"motifs":["other"],"colorFamilies":["coral/red","cobalt/navy","orange","emerald/green"],"categories":["necklace","earring","bracelet"],"styleFamilies":["playful"]},"match":{"any":{"nameAny":["game day","football","team","touchdown","pickleball","tennis","golf","mahjong"]},"minPieces":1},"buyerLine":"Team-color and hobby jewelry, from game day to pickleball, is a steady add-on for fall.","confidence":3,"asOf":"2026-09-27"},{"id":"holiday-early","trend":"Holiday assortments already live","direction":"New","tags":{"materials":["enamel","crystal/CZ"],"motifs":["other","celestial"],"colorFamilies":["coral/red","emerald/green","gold"],"categories":["earring","necklace"],"styleFamilies":["playful"]},"match":{"any":{"occasions":["holiday/evening","gifting"],"nameAny":["holiday","christmas","snowflake","santa","halloween","pumpkin"]},"minPieces":3},"buyerLine":"Holiday and gift assortments went live in September; stores are buying for November now.","confidence":3,"asOf":"2026-09-27"},{"id":"faith-cross","trend":"Faith and cross pieces","direction":"Steady","tags":{"materials":[],"motifs":["cross/faith"],"colorFamilies":["gold","silver"],"categories":["necklace","bracelet"],"styleFamilies":["classic pearl","minimal"]},"match":{"any":{"motifs":["cross/faith"]},"minPieces":1},"buyerLine":"Cross and faith pieces remain a year-round staple across gift and boutique assortments.","confidence":3,"asOf":"2026-09-27"},{"id":"coastal-sea-life","trend":"Coastal and sea-life motifs","direction":"Steady","tags":{"materials":["shell","enamel","crystal/CZ"],"motifs":["ocean/shell"],"colorFamilies":["aqua","turquoise","coral/red"],"categories":["earring","necklace","bracelet"],"styleFamilies":["coastal"]},"match":{"any":{"motifs":["ocean/shell"],"materials":["shell"],"styleFamilies":["coastal"]},"minPieces":2},"buyerLine":"Sea-life and shell jewelry is a year-round staple for resort and coastal gift shops.","confidence":2,"asOf":"2026-09-27"}]},"OIYK":{"line":"OIYK","edition":"2026-09-27","source":"itk-OIYK-curation-2026-09-27.json","maxAgeDays":60,"rule":"Show a signal's buyerLine only on OIYK capsules whose pieces meet its match rule; hide after 60 days from asOf.","signals":[{"id":"dark-natural-stones","trend":"Dark and smoky natural stones","direction":"New","tags":{"materials":["gemstone"],"motifs":[],"colorFamilies":["black","grey","neutral"],"categories":["necklace","earring","bracelet"],"styleFamilies":["statement"]},"match":{"all":{"materials":["gemstone"],"colorFamilies":["black","grey","neutral"]},"minPieces":1},"buyerLine":"Deeper stones, smoky quartz, obsidian and hematite, are replacing bright color in premium fall jewelry.","confidence":2,"asOf":"2026-09-27"},{"id":"pearl-steady","trend":"Pearls as a steady anchor","direction":"Steady","tags":{"materials":["pearl","mother-of-pearl"],"motifs":[],"colorFamilies":["ivory/pearl","white"],"categories":["earring","necklace"],"styleFamilies":["classic pearl"]},"match":{"any":{"materials":["pearl","mother-of-pearl"]},"minPieces":3},"buyerLine":"Pearls remain the steady anchor of premium jewelry, now paired with gold and darker stones.","confidence":3,"asOf":"2026-09-27"},{"id":"statement-earrings-lead","trend":"Statement earrings lead new arrivals","direction":"Rising","tags":{"materials":[],"motifs":[],"colorFamilies":[],"categories":["earring"],"styleFamilies":["statement","glam"]},"match":{"all":{"categories":["earring"],"scale":["statement"]},"minPieces":2},"buyerLine":"Statement earrings are leading premium new arrivals; they are the easiest fall add-on.","confidence":2,"asOf":"2026-09-27"},{"id":"place-named-capsules","trend":"Place-named capsules","direction":"Steady","tags":{"materials":[],"motifs":[],"colorFamilies":["blue","white","neutral"],"categories":["necklace","earring"],"styleFamilies":["statement","boho"]},"match":{"sameCollectionMin":6,"minPieces":6},"buyerLine":"Collections named for a place give shoppers a story; a small named table works in any store.","confidence":3,"asOf":"2026-09-27"},{"id":"beaded-stackers","trend":"Beaded bracelet stackers","direction":"Rising","tags":{"materials":["glass bead","seed bead","gemstone"],"motifs":[],"colorFamilies":[],"categories":["bracelet"],"styleFamilies":["boho","playful"]},"match":{"all":{"categories":["bracelet"]},"any":{"materials":["glass bead","seed bead","gemstone"]},"minPieces":2},"buyerLine":"Beaded bracelets in two-color stripes are stacking up at premium price points.","confidence":2,"asOf":"2026-09-27"},{"id":"charm-add-ons","trend":"Charms as add-ons","direction":"Rising","tags":{"materials":["metal","enamel"],"motifs":["other","heart"],"colorFamilies":["gold"],"categories":["necklace","other"],"styleFamilies":["playful"]},"match":{"any":{"nameAny":["charm"]},"minPieces":1},"buyerLine":"Single charms that clip onto a chain are back as an easy add-on at the counter.","confidence":2,"asOf":"2026-09-27"}]}};
+if (typeof module !== 'undefined' && module.exports) module.exports = T; else root.TREND_SIGNALS = T; })(this);
+
 /* Capsule matching engine — rules-first, explainable.
    Works in the browser (window.CapsuleEngine) and in Node (module.exports). */
 (function (root) {
@@ -23,6 +27,7 @@
 
   function Engine(catalog, cfg) {
     this.cfg = cfg;
+    this.line = catalog.line;
     this.items = catalog.items;
     this.bySku = new Map(this.items.map((i) => [i.sku, i]));
     this.colorP = pairMap(cfg.colorPairs);
@@ -795,7 +800,62 @@
     return out;
   };
 
-  const api = { Engine, CATS, label: lab };
+  /* ------------------------------------------------ v1.6.5: trend notes from In the Know
+     A signals file is line-locked (file.line must equal the capsule's line), hidden once older than
+     file.maxAgeDays (60) from the signal's asOf, and shown only when enough capsule pieces match its
+     "match" rule. Buyer text is the signal's buyerLine only (no brand names; In the Know checks that). */
+  const TREND_FIELD = { materials: (it) => it.mats || [], motifs: (it) => it.motifs || [], colorFamilies: (it) => [it.dom].concat(it.fams || []),
+    categories: (it) => [it.cat], styleFamilies: (it) => [it.style], scale: (it) => [it.scale], occasions: (it) => [it.occ] };
+  function trendHits(it, groups) {   // groups: {field: [values]}; true if the piece hits a value in the given group
+    return (g) => {
+      const want = groups[g] || [];
+      if (!want.length) return null;
+      if (g === "nameAny") { const n = String(it.name || "").toLowerCase(); return want.some((w) => n.includes(String(w).toLowerCase())); }
+      const have = (TREND_FIELD[g] ? TREND_FIELD[g](it) : []).filter(Boolean);
+      return want.some((w) => have.includes(w));
+    };
+  }
+  function trendMatches(it, sig) {
+    const m = sig.match || { any: { materials: sig.tags.materials, motifs: (sig.tags.motifs || []).filter((x) => x !== "other"), colorFamilies: sig.tags.colorFamilies }, all: { categories: sig.tags.categories } };
+    const all = m.all || {}, any = m.any || {};
+    const hA = trendHits(it, all), hN = trendHits(it, any);
+    for (const g of Object.keys(all)) { const r = hA(g); if (r === false) return false; }
+    const anyGroups = Object.keys(any).filter((g) => (any[g] || []).length);
+    return !anyGroups.length || anyGroups.some((g) => hN(g));
+  }
+  function dayNum(d) { const t = Date.parse(String(d).slice(0, 10) + "T00:00:00Z"); return isNaN(t) ? NaN : Math.floor(t / 86400000); }
+  function trendNotes(file, line, items, today, opts) {
+    opts = opts || {};
+    const out = { notes: [], hiddenStale: 0, hiddenOtherLine: false, asOf: null, expires: null };
+    if (!file || !file.signals) return out;
+    if (String(file.line || "").toUpperCase() !== String(line || "").toUpperCase()) { out.hiddenOtherLine = true; return out; }
+    const maxAge = file.maxAgeDays == null ? 60 : file.maxAgeDays;
+    const now = dayNum(today || new Date().toISOString());
+    const byStyle = new Map(); items.forEach((it) => byStyle.set(it.base || it.sku, it));
+    for (const sig of file.signals) {
+      const age = now - dayNum(sig.asOf);
+      if (!(age >= 0 && age <= maxAge)) { out.hiddenStale++; continue; }
+      if (String(sig.direction).toLowerCase() === "cooling") continue;
+      const m = sig.match || {};
+      let hit = items.filter((it) => trendMatches(it, sig));
+      if (m.sameCollectionMin) {
+        const c = new Map(); items.forEach((it) => it.collection && c.set(it.collection, (c.get(it.collection) || []).concat([it])));
+        const best = [...c.values()].sort((a, b) => b.length - a.length)[0] || [];
+        hit = best.length >= m.sameCollectionMin ? best : [];
+      }
+      const need = m.minPieces || 2;
+      if (hit.length < need) continue;
+      const exp = new Date((dayNum(sig.asOf) + maxAge) * 86400000).toISOString().slice(0, 10);
+      out.notes.push({ id: sig.id, text: sig.buyerLine, direction: sig.direction, confidence: sig.confidence || 1, asOf: sig.asOf, expires: exp, trend: sig.trend, pieces: hit.map((it) => it.sku), share: hit.length / Math.max(1, items.length) });
+    }
+    out.notes.sort((a, b) => b.share * b.confidence - a.share * a.confidence || b.confidence - a.confidence);   // most of the capsule first, weighted by confidence
+    out.notes = out.notes.slice(0, opts.max || 2);
+    if (out.notes.length) { out.asOf = out.notes[0].asOf; out.expires = out.notes[0].expires; }
+    return out;
+  }
+  Engine.prototype.trendNotes = function (file, items, today, opts) { return trendNotes(file, this.line, items, today, opts); };
+
+  const api = { Engine, CATS, label: lab, trendNotes };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.CapsuleEngine = api;
 })(typeof window !== "undefined" ? window : globalThis);
