@@ -110,6 +110,7 @@
   function loadLine(L) {
     line = L;
     document.body.classList.toggle("line-rf", L === "RF"); document.body.classList.toggle("line-oiyk", L === "OIYK");
+    if (typeof sendToLabel === "function") try { sendToLabel(); } catch (e) {}
     cfg = Object.assign({}, BASE, BASE.lines[L] || {});
     const src = SOURCES[L];
     catalog = { line: src.line, built: src.built, tagFile: src.tagFile, flags: src.flags.slice(), items: src.items.map((i) => Object.assign({}, i)) };
@@ -845,6 +846,70 @@
     const old = document.title; document.title = fileSafe(capTitle()) + "_line_sheet";
     setTimeout(() => { window.print(); document.title = old; }, 150);
   }
+  /* ---------- v1.6.7: the line sheet as a real PDF file, to email or save ---------- */
+  // Each page is drawn exactly as previewed (html2canvas) into a PDF at the chosen paper size (jsPDF).
+  // A page opened straight from a folder on this computer (file://) can't read its own photos into a PDF
+  // (browser security), so there the rep falls back to Print / Save as PDF; the web copy works everywhere.
+  async function sheetPDF() {
+    if (!window.jspdf || !window.html2canvas) throw new Error("PDF tools didn't load");
+    const S = sheetOpts(), d = pageDims();
+    const host = document.createElement("div");
+    host.style.cssText = "position:fixed;left:-20000px;top:0;background:#fff;";
+    document.body.appendChild(host);
+    try {
+      const w = buildSheet(); host.appendChild(w);
+      await Promise.all([...host.querySelectorAll("img")].map((im) => (im.complete ? 0 : new Promise((r) => { im.onload = im.onerror = r; }))));
+      const doc = new window.jspdf.jsPDF({ unit: "in", format: S.paper === "a4" ? "a4" : "letter", orientation: S.orientation === "landscape" ? "landscape" : "portrait", compress: true });
+      const pages = [...w.children];
+      for (let k = 0; k < pages.length; k++) {
+        const c = await window.html2canvas(pages[k], { scale: 2, backgroundColor: "#ffffff", logging: false, useCORS: true });
+        const img = c.toDataURL("image/jpeg", 0.88);   // throws on a file:// page (tainted canvas)
+        if (k) doc.addPage();
+        doc.addImage(img, "JPEG", MARGIN, MARGIN, d.w, d.h, undefined, "FAST");
+      }
+      doc.setProperties({ title: `${capTitle()} · ${cfg.name} line sheet`, author: cfg.name });
+      return new File([doc.output("blob")], `${fileSafe(capTitle())}_line_sheet.pdf`, { type: "application/pdf" });
+    } finally { host.remove(); }
+  }
+  function sheetMailText() {
+    const who = state.buyer.trim(), ol = orderLink();
+    return [
+      "Hi,", "",
+      `Attached is the ${cfg.name} line sheet for ${capTitle()}${who ? ` (prepared for ${who})` : ""}.`,
+      ol ? `\nReady to order? This opens our order page with these styles filled in:\n${ol.url}` : "",
+      "", "Best,",
+    ].join("\n");
+  }
+  async function busy(btn, label, fn) {
+    const old = btn.textContent; btn.disabled = true; btn.textContent = label;
+    try { return await fn(); } finally { btn.disabled = false; btn.textContent = old; }
+  }
+  async function downloadSheetPDF() {
+    let file = null;
+    try { file = await busy($("pdfBtn"), "Making PDF…", sheetPDF); } catch (e) { file = null; }
+    if (!file) { flash("shMsg", "This copy can't make the PDF itself (it was opened from a folder on this computer). Use <b>Print / Save as PDF</b>, or the web copy."); return; }
+    download(file.name, file, "application/pdf"); logSend("line-sheet-pdf");
+    flash("shMsg", `Saved <b>${esc(file.name)}</b> to this device's downloads.`);
+  }
+  async function emailSheetPDF() {
+    const subj = `${cfg.name}: ${capTitle()} line sheet`, body = sheetMailText();
+    let file = null;
+    try { file = await busy($("emailPdfBtn"), "Making PDF…", sheetPDF); } catch (e) { file = null; }
+    // phones, tablets and Windows: the share sheet hands the PDF to Mail, Gmail or Outlook as an attachment
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: subj, text: body }); logSend("line-sheet-pdf-share"); flash("shMsg", "Shared. Check the email in your mail app and press Send there."); return; }
+      catch (e) { if (e && e.name === "AbortError") return; }
+    }
+    // elsewhere: save the PDF and open an email draft to attach it to (a mailto link can't carry a file)
+    const to = ($("sdTo") && $("sdTo").value.trim().replace(/[\s,;]+/g, ",")) || "";
+    if (file) download(file.name, file, "application/pdf");
+    const a = document.createElement("a");
+    a.href = `mailto:${encodeURIComponent(to).replace(/%2C/g, ",").replace(/%40/g, "@")}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+    a.target = "_top"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove();
+    logSend("line-sheet-email", { to });
+    if (file) flash("shMsg", `Saved <b>${esc(file.name)}</b> to your downloads and opened an email draft. Attach the PDF (drag it in from Downloads) and press Send. Nothing is sent from here.`);
+    else { flash("shMsg", "Opened an email draft. This copy can't make the PDF itself, so the print window opens: choose <b>Save as PDF</b>, then attach that file."); printSheet(); }
+  }
   function wireSheetOpts() {
     const S = () => sheetOpts();
     const upd = (fn) => () => { fn(); persist(); drawSheetOpts(); renderSheetPreview(); };
@@ -1101,22 +1166,38 @@
     return orderedItems().map((o) => { const c = engine.lineCost(o.it, u); return { it: o.it, units: c.units, each: Math.round(c.each * 100) / 100, total: Math.round(c.total * 100) / 100 }; });
   }
   const SEND_TO = [
-    { id: "order", name: "Our order page (Shopify)", tag: "Default", what: "Every account. Opens onlyifyouknow.com with the capsule filled in; the rep code and capsule ID ride along into the order.", acts: [["Open ↗", () => { openOrderPage(); logSend("order-page"); }], ["Copy link", () => { const l = orderLink(); if (l) { copyText(l.url, "stNote", "Order link"); logSend("copy-order-link"); } }]] },
-    { id: "markettime", name: "MarketTime", what: "Quick Import file (.xlsx): Item Number + Quantity in pieces. In MarketTime: Basket → Quick Import. Works once the rep's agency has loaded our line with the same item numbers (agency-managed, no cost to us).", acts: [["Download .xlsx", () => { simpleXLSX(`${fileSafe(capTitle())}_MarketTime_QuickImport.xlsx`, "Quick Import", ["Item Number", "Quantity"], exportLines().map((r) => [r.it.sku, r.units])); logSend("export-markettime"); }]] },
-    { id: "nuorder", name: "NuORDER", what: "Order import file (.xlsx): Style Number, Season \"Core\", Color \"Multi\", Size \"One Size\", Quantity. In NuORDER: Working Order → Import. Only when the line is on NuORDER.", acts: [["Download .xlsx", () => { simpleXLSX(`${fileSafe(capTitle())}_NuORDER_import.xlsx`, "Order", ["Style Number", "Season", "Color", "Size", "Quantity"], exportLines().map((r) => [r.it.sku, "Core", "Multi", "One Size", r.units])); logSend("export-nuorder"); }]] },
-    { id: "faire", lines: ["RF"], name: "Faire (Faire Direct order)", what: "Faire has no order import: you write the order in Faire's brand portal and add each style by searching its SKU. The helper lists every style with its Faire SKU, quantity in Faire case packs and whether it's live on Faire, with a copy button per line and a checklist. The retailer then reviews and approves the order. Faire Direct orders from our own accounts carry 0% Faire commission.", acts: [["Faire order helper…", () => openFaire()]] },
-    { id: "repzio", name: "RepZio · JOOR", what: "Neither takes an order file. Send the line sheet with SKUs showing and key the styles in; the order link above still works for the buyer.", acts: [["Line sheet…", () => { closeDlg("sendToDlg"); openSheet(); logSend("line-sheet"); }]] },
-    { id: "upc", name: "UPC + quantity (RepSpark, scanners)", what: "Needs UPCs, and the builder has none on file yet. Add a UPC column to the catalog data to turn this on.", acts: [] },
-    { id: "universal", name: "Universal order file", what: "Every column the platforms ask for, one row per style (.xlsx): item and style number, name, category, wholesale and retail price, pack, minimum, quantity, line total, image file, store, PO, date, rep code, capsule ID.", acts: [["Download .xlsx", () => {
+    { id: "order", short: ["Order page"], name: "Our order page (Shopify)", tag: "Default", what: "Every account. Opens onlyifyouknow.com with the capsule filled in; the rep code and capsule ID ride along into the order.", acts: [["Open ↗", () => { openOrderPage(); logSend("order-page"); }], ["Copy link", () => { const l = orderLink(); if (l) { copyText(l.url, "stNote", "Order link"); logSend("copy-order-link"); } }]] },
+    { id: "markettime", short: ["MarketTime"], name: "MarketTime", what: "Quick Import file (.xlsx): Item Number + Quantity in pieces. In MarketTime: Basket → Quick Import. Works once the rep's agency has loaded our line with the same item numbers (agency-managed, no cost to us).", acts: [["Download .xlsx", () => { simpleXLSX(`${fileSafe(capTitle())}_MarketTime_QuickImport.xlsx`, "Quick Import", ["Item Number", "Quantity"], exportLines().map((r) => [r.it.sku, r.units])); logSend("export-markettime"); }]] },
+    { id: "nuorder", short: ["NuORDER"], name: "NuORDER", what: "Order import file (.xlsx): Style Number, Season \"Core\", Color \"Multi\", Size \"One Size\", Quantity. In NuORDER: Working Order → Import. Only when the line is on NuORDER.", acts: [["Download .xlsx", () => { simpleXLSX(`${fileSafe(capTitle())}_NuORDER_import.xlsx`, "Order", ["Style Number", "Season", "Color", "Size", "Quantity"], exportLines().map((r) => [r.it.sku, "Core", "Multi", "One Size", r.units])); logSend("export-nuorder"); }]] },
+    { id: "faire", short: ["Faire"], lines: ["RF"], name: "Faire (Faire Direct order)", what: "Faire has no order import: you write the order in Faire's brand portal and add each style by searching its SKU. The helper lists every style with its Faire SKU, quantity in Faire case packs and whether it's live on Faire, with a copy button per line and a checklist. The retailer then reviews and approves the order. Faire Direct orders from our own accounts carry 0% Faire commission.", acts: [["Faire order helper…", () => openFaire()]] },
+    { id: "repzio", short: ["RepZio", "JOOR"], name: "RepZio · JOOR", what: "Neither takes an order file. Send the line sheet with SKUs showing and key the styles in; the order link above still works for the buyer.", acts: [["Line sheet…", () => { closeDlg("sendToDlg"); openSheet(); logSend("line-sheet"); }]] },
+    { id: "upc", short: ["RepSpark"], name: "UPC + quantity (RepSpark, scanners)", what: "Needs UPCs, and the builder has none on file yet. Add a UPC column to the catalog data to turn this on.", acts: [] },
+    { id: "universal", short: ["Universal file"], name: "Universal order file", what: "Every column the platforms ask for, one row per style (.xlsx): item and style number, name, category, wholesale and retail price, pack, minimum, quantity, line total, image file, store, PO, date, rep code, capsule ID.", acts: [["Download .xlsx", () => {
       const u = activeUnits(), H = HT();
       const rows = exportLines().map((r) => [cfg.name, r.it.sku, r.it.sku, r.it.name, CAT_LABEL[r.it.cat].replace(/s$/, ""), label(r.it.dom), "One Size", "Core", "", r.each, r.it.msrp || "",
         H ? (r.units === H.units ? H.units : 12) : engine.unitsFor(r.it, u), engine.unitsFor(r.it, u), r.units, r.total, `${r.it.sku}.jpg`, state.buyer.trim(), "", today(), state.rep, capId()]);
       simpleXLSX(`${fileSafe(capTitle())}_order_universal.xlsx`, "Order", ["Brand", "Item Number", "Style Number", "Item Name", "Category", "Color", "Size", "Season", "UPC", "Wholesale Price", "Retail Price", "Case Pack", "Minimum Qty", "Quantity", "Line Total", "Image File", "Store Name", "PO Number", "Order Date", "Rep Code", "Capsule ID"], rows);
       logSend("export-universal"); }]] },
   ];
+  /* v1.6.7: a generic icon per destination (our own simple glyphs, not the platforms' logos) */
+  const ST_ICON = {
+    order: '<path d="M4 9h16l-1.5 10.5a1 1 0 0 1-1 .5h-11a1 1 0 0 1-1-.5z"/><path d="M8.5 9V7a3.5 3.5 0 0 1 7 0v2"/>',
+    markettime: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 10v10"/><path d="M14.5 13.5v4M12.8 15.8l1.7 1.7 1.7-1.7"/>',
+    nuorder: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 15.5h6M9 19h3.5"/>',
+    faire: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8a3 3 0 0 1 6 0"/><path d="M9.5 13.5l1.8 1.8 3.4-3.6"/>',
+    repzio: '<rect x="5" y="3" width="14" height="18" rx="1.5"/><rect x="8" y="6.5" width="3.5" height="3.5"/><rect x="12.5" y="6.5" width="3.5" height="3.5"/><path d="M8 13.5h8M8 16.5h8"/>',
+    upc: '<path d="M4 6v12M7 6v12M9.5 6v12M13 6v12M15 6v12M18 6v12M20 6v12"/>',
+    universal: '<path d="M12 3l8 4-8 4-8-4z"/><path d="M4 12l8 4 8-4"/><path d="M4 16.5l8 4 8-4"/>',
+  };
+  const stIcon = (id) => `<span class="st-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ST_ICON[id] || ""}</svg></span>`;
+  // the sidebar button names every destination that has an action on this line
+  function sendToLabel() {
+    const names = SEND_TO.filter((p) => (!p.lines || p.lines.includes(line)) && p.acts.length).flatMap((p) => p.short);
+    $("sendToBtn").innerHTML = `Send to…<small>${esc(names.join(" · "))}</small>`;
+  }
   function openSendTo() {
     if (!state.capsule) return;
-    $("stBody").innerHTML = SEND_TO.map((p, i) => p.lines && !p.lines.includes(line) ? "" : `<div class="st-row"><div class="st-t"><b>${esc(p.name)}</b>${p.tag ? `<span class="pill">${esc(p.tag)}</span>` : ""}<div class="note">${esc(p.what)}</div></div><div class="st-a">${p.acts.length ? p.acts.map((a, k) => `<button class="btn" data-p="${i}" data-k="${k}">${esc(a[0])}</button>`).join("") : '<span class="note">Not available</span>'}</div></div>`).join("");
+    $("stBody").innerHTML = SEND_TO.map((p, i) => p.lines && !p.lines.includes(line) ? "" : `<div class="st-row">${stIcon(p.id)}<div class="st-t"><b>${esc(p.name)}</b>${p.tag ? `<span class="pill">${esc(p.tag)}</span>` : ""}<div class="note">${esc(p.what)}</div></div><div class="st-a">${p.acts.length ? p.acts.map((a, k) => `<button class="btn" data-p="${i}" data-k="${k}">${esc(a[0])}</button>`).join("") : '<span class="note">Not available</span>'}</div></div>`).join("");
     $("stBody").querySelectorAll("button[data-p]").forEach((b) => (b.onclick = () => SEND_TO[+b.dataset.p].acts[+b.dataset.k][1]()));
     $("stNote").innerHTML = ""; openDlg("sendToDlg");
   }
@@ -1243,7 +1324,7 @@
   $("anotherBtn").onclick = () => build({ exclude: state.capsule.picks.filter((p) => !state.locked.has(p.item.sku)).map((p) => p.item.sku) });
   $("csvBtn").onclick = exportCSV;
   $("sendBtn").onclick = openSend;
-  $("sendToBtn").onclick = openSendTo;
+  $("sendToBtn").onclick = openSendTo; sendToLabel();
   $("whyBtn").onclick = openWhy;
   $("sendLogBtn").onclick = exportSendLog;
   $("sdMail").onclick = sendMail;
@@ -1258,7 +1339,7 @@
   $("xlsxBtn").onclick = exportXLSX;
   $("orderPageBtn").onclick = openOrderPage;
   $("sheetBtn").onclick = openSheet;
-  $("printBtn").onclick = printSheet;
+  $("printBtn").onclick = printSheet; $("pdfBtn").onclick = downloadSheetPDF; $("emailPdfBtn").onclick = emailSheetPDF;
   $("browseBtn").onclick = () => { browseTarget = state.anchors[0] ? 1 : 0; renderBrowse(); openDlg("browseDlg"); $("bq").focus(); };
   $("bq").oninput = renderBrowse;
   $("libSel").onchange = () => { if ($("libSel").value) openRecord($("libSel").value); };

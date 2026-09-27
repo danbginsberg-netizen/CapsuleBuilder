@@ -267,7 +267,13 @@
   .st-row { display: flex; gap: 14px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
   .st-row .st-t { flex: 1; min-width: 0; } .st-row .st-t .pill { margin-left: 8px; background: var(--lav-soft); color: var(--lav-ink); border-radius: 99px; padding: 1px 8px; font-size: 12px; }
   .st-row .st-a { flex: 0 0 auto; display: flex; gap: 6px; } .st-row .st-a .btn { margin: 0; width: auto; white-space: nowrap; }
-  @media (max-width: 600px) { .st-row { flex-direction: column; align-items: stretch; } }
+  /* v1.6.7: icon per destination; the sidebar button lists every destination */
+  .st-row .st-ic { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 10px; background: var(--lav-soft); color: var(--lav-ink); display: flex; align-items: center; justify-content: center; }
+  .st-row .st-ic svg { width: 22px; height: 22px; }
+  #sendToBtn small { display: block; font-size: 11.5px; font-weight: 400; line-height: 1.35; margin-top: 2px; opacity: .8; }
+  @media (max-width: 600px) { .st-row { flex-direction: column; align-items: stretch; } .st-row .st-ic { display: none; } }
+  /* v1.6.7: line sheet buttons wrap under the title on a phone */
+  @media (max-width: 700px) { #sheetDlg .hd { flex-wrap: wrap; } #sheetDlg .hd h2 { flex: 1 1 auto; } #sheetDlg .hd .row { order: 3; flex: 1 1 100% !important; flex-wrap: wrap; } #sheetDlg .hd .row .btn { flex: 1 1 auto; } #sheetDlg .hd .row .x { position: absolute; top: 14px; right: 14px; } #sheetDlg .box { position: relative; } }
   /* v1.6.5: market note from In the Know */
   .trendnote { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 12px; margin:0 0 14px; padding:10px 14px; border-radius:10px; background:var(--lav-soft, #f3effa); border-left:3px solid var(--lav, #7a64b0); font-size:13px; line-height:1.45; }
   .trendnote b { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--lav-ink, #5b4a8f); }
@@ -278,7 +284,7 @@
 <body>
 <div class="app">
   <aside>
-    <div class="brand"><img id="brandLogo" src="logo_rf.png" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.6.6</small></div></div>
+    <div class="brand"><img id="brandLogo" src="logo_rf.png" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.6.7</small></div></div>
     <div class="lines">
       <button class="on" id="lineRF" data-line="RF">Retro Forever</button>
       <button id="lineOIYK" data-line="OIYK">OIYK</button>
@@ -337,7 +343,7 @@
 
     <h3>Send &amp; export</h3>
     <button class="btn primary" id="sendBtn" disabled>Send capsule…</button>
-    <button class="btn" id="sendToBtn" disabled>Send to… MarketTime · NuORDER · Faire</button>
+    <button class="btn" id="sendToBtn" disabled>Send to…<small>Order page · MarketTime · NuORDER · Faire · RepZio · JOOR · Universal file</small></button>
     <button class="btn" id="sheetBtn" disabled>Line sheet (PDF)…</button>
     <button class="btn" id="orderPageBtn" disabled>Order page (pre-filled) ↗</button>
     <button class="btn" id="xlsxBtn" disabled>Order form (Excel)</button>
@@ -370,7 +376,8 @@
   <div class="browse" id="browseGrid"></div></div></div>
 <div class="dlg" id="flagDlg"><div class="box"><div class="hd"><h2>Data flags</h2><button class="x" data-close>✕</button></div><table class="flags" id="flagTable"></table></div></div>
 <div class="dlg" id="guideDlg"><div class="box"><div class="hd"><h2>Budget guide — what B2B jewelry buyers spend</h2><button class="x" data-close>✕</button></div><div id="guideBody"></div></div></div>
-<div class="dlg" id="sheetDlg"><div class="box" style="width:min(1180px,100%)"><div class="hd"><h2>Line sheet</h2><div class="row" style="flex:0 0 auto;gap:8px"><button class="btn primary" id="printBtn" style="width:auto;margin:0;white-space:nowrap">Print / Save as PDF</button><button class="x" data-close>✕</button></div></div>
+<div class="dlg" id="sheetDlg"><div class="box" style="width:min(1180px,100%)"><div class="hd"><h2>Line sheet</h2><div class="row" style="flex:0 0 auto;gap:8px"><button class="btn primary" id="emailPdfBtn" style="width:auto;margin:0;white-space:nowrap">Email as PDF</button><button class="btn" id="pdfBtn" style="width:auto;margin:0;white-space:nowrap">Download PDF</button><button class="btn" id="printBtn" style="width:auto;margin:0;white-space:nowrap">Print</button><button class="x" data-close>✕</button></div></div>
+  <div class="note" id="shMsg" style="margin:-4px 0 8px"></div>
   <div class="composer">
     <div class="opts" id="sheetOpts">
       <h4>Layout</h4>
@@ -402,7 +409,7 @@
       <label class="tog"><input type="checkbox" id="shPageNo"> Page numbers</label>
       <h4>Note under the title</h4>
       <textarea id="shNote" placeholder="Optional, e.g. Built around the buyer's favorite for spring"></textarea>
-      <p class="note" style="margin-top:10px">Prices never print unless you tick them. In the print dialog choose <b>Save as PDF</b>, turn <b>Headers and footers</b> off, and match the paper size.</p>
+      <p class="note" style="margin-top:10px">Prices never print unless you tick them. <b>Email as PDF</b> makes the PDF and hands it to your email app (on a phone or Windows it attaches itself; elsewhere it saves to Downloads and opens an email draft to attach it to). <b>Download PDF</b> just saves it. With <b>Print</b>, choose <b>Save as PDF</b>, turn <b>Headers and footers</b> off, and match the paper size.</p>
     </div>
     <div><div class="pvinfo" id="pvInfo"></div><div class="pv" id="sheetPreview"></div></div>
   </div></div></div>
@@ -439,6 +446,8 @@
 <script src="orderpage_rf.js"></script>
 <script src="orderpage_oiyk.js"></script>
 <script src="qrcode.js"></script>
+<script src="jspdf.umd.min.js" defer></script>
+<script src="html2canvas.min.js" defer></script>
 <script src="guide.js"></script>
 <script src="engine.js"></script>
 <script src="ui.js"></script>
