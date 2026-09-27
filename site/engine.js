@@ -493,7 +493,21 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
    * keeping the category mix close to target, until nothing else fits (or maxSize).
    * opts: {budget, units ("first" | "reorder" | n), mix, colorwayStory, minQty, locked, exclude, maxSize}
    */
+  // v1.6.6: a bigger budget never returns fewer styles. The greedy build favors the best match, so at a bigger budget it can
+  // pick pricier pieces and end with fewer styles than half that budget buys. When that happens, the capsule for half the
+  // budget is kept and extended with what's left.
   Engine.prototype.buildBudget = function (anchorSkus, opts) {
+    const cap = this.buildBudgetOnce(anchorSkus, opts);
+    const minimum = (this.cfg.terms || {}).orderMinimum || 0;
+    const lower = opts && opts.budget ? opts.budget / 2 : 0;
+    if (!lower || lower < Math.max(minimum, 1)) return cap;
+    const small = this.buildBudget(anchorSkus, Object.assign({}, opts, { budget: lower }));
+    if (small.picks.length <= cap.picks.length) return cap;
+    const seeded = this.buildBudgetOnce(anchorSkus, Object.assign({}, opts, { seed: small.picks.map((p) => p.item.sku), halves: small.halves }));
+    return seeded.picks.length >= small.picks.length ? seeded : cap;
+  };
+
+  Engine.prototype.buildBudgetOnce = function (anchorSkus, opts) {
     const anchors = anchorSkus.map((s) => this.bySku.get(s)).filter(Boolean);
     if (!anchors.length) throw new Error("anchor SKU not found");
     opts = Object.assign({ mix: this.cfg.mix, units: "first", maxSize: this.cfg.maxSize }, opts || {});
@@ -504,7 +518,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
     // half dozen when a category would otherwise stay empty; the rep's own switches carry over for the buyer's picks and
     // locked pieces. Styles with under a dozen in stock are always a half dozen and count toward the cap.
     const H = opts.units === "reorder" ? null : this.halfTerms();
-    const keepHalf = new Set(anchors.map((a) => a.sku).concat(opts.locked || []));
+    const keepHalf = new Set(anchors.map((a) => a.sku).concat(opts.locked || [], opts.seed || []));
     const halves = new Set([...(opts.halves || [])].filter((s) => keepHalf.has(s)));
     opts.halves = halves;
     const cost = (it) => this.lineCost(it, opts.units, halves).total;
@@ -532,6 +546,12 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
         if (picks.includes(e) || spent + cost(e.item) > opts.budget) continue;
         chosen.push(e.item); picks.push(e); n[e.item.cat]++; spent += cost(e.item); e.story = true;
       }
+    // seed: the capsule half this budget buys (see buildBudget), kept so a bigger budget never has fewer styles
+    for (const sku of opts.seed || []) {
+      const e = pool.find((p) => p.item.sku === sku);
+      if (!e || picks.includes(e) || chosen.includes(e.item) || spent + cost(e.item) > opts.budget + 1e-9) continue;
+      chosen.push(e.item); picks.push(e); n[e.item.cat]++; spent += cost(e.item);
+    }
     const done = new Set(CATS.filter((c) => share[c] === 0));
     while (chosen.length < opts.maxSize && done.size < CATS.length) {
       const open = CATS.filter((c) => !done.has(c));
