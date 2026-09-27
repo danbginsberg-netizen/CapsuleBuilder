@@ -1,6 +1,6 @@
 /* Capsule Builder v1.7.0 — guided mode: one four-step flow, four uses, switched by the link.
      ?mode=guided&line=RF&rep=CODE   booth or storefront, rep present: prices hidden until the rep taps "Show prices"; ends with the pre-filled order page
-     ?mode=kiosk&line=RF             unattended (program page, kiosk): no prices; ends with "Request this capsule"
+     ?mode=kiosk&line=RF             unattended (program page, kiosk): prices hidden until "Show prices" is tapped; Exit asks first; ends with "Request this capsule"
      ?mode=train&rep=CODE            new reps: coach notes beside each step and the three training sessions
      ?mode=demo&line=RF              recruiting: the flow on featured styles, ending with "Rep this line"
    Each link is locked to one line, so RF and OIYK never mix. The rep's settings, tuning and saved lists stay hidden. */
@@ -11,7 +11,7 @@
   const { $, esc, state, money } = A;
   const MODES = {
     guided: { name: "Booth", title: "Booth or storefront", who: "The buyer in front of you, on an iPad or phone", prices: "tap", end: "order" },
-    kiosk: { name: "Kiosk", title: "Unattended kiosk or program page", who: "Booth traffic after hours; landing pages", prices: "never", end: "request" },
+    kiosk: { name: "Kiosk", title: "Unattended kiosk or program page", who: "Booth traffic after hours; landing pages", prices: "tap", end: "request" },
     train: { name: "Training", title: "Training", who: "New reps in week one", prices: "always", end: "order" },
     demo: { name: "Recruiting demo", title: "Recruiting demo", who: "Prospective reps on calls and at markets", prices: "always", end: "rep" },
   };
@@ -43,7 +43,7 @@
   function header() {
     const steps = ["Pick a piece", "Budget", "Your capsule", g.mode === "demo" ? "Rep this line" : g.mode === "kiosk" ? "Keep it" : "Take it with you"];
     return `<header class="g-hd"><img src="${esc(A.cfg().logo)}" alt="${esc(A.cfg().name)}" id="gLogo"><div class="g-steps">${steps.map((s, i) => `<button data-step="${i + 1}" class="${g.step === i + 1 ? "on" : ""} ${i + 1 < g.step ? "done" : ""}" ${i + 1 > g.step + 0 && !(i + 1 <= maxStep()) ? "disabled" : ""}><i>${i + 1}</i><span>${esc(s)}</span></button>`).join("")}</div>
-      <div class="g-tools">${MODES[g.mode].prices === "tap" ? `<button class="g-pr ${g.priced ? "on" : ""}" id="gPrices">${g.priced ? "Hide prices" : "Show prices"}</button>` : ""}${g.mode === "train" ? `<span class="pill">Training</span>` : ""}${g.mode === "demo" ? `<span class="pill">Demo</span>` : ""}${g.mode !== "kiosk" ? `<button class="g-x" id="gExit">Exit</button>` : ""}</div></header>`;
+      <div class="g-tools">${MODES[g.mode].prices === "tap" ? `<button class="g-pr ${g.priced ? "on" : ""}" id="gPrices">${g.priced ? "Hide prices" : "Show prices"}</button>` : ""}${g.mode === "train" ? `<span class="pill">Training</span>` : ""}${g.mode === "demo" ? `<span class="pill">Demo</span>` : ""}<button class="g-x" id="gExit">Exit</button></div></header>`;
   }
   const maxStep = () => (!state.anchors[0] ? 1 : !state.capsule ? 2 : 4);
 
@@ -124,7 +124,7 @@
   function wire() {
     const el = $("guided");
     el.querySelectorAll(".g-steps [data-step]").forEach((b) => (b.onclick = () => { const n = +b.dataset.step; if (n <= maxStep()) go(n); }));
-    const x = $("gExit"); if (x) x.onclick = stop;
+    const x = $("gExit"); if (x) x.onclick = () => { if (g.mode === "kiosk") { g.confirmExit = true; draw(); } else stop(); };   // an unattended kiosk asks before leaving
     const pr = $("gPrices"); if (pr) pr.onclick = () => { g.priced = !g.priced; draw(); };
     // kiosk: hold the logo for 3 seconds to leave
     const logo = $("gLogo"); let t = null;
@@ -215,7 +215,7 @@
     return `${base}?${p.toString()}`;
   }
   function openLauncher() {
-    $("gmBody").innerHTML = Object.entries(MODES).map(([k, m]) => `<div class="gm-row"><div><b>${esc(m.title)}</b><div class="note">${esc(m.who)}. ${k === "guided" ? "Prices stay hidden until you tap Show prices; ends with the pre-filled order page." : k === "kiosk" ? "No prices; ends with “Request this capsule,” an email to us. Hold the logo 3 seconds to leave." : k === "train" ? "Coach notes beside each step and the three training sessions." : "Featured styles, ending with a “Rep this line” card."}</div>
+    $("gmBody").innerHTML = Object.entries(MODES).map(([k, m]) => `<div class="gm-row"><div><b>${esc(m.title)}</b><div class="note">${esc(m.who)}. ${k === "guided" ? "Prices stay hidden until you tap Show prices; ends with the pre-filled order page." : k === "kiosk" ? "Prices stay hidden until someone taps Show prices; ends with “Request this capsule,” an email to us. Exit asks before leaving, and it starts over after 3 idle minutes." : k === "train" ? "Coach notes beside each step and the three training sessions." : "Featured styles, ending with a “Rep this line” card."}</div>
       <div class="gm-link">${esc(link(k))}</div></div><div class="gm-a"><button class="btn primary" data-go="${k}">Start here</button><button class="btn" data-copy="${k}">Copy link</button></div></div>`).join("") +
       `<p class="note">Each link opens ${esc(A.cfg().name)} only${state.rep ? ` and carries your rep code ${esc(state.rep)} (booth and training)` : ". Set your rep code under Buyer first so booth and training links carry it"}.</p>`;
     $("gmBody").querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => start(b.dataset.go)));
