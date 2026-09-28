@@ -1,4 +1,4 @@
-/* Capsule Builder v1.7.0 "In the store": tabs, Market brief (In the Know), store size, extra line-sheet pages
+/* Capsule Builder v1.7.0 "In the store" (v1.7.5: In the Know social side in "About this research"): tabs, Market brief (In the Know), store size, extra line-sheet pages
    (market brief, shown with her store, buyer packet), Boards and the rep kit. Builds on window.__cb (app/ui.js). */
 (function () {
   "use strict";
@@ -19,6 +19,7 @@
     if (p === "brief") drawBrief();
     if (p === "boards") drawBoards();
     if (p === "store" && window.CB_CONTEXT) window.CB_CONTEXT.draw();
+    if (p === "store" && window.CB_SIMILAR) window.CB_SIMILAR.draw();   // v1.7.4 (draws only when Find similar is open)
     try { sessionStorage.setItem("cb_pane", p); } catch (e) { /* ignore */ }
     window.scrollTo({ top: 0, behavior: "instant" });
   }
@@ -45,14 +46,14 @@
   const cap1 = (t) => t.charAt(0).toUpperCase() + t.slice(1);
   function aboutText(f) {
     const M = methodOf(f); if (!M) return [];
-    return ["ABOUT THIS RESEARCH", M.who, (M.stats || []).map((x) => `${x[0]} ${x[1]}`).join(" · ") + ".", M.design, M.retail, M.rigor, M.cadence].filter(Boolean);
+    return ["ABOUT THIS RESEARCH", M.who, (M.stats || []).map((x) => `${x[0]} ${x[1]}`).join(" · ") + ".", M.design, M.retail, M.social, M.rigor, M.cadence].filter(Boolean);
   }
   function aboutHTML(f, compact) {
     const M = methodOf(f); if (!M) return "";
-    if (compact) return `<div class="about"><b>About this research.</b> ${esc(M.who)} ${esc((M.stats || []).map((x) => `${x[0]} ${x[1]}`).join(" · "))}.<br><b>Design side:</b> ${esc(cap1(M.design.replace(/^What's being designed:\s*/, "")))}<br><b>Retail side:</b> ${esc(cap1(M.retail.replace(/^What's actually selling:\s*/, "")))}<br>${esc(M.rigor)} <b>${esc(M.cadence)}</b></div>`;
+    if (compact) return `<div class="about"><b>About this research.</b> ${esc(M.who)} ${esc((M.stats || []).map((x) => `${x[0]} ${x[1]}`).join(" · "))}.<br><b>Design side:</b> ${esc(cap1(M.design.replace(/^What's being designed:\s*/, "")))}<br><b>Retail side:</b> ${esc(cap1(M.retail.replace(/^What's actually selling:\s*/, "")))}${M.social ? `<br><b>Social side:</b> ${esc(cap1(M.social.replace(/^What's being shared:\s*/, "")))}` : ""}<br>${esc(M.rigor)} <b>${esc(M.cadence)}</b></div>`;
     return `<div class="panel bf-about"><h3>About this research</h3><p>${esc(M.who)}</p>
       <div class="bf-stats">${(M.stats || []).map((x) => `<div><b>${esc(x[0])}</b><span>${esc(x[1])}</span></div>`).join("")}</div>
-      <div class="bf-two"><p><b>The design side: what's being designed.</b> ${esc(cap1(M.design.replace(/^What's being designed:\s*/, "")))}</p><p><b>The retail side: what's actually selling.</b> ${esc(cap1(M.retail.replace(/^What's actually selling:\s*/, "")))}</p></div>
+      <div class="bf-two"><p><b>The design side: what's being designed.</b> ${esc(cap1(M.design.replace(/^What's being designed:\s*/, "")))}</p><p><b>The retail side: what's actually selling.</b> ${esc(cap1(M.retail.replace(/^What's actually selling:\s*/, "")))}</p>${M.social ? `<p><b>The social side: what's being shared.</b> ${esc(cap1(M.social.replace(/^What's being shared:\s*/, "")))}</p>` : ""}</div>
       <p>${esc(M.rigor)}</p><p><b>${esc(M.cadence)}</b></p><p class="note">This edition: ${esc(A.fmtDay(f.edition))}. Shared text names no brand, retailer, price or sales figure.</p></div>`;
   }
   function briefText(f) {
@@ -78,7 +79,7 @@
         <div class="panel"><h3>Display ideas a store can copy</h3><ul>${B.display.map((p) => `<li>${esc(p)}</li>`).join("")}</ul><h3>Timing</h3><ul>${B.timing.map((p) => `<li>${esc(p)}</li>`).join("")}</ul></div>
       </div>
       <h3 class="bf-h">Trend notes</h3><p class="note">A note shows on a ${esc(A.cfg().name)} capsule when its pieces match. These notes reflect research through ${esc(A.fmtDay(f.edition))} and will be replaced with new insights from current research by ${esc(expires(f))}.${state.capsule ? " Marked: notes that match the capsule on the board." : ""}</p>
-      <div class="bf-sigs">${sig.map((s) => `<div class="panel sig ${hit.has(s.id) ? "hit" : ""}"><div class="meta"><span class="dir">${esc(s.direction)}</span>${dots(s.confidence || 1)}${hit.has(s.id) ? `<span class="pill">In this capsule</span>` : ""}</div><p>${esc(s.buyerLine)}</p></div>`).join("")}</div>
+      <div class="bf-sigs">${sig.map((s) => `<div class="panel sig ${hit.has(s.id) ? "hit" : ""}"><div class="meta"><span class="dir">${esc(s.direction)}</span>${dots(s.confidence || 1)}${s.source === "social" ? `<span class="pill soc" title="From the social and customer-post read">Social</span>` : ""}${hit.has(s.id) ? `<span class="pill">In this capsule</span>` : ""}</div><p>${esc(s.buyerLine)}</p></div>`).join("")}</div>
       ${aboutHTML(f)}</div>`;
     const subj = () => `${A.cfg().name}: ${B.title}`;
     $("bfCopy").onclick = () => { A.copyText(briefText(f), "bfNote", "Brief"); A.logSend("brief-copy"); };
@@ -106,6 +107,11 @@
       ${sig.length ? `<h5>Trend notes</h5><ul class="sig">${sig.map((s) => `<li>${esc(s.buyerLine)}${hit && hit.has(s.id) ? " <b>· in this capsule</b>" : ""}</li>`).join("")}</ul>` : ""}
       ${aboutHTML(f, true)}<div class="src">Market brief from In the Know, ${esc(A.fmtDay(f.edition))}. No brand names.</div></div>`;
   }
+  // v1.7.5: the brief always fits its page. With the social read it runs longer, so the type steps down until it fits (never under 7pt)
+  function fitBrief(pg) {
+    const el = pg && pg.querySelector(".sh-brief"); if (!el) return;
+    for (let fs = 9.6; fs >= 7; fs -= 0.2) { el.style.fontSize = fs.toFixed(1) + "pt"; if (el.scrollHeight <= el.clientHeight + 1) break; }
+  }
   // a stand-alone brief PDF (one Letter page), drawn the same way as the line sheet PDF
   async function briefPDF(f) {
     if (!window.jspdf || !window.html2canvas) throw new Error("pdf");
@@ -114,7 +120,7 @@
     try {
       const pg = document.createElement("div"); pg.className = "sheet sheet-" + A.line().toLowerCase(); pg.style.width = "7.6in"; pg.style.height = "10.1in";
       pg.innerHTML = `<div class="sh-mini"><img src="${esc(A.cfg().logo)}" alt=""><div class="t"><small>${esc(A.cfg().name)}</small>Market brief</div></div>` + briefPageHTML(f, null) + `<div class="sh-foot"><span class="l"></span><span class="c">${esc(A.cfg().lineSheet.contactLine)}</span><span class="r"></span></div>`;
-      host.appendChild(pg);
+      host.appendChild(pg); fitBrief(pg);
       await Promise.all([...host.querySelectorAll("img")].map((im) => (im.complete ? 0 : new Promise((r) => { im.onload = im.onerror = r; }))));
       const c = await window.html2canvas(pg, { scale: 2, backgroundColor: "#ffffff", logging: false });
       const doc = new window.jspdf.jsPDF({ unit: "in", format: "letter", orientation: "portrait", compress: true });
@@ -157,7 +163,7 @@
     const S = P.S, cfg = A.cfg();
     // market brief (buyer-safe; only while fresh)
     const f = briefFile();
-    if (S.brief && f && briefLive(f)) P.add(P.newPage(P.miniHead("Market brief") + briefPageHTML(f, matchedIds())));
+    if (S.brief && f && briefLive(f)) fitBrief(P.add(P.newPage(P.miniHead("Market brief") + briefPageHTML(f, matchedIds()))));
     // shown with her store (context only)
     const cx = state.context.items;
     if (S.ctxPage && cx.length) {
@@ -311,6 +317,6 @@
   A.hooks.board.push(() => { if (pane === "brief") drawBrief(); });
   A.hooks.context.push(() => { drawStoreSize(); storeNote(""); });
   A.hooks.sheetOpts.push((S) => { const f = briefFile(), live = f && briefLive(f); if ($("shBrief")) { $("shBrief").disabled = !live; $("shBriefRow").title = live ? "" : "No fresh In the Know brief for this line"; } if ($("shCtxPage")) $("shCtxPage").disabled = !state.context.items.length; });
-  window.CB_INSTORE = { show, briefFile, briefLive, briefText, liveSignals, drawBoards, drawBrief, applyStoreSize };
+  window.CB_INSTORE = { fitBrief, show, briefFile, briefLive, briefText, liveSignals, drawBoards, drawBrief, applyStoreSize };
   mount();
 })();

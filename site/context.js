@@ -437,7 +437,7 @@
       if (!fs.length) { const u = e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain"); if (u) addPhotoLink(u); }
     });
     document.addEventListener("paste", (e) => {
-      if ($("paneStore").classList.contains("hide")) return;
+      if ($("paneStore").classList.contains("hide") || document.body.classList.contains("sim-on")) return;   // v1.7.4: Find similar takes its own photos
       if (/INPUT|TEXTAREA/.test((document.activeElement || {}).tagName || "") && document.activeElement.id !== "ctxLink") return;
       const fs = [...(e.clipboardData ? e.clipboardData.files : [])].filter((f) => /^image\//.test(f.type));
       if (fs.length) { e.preventDefault(); fs.forEach((f) => addPhotoFile(f, "paste")); }

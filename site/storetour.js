@@ -84,6 +84,7 @@
   }
   function start() {
     if (window.CB_GUIDED && window.CB_GUIDED.state.on) window.CB_GUIDED.stop();
+    if (window.CB_SIMILAR) { if (window.CB_PANE) window.CB_PANE("store"); window.CB_SIMILAR.setMode("match"); }   // v1.7.4: the training is on "Goes with her store"
     T.on = true; T.i = 0; T.edited = false; T.strengths = new Set(); T.start = { items: items().length };
     document.body.classList.add("tour-on");
     draw();
