@@ -170,10 +170,13 @@ window.CAPSULE_CONFIG = {
     // Accent per line (v1.6.2, Dan 26 Sep 2026): Retro Forever = the logo red, Only If You Know = light lavender.
     accent: { RF: "#D0402E", OIYK: "#B8A9D9" },
     accentSoft: { RF: "#FCEFEC", OIYK: "#EFEAF8" },   // Excel header fill
-    markBuyerPick: true,          // small "Your pick" tag on the anchor(s)
+    markBuyerPick: true,          // small "Your pick" tag on the anchor(s), shown above the photo (v1.7.8)
+    // v1.7.8 (Dan, 28 Sep 2026): Auto layout goes to more pages rather than shrinking photos. Up to this many styles
+    // per page (split evenly: 22 styles = 2 pages of 11); 15 keeps photos about 1.3 in. wide. Try 20 for denser pages.
+    autoPerPage: 15,
     // Defaults for the line sheet composer (each can be changed in the Line sheet dialog)
     defaults: {
-      layout: "auto",             // "auto" = one page, photos as large as fit; or "2x2", "3x2", "3x3", "4x3", "4x4" per page
+      layout: "auto",             // "auto" = photos as large as fit, up to autoPerPage styles a page (one page for most capsules); or "2x2", "3x2", "3x3", "4x3", "4x4" per page
       paper: "letter",            // "letter" | "a4"
       orientation: "portrait",    // "portrait" | "landscape"
       cover: false,               // cover page: logo, capsule name, prepared for <buyer>, note, contact

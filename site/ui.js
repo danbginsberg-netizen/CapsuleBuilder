@@ -695,7 +695,9 @@
     if (f.wholesale && it.ws != null) tx += `<div class="p">Wholesale ${wsText(it)}</div>`;
     if (f.msrp && it.msrp) tx += `<div class="p m">MSRP ${money(it.msrp)}</div>`;
     if (f.units) tx += HT() ? `<div class="u">Qty ${qtyWord(minFor(it))}</div>` : `<div class="u">Minimum ${minFor(it)} per style</div>`;
-    return `<div class="it"><div class="ph"><img src="${esc(it.img)}" alt="">${o.anchor && S.markPick ? '<span class="yp">Your pick</span>' : ""}</div><div class="tx">${tx}</div></div>`;
+    // v1.7.8: "Your pick" gets its own line above the photo (every tile keeps the same line so the rows stay aligned)
+    const mark = S.markPick && orderedItems().some((x) => x.anchor);
+    return `<div class="it">${mark ? `<div class="yt">${o.anchor ? '<span class="yp">Your pick</span>' : ""}</div>` : ""}<div class="ph"><img src="${esc(it.img)}" alt=""></div><div class="tx">${tx}</div></div>`;
   }
   // [label, text] pairs for the terms block and the Excel header, in print order; blank entries are skipped
   function termsRows() {
@@ -746,7 +748,8 @@
       grid.style.gridTemplateColumns = `repeat(${o.cols}, minmax(0, 1fr))`;
       grid.style.gridTemplateRows = "";
       pg.style.setProperty("--ph", "10px");
-      const textH = Math.max(0, ...[...grid.querySelectorAll(".tx")].map((t) => t.getBoundingClientRect().height)) + 6;
+      const yt = grid.querySelector(".yt"), ytH = yt ? yt.getBoundingClientRect().height + 2 : 0;
+      const textH = Math.max(0, ...[...grid.querySelectorAll(".tx")].map((t) => t.getBoundingClientRect().height)) + 6 + ytH;
       const cellW = (r.width - gapX * (o.cols - 1)) / o.cols, cellH = (r.height - gapY * (o.rows - 1)) / o.rows;
       const ph = Math.min(cellW - 4, cellH - textH);
       if (!best || ph > best.ph + 1) best = Object.assign({ ph }, o);
@@ -781,8 +784,13 @@
     const formPage = S.orderForm && !cfg.orderPage;     // lines without an order page: hand-fill order form page
     const termsOnSheet = S.terms && !formPage;
     if (S.layout === "auto") {
-      const pg = add(newPage((S.cover ? miniHead() : fullHead(S)) + `<div class="sh-grid">${items.map(itemHTML).join("")}</div>` + (termsOnSheet ? termsHTML() : "") + (linkBand ? orderBandHTML() : "")));
-      fitGrid(pg, items.length, null);
+      // v1.7.8 (Dan): a big capsule goes to 2-3 pages instead of shrinking the photos; styles split evenly across pages
+      const per = Math.max(4, cfg.lineSheet.autoPerPage || 15), nPg = Math.max(1, Math.ceil(items.length / per)), size = Math.ceil(items.length / nPg);
+      for (let k = 0; k < nPg; k++) {
+        const list = items.slice(k * size, (k + 1) * size), last = k === nPg - 1;
+        const pg = add(newPage((k === 0 && !S.cover ? fullHead(S) : miniHead()) + `<div class="sh-grid">${list.map(itemHTML).join("")}</div>` + (termsOnSheet && last ? termsHTML() : "") + (linkBand && last ? orderBandHTML() : "")));
+        fitGrid(pg, list.length, null);
+      }
     } else {
       const [cols, rows] = S.layout.split("x").map(Number), per = cols * rows;
       let groups = [{ title: "", list: items }];

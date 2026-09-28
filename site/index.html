@@ -209,7 +209,8 @@
   .sheet .it { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 0; min-width: 0; }
   .sheet .it .ph { position: relative; width: var(--ph); height: var(--ph); flex: 0 0 auto; }
   .sheet .it .ph img { width: 100%; height: 100%; object-fit: contain; }
-  .sheet .it .yp { position: absolute; top: 2px; left: 2px; background: var(--lav); color: #fff; font-size: 6.5pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 1px 6px; border-radius: 99px; }
+  .sheet .it .yt { height: 13px; flex: 0 0 13px; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; }   /* v1.7.8: "Your pick" sits above the photo, never on it */
+  .sheet .it .yp { background: var(--lav); color: #fff; font-size: 6.5pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 1px 7px; border-radius: 99px; line-height: 11px; white-space: nowrap; }
   .sheet .it .tx { width: 100%; display: flex; flex-direction: column; align-items: center; }
   .sheet .it .s { font-size: 8pt; font-weight: 700; letter-spacing: .04em; margin-top: .04in; }
   .sheet .it .n { font-size: 8.5pt; color: #333; text-align: center; line-height: 1.2; max-width: 100%; }
@@ -241,7 +242,7 @@
   .sheet table.of { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
   .sheet table.of th { text-align: left; font-size: 7pt; letter-spacing: .12em; text-transform: uppercase; color: #555; border-bottom: 1.5px solid var(--lav); padding: 3px 4px; }
   .sheet table.of td { border-bottom: 1px solid #e3e0ea; padding: 3px 4px; vertical-align: middle; font-variant-numeric: tabular-nums; }
-  .sheet table.of td.im img { width: .42in; height: .42in; object-fit: contain; display: block; }
+  .sheet table.of td.im img { width: .62in; height: .62in; object-fit: contain; display: block; }
   .sheet table.of td.bl { width: .6in; }
   .sheet table.of td.bl i { display: block; border-bottom: 1px solid #888; height: .18in; }
   .sheet table.of td.num, .sheet table.of th.num { text-align: right; }
@@ -504,7 +505,7 @@
   .sheet table.pk { width: 100%; border-collapse: collapse; font-size: 8.2pt; }
   .sheet table.pk th { text-align: left; font-size: 6.8pt; letter-spacing: .12em; text-transform: uppercase; color: #555; border-bottom: 1.5px solid var(--lav); padding: 3px 4px; }
   .sheet table.pk td { border-bottom: 1px solid #e3e0ea; padding: 3px 4px; vertical-align: middle; font-variant-numeric: tabular-nums; }
-  .sheet table.pk td.im img { width: .4in; height: .4in; object-fit: contain; display: block; }
+  .sheet table.pk td.im img { width: .62in; height: .62in; object-fit: contain; display: block; }
   .sheet table.pk .num { text-align: right; } .sheet table.pk .mt { color: #777; font-size: 7pt; }
   .sheet .pk-terms { border: 1px solid var(--lav); border-radius: 6px; padding: .06in .12in; margin-top: .12in; font-size: 8pt; color: #333; line-height: 1.35; display: grid; grid-template-columns: auto 1fr; gap: 1px .14in; }
   .sheet .pk-terms b { letter-spacing: .12em; text-transform: uppercase; font-size: 6.8pt; color: #666; }
@@ -604,7 +605,7 @@
 <body>
 <div class="app">
   <aside>
-    <div class="brand"><img id="brandLogo" src="logo_rf.png" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.7.7</small></div></div>
+    <div class="brand"><img id="brandLogo" src="logo_rf.png" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.7.8</small></div></div>
     <div class="lines">
       <button class="on" id="lineRF" data-line="RF">Retro Forever</button>
       <button id="lineOIYK" data-line="OIYK">OIYK</button>
@@ -712,7 +713,7 @@
     <div class="opts" id="sheetOpts">
       <h4>Layout</h4>
       <select id="shLayout">
-        <option value="auto">One page — photos as large as fit</option>
+        <option value="auto">Auto — photos as large as fit (up to 15 a page)</option>
         <option value="2x2">4 per page (2 × 2)</option>
         <option value="3x2">6 per page (3 × 2)</option>
         <option value="3x3">9 per page (3 × 3)</option>
