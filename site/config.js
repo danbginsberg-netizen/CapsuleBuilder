@@ -201,7 +201,7 @@ window.CAPSULE_CONFIG = {
   lines: {
     RF: {
       name: "Retro Forever",
-      logo: "logo_rf.png",
+      logo: "logo_rf.png?h=88500682",
       sheetTagline: "Curated capsule",           // small line under the logo on the line sheet
       minQty: 6,
       terms: {
@@ -239,7 +239,7 @@ window.CAPSULE_CONFIG = {
     },
     OIYK: {
       name: "Only If You Know",
-      logo: "logo_oiyk.png",
+      logo: "logo_oiyk.png?h=64cbd40d",
       sheetTagline: "Color, memory, light",
       minQty: 0,                 // made to order: no stock rule
       mix: { necklace: 0.50, bracelet: 0.17, earring: 0.33 },   // OIYK has 5 bracelets today

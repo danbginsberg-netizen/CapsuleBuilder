@@ -254,8 +254,8 @@
   function loadXLSX() {
     if (window.XLSX) return Promise.resolve(window.XLSX);
     if (XLSXp) return XLSXp;
-    const base = (document.querySelector('script[src$="ui.js"]') || {}).src.replace(/ui\.js.*$/, "");
-    XLSXp = new Promise((ok, no) => { const s = document.createElement("script"); s.src = base + "xlsx.core.min.js"; s.onload = () => ok(window.XLSX); s.onerror = () => no(new Error("xlsx")); document.head.appendChild(s); });
+    const base = (document.querySelector('script[src*="ui.js"]') || {}).src.replace(/ui\.js.*$/, "");   // v1.8.0: web scripts carry ?h=
+    XLSXp = new Promise((ok, no) => { const s = document.createElement("script"); s.src = base + "xlsx.core.min.js?h=e4d0d141"; s.onload = () => ok(window.XLSX); s.onerror = () => no(new Error("xlsx")); document.head.appendChild(s); });
     return XLSXp;
   }
   async function importFile(file) {

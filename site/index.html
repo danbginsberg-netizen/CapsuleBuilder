@@ -429,6 +429,7 @@
   .sim-tray .tr-im img.reo { border: 2px solid #a15c00; }
   #board .card .reo-tag { position: absolute; left: 8px; bottom: 8px; background: #a15c00; color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; z-index: 2; }
   .sheet.fu-page .fu-bought .ro { color: #a15c00; font-weight: 700; font-size: 6.8pt; letter-spacing: .04em; text-transform: uppercase; }
+  .simstrip .btn { display: inline-block; width: auto; margin: 6px 0 0; padding: 7px 12px; font-size: 13px; }
   .simstrip { background: var(--lav-soft); border: 1px solid var(--lav); color: var(--ink); border-radius: 10px; padding: 8px 12px; margin: 0 0 10px; font-size: 13px; }
   .sm .row { margin: 4px 0 0; gap: 4px; } .sm .row .btn { font-size: 11.5px; padding: 4px 8px; white-space: nowrap; border-radius: 8px; }
   #simPane .sim-bought .row .btn, #simPane .sim-acts .btn { white-space: nowrap; padding: 8px 11px; font-size: 13px; }
@@ -451,6 +452,11 @@
   .sheet.fu-page .fu-grid .t img { width: var(--ph, 1.3in); height: var(--ph, 1.3in); object-fit: contain; }
   .sheet.fu-page .fu-grid .t span { font-size: 8pt; color: #333; line-height: 1.2; } .sheet.fu-page .fu-grid .t span.s { font-size: 7.6pt; color: #555; margin-top: 2px; } .sheet.fu-page .fu-grid .t span.s b { color: #222; letter-spacing: .03em; }
   .sheet.fu-page .fu-grid .t i { font-size: 7pt; color: var(--lav-ink); font-style: normal; font-weight: 700; line-height: 1.2; } .sheet.fu-page .fu-grid .t .p { font-size: 7.5pt; color: var(--lav-ink); }
+  /* v1.8.1: the follow-up flows onto as many pages as it needs */
+  .sheet.fu-page .fu-flow { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+  .sheet.fu-page .fu-flow > * { flex: 0 0 auto; }
+  .sheet.fu-page .fu-flowgrid { flex: 0 0 auto; overflow: visible; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .1in .12in; align-content: start; --ph: 1.3in; margin-bottom: .04in; }
+  .sheet.fu-page .fu-grid .t .q { font-size: 7.2pt; color: #666; }
   .sheet.fu-page .fu-order { margin-top: .1in; } .sheet.fu-page .fu-order .tx b { font-size: 9pt; }
   .cc-a { display: flex; flex-direction: column; gap: 4px; margin-top: auto; } .cc-a .btn { font-size: 11.5px; padding: 5px 6px; }
   /* boards */
@@ -605,7 +611,7 @@
 <body>
 <div class="app">
   <aside>
-    <div class="brand"><img id="brandLogo" src="logo_rf.png" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.7.9</small></div></div>
+    <div class="brand"><img id="brandLogo" src="logo_rf.png?h=88500682" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.8.1</small></div></div>
     <div class="lines">
       <button class="on" id="lineRF" data-line="RF">Retro Forever</button>
       <button id="lineOIYK" data-line="OIYK">OIYK</button>
@@ -789,23 +795,30 @@
 <div id="guided"></div>
 <div id="sheetWrap"></div>
 
-<script src="config.js"></script>
-<script src="data_rf.js"></script>
-<script src="data_oiyk.js"></script>
-<script src="faire_rf.js"></script>
-<script src="orderpage_rf.js"></script>
-<script src="orderpage_oiyk.js"></script>
-<script src="qrcode.js"></script>
-<script src="jspdf.umd.min.js" defer></script>
-<script src="html2canvas.min.js" defer></script>
-<script src="guide.js"></script>
-<script src="engine.js"></script>
-<script src="ui.js"></script>
-<script src="boards.js"></script>
-<script src="context.js"></script>
-<script src="instore.js"></script>
-<script src="guided.js"></script>
-<script src="storetour.js"></script>
-<script src="similar.js"></script>
+<script src="config.js?h=2a81e9ae"></script>
+<script src="data_rf.js?h=189147ab"></script>
+<script src="data_oiyk.js?h=e00012b9"></script>
+<script src="faire_rf.js?h=977f58fa"></script>
+<script src="orderpage_rf.js?h=da45501f"></script>
+<script src="orderpage_oiyk.js?h=b9386002"></script>
+<script src="qrcode.js?h=6e6189e2"></script>
+<script src="jspdf.umd.min.js?h=e6c65801" defer></script>
+<script src="html2canvas.min.js?h=d7530aa0" defer></script>
+<script src="guide.js?h=47973b5b"></script>
+<script src="engine.js?h=4b468c79"></script>
+<script src="ui.js?h=ea7e57f2"></script>
+<script src="boards.js?h=775a6d26"></script>
+<script src="context.js?h=d5eca56c"></script>
+<script src="instore.js?h=95b923b2"></script>
+<script src="guided.js?h=dd332ae0"></script>
+<script src="storetour.js?h=246430e5"></script>
+<script src="similar.js?h=92d00571"></script>
+<script>/* v1.8.0: open the newest release, not a saved copy (GitHub Pages keeps pages up to 10 minutes) */
+(function(){var V="1.8.1",t0=Date.now();
+function newest(cb){try{fetch("version.json?cb="+Date.now(),{cache:"no-store"}).then(function(r){return r.json()}).then(function(j){if(j&&j.version&&j.version!==V)cb(j.version)}).catch(function(){})}catch(e){}}
+function reload(v){try{if(sessionStorage.getItem("cb_fresh")===v)return false;sessionStorage.setItem("cb_fresh",v)}catch(e){}var u=new URL(location.href);u.searchParams.set("v",v);location.replace(u.toString());return true}
+function bar(v){if(document.getElementById("cbFresh"))return;var d=document.createElement("div");d.id="cbFresh";d.style.cssText="position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:99999;background:#1f1d24;color:#fff;padding:9px 14px;border-radius:10px;font:600 14px system-ui,sans-serif;box-shadow:0 4px 18px #0004";d.innerHTML="Version "+v+" is ready. <button style='margin-left:8px;border:0;border-radius:7px;padding:5px 10px;font-weight:700;cursor:pointer'>Reload</button>";d.querySelector("button").onclick=function(){try{sessionStorage.removeItem("cb_fresh")}catch(e){}reload(v)};document.body.appendChild(d)}
+newest(function(v){if(Date.now()-t0<6000&&!document.querySelector(".dlg.open")&&reload(v))return;bar(v)});
+setInterval(function(){newest(bar)},30*60*1000);})();</script>
 </body>
 </html>

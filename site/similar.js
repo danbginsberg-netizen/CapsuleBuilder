@@ -10,7 +10,6 @@
   if (!A || !CE || !CE.parseLook) return;
   const { $, esc, state, money } = A;
   const KEY = "capsule_similar_v1";
-  const MAX_ON_SHEET = 12;
   const LINES = ["RF", "OIYK"];
   const NAME = { RF: "Retro Forever", OIYK: "Only If You Know" };
 
@@ -279,7 +278,7 @@
     const L = A.line(), n = S.sel[L].length + S.reo[L].length, has = B.per[L].rows.length > 0;
     const reorder = S.reorder == null ? has : S.reorder;
     return `<h3><span class="n">4</span> Send her the follow-up</h3>
-      <p class="note">One page from ${esc(NAME[L])}: what she bought, her photo and request, your new picks from step 3, and how to order, with a link that fills in her reorder and the new picks. ${n > MAX_ON_SHEET ? `<span class="warn">The page holds ${MAX_ON_SHEET}; the first ${MAX_ON_SHEET} chosen are used.</span>` : ""}</p>
+      <p class="note">From ${esc(NAME[L])}: what she bought, her photo and request, every new pick from step 3${S.built && S.built.line === L && state.capsule ? " and the rest of the capsule you built from them" : ""}, then how to order, with a QR code and a link that fill in her reorder and every style shown. As many pages as it needs.</p>
       <div class="sim-f">
         <label>For<input type="text" id="simFor" value="${esc(state.buyer)}" placeholder="Her name or store"></label>
         <label>Her email<input type="email" id="simEmail" value="${esc(S.email)}" placeholder="optional, for Email as PDF"></label>
@@ -432,9 +431,23 @@
   }
 
   /* ---------------- the follow-up: text, link, page, PDF ---------------- */
-  const selItems = () => { const e = A.engine(), rs = reoSet(A.line()); return S.sel[A.line()].filter((k) => !rs.has(k)).map((s) => e.bySku.get(s)).filter(Boolean).slice(0, MAX_ON_SHEET); };
+  // v1.8.1 (Dan): the follow-up carries every pick (no 12-piece cap), best matches first, a style's colorways side by side
+  function selItems() {
+    const L = A.line(), e = A.engine(), rs = reoSet(L), items = S.sel[L].filter((k) => !rs.has(k)).map((s) => e.bySku.get(s)).filter(Boolean);
+    let rank = new Map();
+    try { const R = results(L, B || bought(), 999); if (R) R.groups.forEach((g, gi) => g.colorways.forEach((c, ci) => rank.set(c.item.sku, gi * 100 + ci))); } catch (err) { rank = new Map(); }
+    return items.map((it, i) => [it, rank.has(it.sku) ? rank.get(it.sku) : 1e6 + i]).sort((a, b) => a[1] - b[1]).map((x) => x[0]);
+  }
   const reoItems = () => { const e = A.engine(); return S.reo[A.line()].map((s) => e.bySku.get(s)).filter(Boolean); };
-  const linkItems = () => reoItems().concat(selItems());   // v1.7.7: the order link fills in her reorder and the new styles
+  // v1.8.1: the rest of the capsule built from these picks (pieces added on the board, or a capsule filled out around them)
+  function extraItems() {
+    const L = A.line(); if (!S.built || S.built.line !== L || !state.capsule) return [];
+    const have = new Set(S.reo[L].concat(S.sel[L]));
+    const on = A.orderedItems().map((o) => o.it);
+    if (!(S.built.skus || []).some((k) => on.some((it) => it.sku === k))) return [];   // a different capsule is on the board
+    return on.filter((it) => !have.has(it.sku));
+  }
+  const linkItems = () => reoItems().concat(selItems(), extraItems());   // the order link fills in her reorder, the new styles and the rest of the capsule
   const isReorder = () => (S.reorder == null ? (B || bought()).per[A.line()].rows.length > 0 : S.reorder);
   const firstName = () => { const n = state.buyer.trim(); return n && !/\b(inc|llc|shop|store|boutique|co)\b/i.test(n) ? n.split(/\s+/)[0] : ""; };
   function orderRef() { const P = (B || bought()).P; return [S.orderRef || P.order, S.orderDate || P.date].filter(Boolean); }
@@ -492,55 +505,93 @@
     if (S.note) lines.push(S.note, "");
     lines.push(`${ref.length ? `Thank you for your order ${ref.join(", ")}. ` : ""}You asked about ${askLine().charAt(0).toLowerCase() + askLine().slice(1)}. Here's what we have in ${A.cfg().name}:`, "");
     items.forEach((it) => { const b = badgeOf(it); lines.push(`- ${it.name}, ${colorName(it)} (${it.sku})${b ? ` · ${b.toLowerCase()}` : ""}${S.prices ? ` · ${money(A.engine().lineCost(it, isReorder() ? "reorder" : "first").each)} wholesale` : ""}`); });
+    const ex = extraItems();
+    if (ex.length) { lines.push("", "More pieces that go with them:"); ex.forEach((it) => lines.push(`- ${it.name}, ${it.cname || A.label(it.dom)} (${it.sku})${S.prices ? ` · ${money(A.engine().lineCost(it, isReorder() ? "reorder" : "first").each)} wholesale` : ""}`)); }
     if (miss.length) lines.push("", `We don't have ${listWords(miss)} in the line right now; these are the closest in look and color.`);
     if (reo.length) { lines.push("", "Your reorder of what you bought:"); reo.forEach((it) => lines.push(`- ${it.name}, ${it.cname || A.label(it.dom)} (${it.sku})`)); }
     lines.push("", howToOrder());
-    if (link) lines.push(`This link opens our order page with ${reo.length ? "your reorder and these new styles" : "these styles"} filled in:\n${link.url}`);
+    if (link) lines.push(`This link opens our order page with ${reo.length ? "your reorder and these styles" : "these styles"} filled in (${link.n} in all):\n${link.url}`);
     lines.push("", "Best,");
     return lines.join("\n");
   }
-  function pageHTML() {
-    const cfg = A.cfg(), L = A.line(), items = selItems(), ref = orderRef(), per = (B || bought()).per[L], link = S.link ? followLink(linkItems()) : null, miss = missingStones(), rs = reoSet(L);
-    const owned = per.rows.filter((r) => r.kind !== "off");
-    const who = state.buyer.trim();
-    const boughtTiles = owned.slice(0, 8).map((r) => { const it = r.items[0]; const q = r.entry.qty != null ? ` × ${r.entry.qty}` : ""; return `<div class="b"><img src="${esc(it.img)}" alt=""><div><b>${esc(r.kind === "colorway" ? r.items.map((i) => i.sku).join(", ") : r.entry.style)}</b>${esc(q)}<br>${esc(it.name)}${r.kind === "colorway" ? `<br><i>${esc(r.items.map((i) => i.cname || "").join(", "))}</i>` : ""}${r.items.some((i) => rs.has(i.sku)) ? `<br><span class="ro">In your reorder</span>` : ""}</div></div>`; }).join("");
+  /* v1.8.1 (Dan, 28 Sep 2026): the follow-up is the template for every "what she bought + what we have like it" send.
+     Page 1 opens with what she bought and what she asked about; then every pick (in those stones), then the rest of the
+     capsule built from them, as many pages as needed (about 15-20 styles a page), ending with How to order: a QR code and
+     a link that fill in everything shown. Pages are filled by measuring, so nothing is cut off. */
+  const unitsText = (it) => { const u = A.engine().unitsFor(it, isReorder() ? "reorder" : "first"); return A.HT() ? A.qtyWord(u) : `${u} pcs`; };
+  function tileHTML(it, badge) {
+    return `<div class="t"><img src="${esc(it.img)}" alt=""><span class="s"><b>${esc(it.sku)}</b> · ${esc(colorName(it))}</span><span>${esc(it.name)}</span>${badge ? `<i>${esc(badge)}</i>` : ""}${S.prices ? `<span class="p">${money(A.engine().lineCost(it, isReorder() ? "reorder" : "first").each)} wholesale</span>` : ""}<span class="q">Qty ${esc(unitsText(it))}</span></div>`;
+  }
+  function pageParts() {
+    const cfg = A.cfg(), L = A.line(), ref = orderRef(), per = (B || bought()).per[L], link = S.link ? followLink(linkItems()) : null, miss = missingStones(), rs = reoSet(L);
+    const owned = per.rows.filter((r) => r.kind !== "off"), who = state.buyer.trim();
     const offList = per.off.map((e) => e.style + (e.qty != null ? ` × ${e.qty}` : ""));
     const photos = S.showPhoto ? S.photos.slice(0, 2) : [];
-    const tiles = items.map((it) => { const b = badgeOf(it); return `<div class="t"><img src="${esc(it.img)}" alt=""><span class="s"><b>${esc(it.sku)}</b> · ${esc(colorName(it))}</span><span>${esc(it.name)}</span>${b ? `<i>${esc(b)}</i>` : ""}${S.prices ? `<span class="p">${money(A.engine().lineCost(it, isReorder() ? "reorder" : "first").each)} wholesale</span>` : ""}</div>`; }).join("");
-    return `<div class="sh-mini"><img src="${esc(cfg.logo)}" alt="${esc(cfg.name)}"><div class="t"><small>Follow-up · ${esc(new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }))}</small>${who ? `For ${esc(who)}` : "Styles in the stones you asked about"}</div></div>
-      <div class="fu-intro">${S.note ? `${esc(S.note)} ` : ""}${ref.length ? `Thank you for your order ${esc(ref.join(", "))}. ` : ""}Here's ${owned.length || offList.length ? "what you bought, and " : ""}what we have in the stones you asked about.</div>
-      ${owned.length || offList.length ? `<div class="fu-h">What you bought</div><div class="fu-bought">${boughtTiles}</div>${offList.length ? `<div class="fu-also">${owned.length ? "Also on your order" : "On your order"}: ${esc(offList.join(" · "))}</div>` : ""}` : ""}
-      <div class="fu-h">You asked about</div>
-      <div class="fu-ask">${photos.length ? `<div class="ph">${photos.map((p) => `<img src="${esc(p.thumb)}" alt="">`).join("")}</div>` : ""}<div class="tx">${esc(askLine())}.${miss.length ? `<small>We don't have ${esc(listWords(miss))} in the line right now; the pieces below are the closest in look and color.</small>` : ""}</div></div>
-      <div class="fu-h">What we have in those stones</div>
-      <div class="fu-grid" data-n="${items.length}">${tiles}</div>
-      <div class="sh-order fu-order">${link ? A.qrBox(link.url) : ""}<div class="tx"><b>How to order</b>${esc(howToOrder())}${link ? ` Scan the code or <a href="${esc(link.url)}">click here</a>: our order page opens with ${rs.size ? `your reorder and the new styles (${link.n} in all)` : `these ${link.n} styles`} filled in. Adjust quantities there, add your details and submit.` : ""}</div></div>
-      <div class="sh-foot"><span class="l">${esc(cfg.name)}</span><span class="c">${esc(cfg.lineSheet.contactLine)}</span><span class="r">${esc(cfg.contactEmail || "")}</span></div>`;
+    const head = (k) => `<div class="sh-mini"><img src="${esc(cfg.logo)}" alt="${esc(cfg.name)}"><div class="t"><small>Follow-up · ${esc(new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }))}</small>${who ? `For ${esc(who)}` : "Styles in the stones you asked about"}</div></div>`;
+    const blocks = [];
+    blocks.push(`<div class="fu-intro">${S.note ? `${esc(S.note)} ` : ""}${ref.length ? `Thank you for your order ${esc(ref.join(", "))}. ` : ""}Here's ${owned.length || offList.length ? "what you bought, and " : ""}what we have in the stones you asked about.</div>`);
+    if (owned.length || offList.length) blocks.push(`<div class="fu-keep"><div class="fu-h">What you bought</div><div class="fu-bought">${owned.map((r) => { const it = r.items[0]; const q = r.entry.qty != null ? ` × ${r.entry.qty}` : ""; return `<div class="b"><img src="${esc(it.img)}" alt=""><div><b>${esc(r.kind === "colorway" ? r.items.map((i) => i.sku).join(", ") : r.entry.style)}</b>${esc(q)}<br>${esc(it.name)}${r.kind === "colorway" ? `<br><i>${esc(r.items.map((i) => i.cname || "").join(", "))}</i>` : ""}${r.items.some((i) => rs.has(i.sku)) ? `<br><span class="ro">In your reorder</span>` : ""}</div></div>`; }).join("")}</div>${offList.length ? `<div class="fu-also">${owned.length ? "Also on your order" : "On your order"}: ${esc(offList.join(" · "))}</div>` : ""}</div>`);
+    blocks.push(`<div class="fu-keep"><div class="fu-h">You asked about</div><div class="fu-ask">${photos.length ? `<div class="ph">${photos.map((p) => `<img src="${esc(p.thumb)}" alt="">`).join("")}</div>` : ""}<div class="tx">${esc(askLine())}.${miss.length ? `<small>We don't have ${esc(listWords(miss))} in the line right now; the pieces below are the closest in look and color.</small>` : ""}</div></div></div>`);
+    const sections = [{ title: "What we have in those stones", tiles: selItems().map((it) => tileHTML(it, badgeOf(it))) }, { title: "More pieces that go with them", tiles: extraItems().map((it) => tileHTML(it, "")) }].filter((x) => x.tiles.length);
+    const band = `<div class="sh-order fu-order">${link ? A.qrBox(link.url) : ""}<div class="tx"><b>How to order</b>${esc(howToOrder())}${link ? ` Scan the code or <a href="${esc(link.url)}">click here</a>: our order page opens with ${rs.size ? `your reorder and every style shown here (${link.n} in all)` : `every style shown here (${link.n})`} filled in. Adjust quantities there, add your details and submit.` : ""}${link && link.off.length ? `<br><i>Not on the order page (email us to add): ${esc(link.off.join(", "))}</i>` : ""}</div></div>`;
+    return { cfg, head, blocks, sections, band };
   }
-  // size the style photos to the room left on the page (one page, always)
-  function fit(pg) {
-    const g = pg.querySelector(".fu-grid"), n = +g.dataset.n || 1;
-    const cols = n <= 4 ? Math.max(n, 3) : 4, rows = Math.ceil(n / cols);
-    g.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-    // start as large as a column allows, then shrink until every row fits above "How to order"
-    let ph = Math.min(165, Math.floor(g.clientWidth / cols - 12), Math.floor(g.clientHeight / rows));
-    g.style.setProperty("--ph", ph + "px");
-    while (ph > 44 && g.scrollHeight > g.clientHeight + 1) { ph -= 6; g.style.setProperty("--ph", ph + "px"); }
-  }
-  function buildPage() {
-    const pg = document.createElement("div");
-    pg.className = "sheet fu-page sheet-" + A.line().toLowerCase();
-    pg.innerHTML = pageHTML();
-    return pg;
+  // lay the follow-up out into as many Letter pages as it needs (inside `host`, which must be in the page so it can measure)
+  function layoutPages(host) {
+    const P = pageParts(), pages = [];
+    let pg, flow;
+    const newPage = () => {
+      pg = document.createElement("div"); pg.className = "sheet fu-page sheet-" + A.line().toLowerCase();
+      pg.innerHTML = P.head(pages.length) + `<div class="fu-flow"></div><div class="sh-foot"><span class="l">${esc(P.cfg.name)}</span><span class="c">${esc(P.cfg.lineSheet.contactLine)}</span><span class="r"></span></div>`;
+      host.appendChild(pg); pages.push(pg); flow = pg.querySelector(".fu-flow");
+    };
+    const fits = () => flow.scrollHeight <= flow.clientHeight + 1;
+    const add = (html) => { flow.insertAdjacentHTML("beforeend", html); if (!fits() && flow.children.length > 1) { flow.lastElementChild.remove(); newPage(); flow.insertAdjacentHTML("beforeend", html); } };
+    newPage();
+    P.blocks.forEach(add);
+    for (const sec of P.sections) {
+      let grid = null, n = 0;
+      const open = (cont) => { flow.insertAdjacentHTML("beforeend", `<div class="fu-h">${esc(sec.title)}${cont ? " (continued)" : ""}</div><div class="fu-grid fu-flowgrid"></div>`); grid = flow.lastElementChild; n = 0; };
+      open(false);
+      if (!fits() && flow.children.length > 2) { flow.lastElementChild.remove(); flow.lastElementChild.remove(); newPage(); open(false); }
+      sec.tiles.forEach((t, i) => {
+        grid.insertAdjacentHTML("beforeend", t); n++;
+        if (fits()) return;
+        grid.lastElementChild.remove(); n--;
+        if (!n) { grid.remove(); flow.lastElementChild.remove(); }   // never leave a title alone at the bottom of a page
+        newPage(); open(i > 0); grid.insertAdjacentHTML("beforeend", t); n++;
+      });
+    }
+    add(P.band);
+    // never end on a page with only "How to order": bring the last row of styles over with it
+    if (pages.length > 1 && flow.children.length === 1) {
+      const prev = pages[pages.length - 2].querySelector(".fu-flow"), grids = prev.querySelectorAll(".fu-flowgrid"), g = grids[grids.length - 1];
+      const hd = g && g.previousElementSibling && g.previousElementSibling.classList.contains("fu-h") ? g.previousElementSibling : null;
+      if (g && g.children.length > 5) {   // a long section: its last row comes over, under "(continued)"
+        const cols = 5, take = g.children.length % cols || cols, moved = [...g.children].slice(-take);
+        moved.forEach((t) => t.remove());
+        flow.insertAdjacentHTML("afterbegin", `<div class="fu-h">${esc((hd ? hd.textContent : "").replace(/ \(continued\)$/, ""))} (continued)</div><div class="fu-grid fu-flowgrid">${moved.map((t) => t.outerHTML).join("")}</div>`);
+      } else if (g && hd && prev.children.length > 2) {   // a short section: it comes over whole, title and all
+        flow.insertAdjacentHTML("afterbegin", hd.outerHTML + g.outerHTML); g.remove(); hd.remove();
+      }
+    }
+    pages.forEach((p, k) => { p.querySelector(".sh-foot .r").textContent = pages.length > 1 ? `Page ${k + 1} of ${pages.length}` : (P.cfg.contactEmail || ""); });
+    return pages;
   }
   async function imgsReady(root) { await Promise.all([...root.querySelectorAll("img")].map((im) => (im.complete ? 0 : new Promise((r) => { im.onload = im.onerror = r; })))); }
   async function preview() {
     const box = $("simPrevBox"); box.classList.remove("hide"); box.innerHTML = "";
-    const holder = document.createElement("div"); holder.className = "pgwrap"; box.appendChild(holder);
-    const pg = buildPage(); holder.appendChild(pg); fit(pg); await imgsReady(pg); fit(pg);
-    const k = Math.min(1, (box.clientWidth - 20) / pg.offsetWidth);
-    pg.style.transform = `scale(${k})`; pg.style.transformOrigin = "top left";
-    holder.style.width = pg.offsetWidth * k + "px"; holder.style.height = pg.offsetHeight * k + "px";
+    const host = document.createElement("div"); host.style.cssText = "position:absolute;left:-20000px;top:0;"; document.body.appendChild(host);
+    const pages = layoutPages(host);
+    const k = Math.min(1, (box.clientWidth - 20) / pages[0].offsetWidth);
+    pages.forEach((pg) => {
+      const holder = document.createElement("div"); holder.className = "pgwrap"; box.appendChild(holder);
+      const w = pg.offsetWidth, h = pg.offsetHeight; holder.appendChild(pg);
+      pg.style.transform = `scale(${k})`; pg.style.transformOrigin = "top left";
+      holder.style.width = w * k + "px"; holder.style.height = h * k + "px"; holder.style.marginBottom = "12px";
+    });
+    host.remove();
+    box.insertAdjacentHTML("afterbegin", `<div class="note">${pages.length} page${pages.length === 1 ? "" : "s"}</div>`);
     box.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
   async function makePDF(btn) {
@@ -549,18 +600,21 @@
       const host = document.createElement("div"); host.style.cssText = "position:fixed;left:-20000px;top:0;background:#fff;";
       document.body.appendChild(host);
       try {
-        const pg = buildPage(); host.appendChild(pg); fit(pg); await imgsReady(pg); fit(pg);
-        const c = await window.html2canvas(pg, { scale: 2, backgroundColor: "#ffffff", logging: false, useCORS: true });
+        const pages = layoutPages(host); await imgsReady(host);
         const doc = new window.jspdf.jsPDF({ unit: "in", format: "letter", orientation: "portrait", compress: true });
-        doc.addImage(c.toDataURL("image/jpeg", 0.9), "JPEG", 0.45, 0.45, 7.6, 10.1, undefined, "FAST");
-        if (A.pdfOverlay) A.pdfOverlay(doc, pg, 0.45, 0.45, 7.6);   // v1.7.9: sharp, scannable QR + clickable links
+        for (let k = 0; k < pages.length; k++) {
+          const c = await window.html2canvas(pages[k], { scale: 2, backgroundColor: "#ffffff", logging: false, useCORS: true });
+          if (k) doc.addPage();
+          doc.addImage(c.toDataURL("image/jpeg", 0.9), "JPEG", 0.45, 0.45, 7.6, 10.1, undefined, "FAST");
+          if (A.pdfOverlay) A.pdfOverlay(doc, pages[k], 0.45, 0.45, 7.6);   // v1.7.9: sharp, scannable QR + clickable links
+        }
         doc.setProperties({ title: `${A.cfg().name} follow-up${state.buyer.trim() ? " for " + state.buyer.trim() : ""}`, author: A.cfg().name });
         return new File([doc.output("blob")], `${A.fileSafe(`${A.cfg().name} follow-up ${state.buyer.trim() || ""}`.trim())}.pdf`, { type: "application/pdf" });
       } finally { host.remove(); }
     };
     const old = btn.textContent; btn.disabled = true; btn.textContent = "Making PDF…";
     try { return await run(); }
-    catch (e) { A.flash("simSendNote", "This copy can't make the PDF itself (it was opened from a folder on this computer). Use the web copy (onlyifyouknow.com/pages/capsule-builder), or Copy as text."); return null; }
+    catch (e) { console.error(e); A.flash("simSendNote", "This copy can't make the PDF itself (it was opened from a folder on this computer). Use the web copy (onlyifyouknow.com/pages/capsule-builder), or Copy as text."); return null; }
     finally { btn.disabled = false; btn.textContent = old; }
   }
   const subject = () => `${A.cfg().name}: styles in the stones you asked about`;
@@ -615,7 +669,11 @@
     d.innerHTML = `Built from Find similar: ${S.reo[A.line()].length ? `her reorder (${S.reo[A.line()].length}) + ` : ""}${S.sel[A.line()].filter((k) => !S.reo[A.line()].includes(k)).length} new picks. <a class="link" id="simBack">← Back to Find similar</a> to pick more colorways or styles, then build again or add them to this capsule. (“Show another version” and “Back to best match” rebuild from scratch; your picks stay in Find similar.)`;
     bd.prepend(d);
     d.querySelector("#simBack").onclick = () => { window.CB_PANE && window.CB_PANE("store"); setMode("similar"); };
+    // v1.8.1: the follow-up is the send for a capsule built this way: what she bought, what she asked about, this whole capsule
+    const fb = document.createElement("button"); fb.className = "btn primary"; fb.id = "simFollowPdf"; fb.textContent = "Follow-up PDF (what she bought + this capsule)";
+    fb.onclick = async () => { const f = await makePDF(fb); if (f) { A.download(f.name, f, "application/pdf"); A.toast(`Saved ${esc(f.name)} to your downloads.`); } };
+    d.appendChild(fb);
   });
   mount();
-  window.CB_SIMILAR = { setMode, draw, state: () => S, query, describe, followText, followLink: () => followLink(linkItems()), buildPage, fit, results: (L) => results(L || A.line(), bought()), bought, moreLike, importOrderCSV };
+  window.CB_SIMILAR = { setMode, draw, state: () => S, query, describe, followText, followLink: () => followLink(linkItems()), layoutPages, makePDF, extraItems, selItems, results: (L) => results(L || A.line(), bought()), bought, moreLike, importOrderCSV };
 })();
