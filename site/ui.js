@@ -657,14 +657,50 @@
     if (l.off.length) alert(`Not on the order page, so left out: ${l.off.join(", ")}. The buyer can email for those.`);
     window.open(l.url, "_blank", "noopener");
   }
+  // v1.7.9: a long link (a big capsule's cart) gets the low error-correction level, which keeps the code as small as it can be
+  const qrEc = (text) => (String(text).length > 250 ? "L" : "M");
+  function qrMake(text, ec) { const q = qrcode(0, ec || qrEc(text)); q.addData(text); q.make(); return q; }
   function qrSVG(text, ec) {
-    try { const q = qrcode(0, ec || "M"); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 2, margin: 0, scalable: true }); }
+    try { return qrMake(text, ec).createSvgTag({ cellSize: 2, margin: 0, scalable: true }); }
     catch (e) { return ""; }
+  }
+  // v1.7.9: the printed QR code grows with the link so each square prints at least ~0.5 mm (0.95 in. for a short link,
+  // up to 2.1 in. for a 30+ style capsule). data-qr lets the PDF redraw it as sharp vector squares and make it clickable.
+  function qrBox(text) {
+    let n = 25; try { n = qrMake(text).getModuleCount(); } catch (e) { /* keep the default */ }
+    const size = Math.min(2.1, Math.max(0.95, (n + 4) * 0.021));
+    return `<div class="qr" data-qr="${esc(text)}" style="width:${size.toFixed(2)}in;height:${size.toFixed(2)}in">${qrSVG(text)}</div>`;
+  }
+  /* v1.7.9: PDFs are pictures of the page (html2canvas), so on their own links don't click and a dense QR code blurs.
+     After a page's picture goes in, this redraws every QR code on it as sharp vector squares (with a white margin) and
+     adds a real link over each <a href> and each QR code. x0/y0: where the page sits on the PDF page, wIn: its width (in.). */
+  function pdfOverlay(doc, pg, x0, y0, wIn) {
+    const R = pg.getBoundingClientRect(), k = wIn / R.width;
+    const at = (r) => [x0 + (r.left - R.left) * k, y0 + (r.top - R.top) * k, r.width * k, r.height * k];
+    pg.querySelectorAll("[data-qr]").forEach((el) => {
+      let q; try { q = qrMake(el.dataset.qr); } catch (e) { return; }
+      const n = q.getModuleCount(), [x, y, w, h] = at(el.getBoundingClientRect()), size = Math.min(w, h), c = size / n;
+      doc.setFillColor(255, 255, 255); doc.rect(x - 2 * c, y - 2 * c, size + 4 * c, size + 4 * c, "F");
+      doc.setFillColor(0, 0, 0);
+      for (let r = 0; r < n; r++) {
+        let run = -1;
+        for (let col = 0; col <= n; col++) {
+          const dark = col < n && q.isDark(r, col);
+          if (dark && run < 0) run = col;
+          if (!dark && run >= 0) { doc.rect(x + run * c, y + r * c, (col - run) * c + 0.0005, c + 0.0005, "F"); run = -1; }
+        }
+      }
+      doc.link(x, y, size, size, { url: el.dataset.qr });
+    });
+    pg.querySelectorAll("a[href]").forEach((a) => {
+      if (!/^https?:/i.test(a.href)) return;
+      [...a.getClientRects()].forEach((r) => { const [x, y, w, h] = at(r); doc.link(x, y, w, h, { url: a.href }); });
+    });
   }
   function orderBandHTML() {
     const l = orderLink();
     if (!l) return "";
-    return `<div class="sh-order"><div class="qr">${qrSVG(l.url)}</div><div class="tx"><b>Order this capsule</b>
+    return `<div class="sh-order">${qrBox(l.url)}<div class="tx"><b>Order this capsule</b>
       Scan the code or <a href="${esc(l.url)}">click here</a> — our wholesale order page opens with these ${l.n} styles filled in at ${esc(unitsLabel(activeUnits()))}. Adjust quantities there, add your details and submit.
       ${l.off.length ? `<br><i>Not on the order page (email us to add): ${esc(l.off.join(", "))}</i>` : ""}</div></div>`;
   }
@@ -918,6 +954,7 @@
         const img = c.toDataURL("image/jpeg", 0.88);   // throws on a file:// page (tainted canvas)
         if (k) doc.addPage();
         doc.addImage(img, "JPEG", MARGIN, MARGIN, d.w, d.h, undefined, "FAST");
+        pdfOverlay(doc, pages[k], MARGIN, MARGIN, d.w);   // v1.7.9: sharp, scannable QR + clickable links
       }
       doc.setProperties({ title: `${capTitle()} · ${cfg.name} line sheet`, author: cfg.name });
       return new File([doc.output("blob")], `${fileSafe(capTitle())}_line_sheet.pdf`, { type: "application/pdf" });
@@ -1502,7 +1539,7 @@
     line: () => line, cfg: () => cfg, engine: () => engine, catalog: () => catalog,
     build, renderBoard, setAnchor, switchLine, setMode, setBudget, drawPresets, persist, applyContext, normCtx,
     orderLink, capsuleLink, capId, capTitle, qrSVG, orderedItems, allItems, explainNow, trendNow, fmtDay, activeUnits, unitsLabel, qtyWord, minFor, wsShort, priceLine,
-    buildSheet: () => { setPageRule(); return buildSheet(); }, sheetPDF, openSheet, renderSheetPreview, openSend, openDlg, closeDlg, flash, toast, copyText, logSend, download, zipStore, simpleXLSX, fileSafe, parseCSV, csvCell,
+    buildSheet: () => { setPageRule(); return buildSheet(); }, sheetPDF, qrBox, pdfOverlay, openSheet, renderSheetPreview, openSend, openDlg, closeDlg, flash, toast, copyText, logSend, download, zipStore, simpleXLSX, fileSafe, parseCSV, csvCell,
     newCapsule, openRecord, lib, saveCapsule, recordFromState, restoreBoard: (b) => restoreBoard(b), HT, sheetMailText,
     // v1.7.6: a capsule of exactly these SKUs (Find similar picks), or those added to the capsule on the board
     buildFromPicks: (skus, o) => {

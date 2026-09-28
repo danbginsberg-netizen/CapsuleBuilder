@@ -514,7 +514,7 @@
       <div class="fu-ask">${photos.length ? `<div class="ph">${photos.map((p) => `<img src="${esc(p.thumb)}" alt="">`).join("")}</div>` : ""}<div class="tx">${esc(askLine())}.${miss.length ? `<small>We don't have ${esc(listWords(miss))} in the line right now; the pieces below are the closest in look and color.</small>` : ""}</div></div>
       <div class="fu-h">What we have in those stones</div>
       <div class="fu-grid" data-n="${items.length}">${tiles}</div>
-      <div class="sh-order fu-order">${link ? `<div class="qr">${A.qrSVG(link.url)}</div>` : ""}<div class="tx"><b>How to order</b>${esc(howToOrder())}${link ? ` Scan the code or <a href="${esc(link.url)}">click here</a>: our order page opens with ${rs.size ? `your reorder and the new styles (${link.n} in all)` : `these ${link.n} styles`} filled in. Adjust quantities there, add your details and submit.` : ""}</div></div>
+      <div class="sh-order fu-order">${link ? A.qrBox(link.url) : ""}<div class="tx"><b>How to order</b>${esc(howToOrder())}${link ? ` Scan the code or <a href="${esc(link.url)}">click here</a>: our order page opens with ${rs.size ? `your reorder and the new styles (${link.n} in all)` : `these ${link.n} styles`} filled in. Adjust quantities there, add your details and submit.` : ""}</div></div>
       <div class="sh-foot"><span class="l">${esc(cfg.name)}</span><span class="c">${esc(cfg.lineSheet.contactLine)}</span><span class="r">${esc(cfg.contactEmail || "")}</span></div>`;
   }
   // size the style photos to the room left on the page (one page, always)
@@ -553,6 +553,7 @@
         const c = await window.html2canvas(pg, { scale: 2, backgroundColor: "#ffffff", logging: false, useCORS: true });
         const doc = new window.jspdf.jsPDF({ unit: "in", format: "letter", orientation: "portrait", compress: true });
         doc.addImage(c.toDataURL("image/jpeg", 0.9), "JPEG", 0.45, 0.45, 7.6, 10.1, undefined, "FAST");
+        if (A.pdfOverlay) A.pdfOverlay(doc, pg, 0.45, 0.45, 7.6);   // v1.7.9: sharp, scannable QR + clickable links
         doc.setProperties({ title: `${A.cfg().name} follow-up${state.buyer.trim() ? " for " + state.buyer.trim() : ""}`, author: A.cfg().name });
         return new File([doc.output("blob")], `${A.fileSafe(`${A.cfg().name} follow-up ${state.buyer.trim() || ""}`.trim())}.pdf`, { type: "application/pdf" });
       } finally { host.remove(); }
