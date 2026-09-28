@@ -290,7 +290,10 @@
         <label class="tog"><input type="checkbox" id="simShowPh" ${S.showPhoto ? "checked" : ""} ${S.photos.length ? "" : "disabled"}> Show her photo</label>
         <label class="tog"><input type="checkbox" id="simMiss" ${S.missing ? "checked" : ""}> Say which stones we don't carry</label>
         <label class="tog"><input type="checkbox" id="simLink" ${S.link ? "checked" : ""}> Order link + QR code (these styles filled in)</label>
-        <label class="tog"><input type="checkbox" id="simPrices" ${S.prices ? "checked" : ""}> Show wholesale prices</label>
+      </div>
+      <div class="sim-fields"><b>On each style</b> <span class="note">(the same settings as the line sheet)</span>
+        ${[["sku", "SKU"], ["name", "Product name"], ["wholesale", "Wholesale price"], ...(A.cfg().terms && A.cfg().terms.tiered ? [["tiers", "Price breaks (3 / 6 / 12)"]] : []), ["msrp", "MSRP"], ["units", "Minimum per style"]].map(([k, t]) => `<label class="tog"><input type="checkbox" data-fld="${k}" ${state.sheet.fields[k] ? "checked" : ""}> ${t}</label>`).join("")}
+        <label class="tog"><input type="checkbox" id="simMarkBought" ${state.sheet.markPick ? "checked" : ""}> Mark what she bought before</label>
       </div>
       <div class="row sim-acts"><button class="btn primary" id="simMail" ${n ? "" : "disabled"}>Email as PDF</button><button class="btn" id="simShare" ${n ? "" : "disabled"} title="On a phone or tablet: WhatsApp, Messages, Mail">Share…</button><button class="btn" id="simPdf" ${n ? "" : "disabled"}>Download PDF</button><button class="btn" id="simCopy" ${n ? "" : "disabled"}>Copy as text</button><button class="btn" id="simPrev" ${n ? "" : "disabled"}>Preview</button>${n ? `<button class="btn" id="simClearSel">Clear picks</button>` : ""}</div>
       <div class="note" id="simSendNote"></div>
@@ -397,7 +400,8 @@
     $("simShowPh").onchange = () => { S.showPhoto = $("simShowPh").checked; save(); };
     $("simMiss").onchange = () => { S.missing = $("simMiss").checked; save(); };
     $("simLink").onchange = () => { S.link = $("simLink").checked; save(); };
-    $("simPrices").onchange = () => { S.prices = $("simPrices").checked; save(); };
+    sp.querySelectorAll("[data-fld]").forEach((b) => (b.onchange = () => { state.sheet.fields[b.dataset.fld] = b.checked; A.persist(); }));   // v1.8.2: shared with the line sheet
+    $("simMarkBought").onchange = () => { state.sheet.markPick = $("simMarkBought").checked; A.persist(); };
     if ($("simClearSel")) $("simClearSel").onclick = () => { S.sel[A.line()] = []; S.touched[A.line()] = true; save(); draw(); };
     $("simPrev").onclick = preview;
     $("simPdf").onclick = async () => { const f = await makePDF($("simPdf")); if (f) { A.download(f.name, f, "application/pdf"); A.flash("simSendNote", `Saved <b>${esc(f.name)}</b> to this device's downloads.`); } };
@@ -504,9 +508,9 @@
     const lines = [`Hi${fn ? " " + fn : ""},`, ""];
     if (S.note) lines.push(S.note, "");
     lines.push(`${ref.length ? `Thank you for your order ${ref.join(", ")}. ` : ""}You asked about ${askLine().charAt(0).toLowerCase() + askLine().slice(1)}. Here's what we have in ${A.cfg().name}:`, "");
-    items.forEach((it) => { const b = badgeOf(it); lines.push(`- ${it.name}, ${colorName(it)} (${it.sku})${b ? ` · ${b.toLowerCase()}` : ""}${S.prices ? ` · ${money(A.engine().lineCost(it, isReorder() ? "reorder" : "first").each)} wholesale` : ""}`); });
+    items.forEach((it) => { const b = badgeOf(it); lines.push(`- ${it.name}, ${colorName(it)} (${it.sku})${b ? ` · ${b.toLowerCase()}` : ""}${state.sheet.fields.wholesale ? ` · ${money(A.engine().lineCost(it, isReorder() ? "reorder" : "first").each)} wholesale` : ""}`); });
     const ex = extraItems();
-    if (ex.length) { lines.push("", "More pieces that go with them:"); ex.forEach((it) => lines.push(`- ${it.name}, ${it.cname || A.label(it.dom)} (${it.sku})${S.prices ? ` · ${money(A.engine().lineCost(it, isReorder() ? "reorder" : "first").each)} wholesale` : ""}`)); }
+    if (ex.length) { lines.push("", "More pieces that go with them:"); ex.forEach((it) => lines.push(`- ${it.name}, ${it.cname || A.label(it.dom)} (${it.sku})${state.sheet.fields.wholesale ? ` · ${money(A.engine().lineCost(it, isReorder() ? "reorder" : "first").each)} wholesale` : ""}`)); }
     if (miss.length) lines.push("", `We don't have ${listWords(miss)} in the line right now; these are the closest in look and color.`);
     if (reo.length) { lines.push("", "Your reorder of what you bought:"); reo.forEach((it) => lines.push(`- ${it.name}, ${it.cname || A.label(it.dom)} (${it.sku})`)); }
     lines.push("", howToOrder());
@@ -519,9 +523,17 @@
      capsule built from them, as many pages as needed (about 15-20 styles a page), ending with How to order: a QR code and
      a link that fill in everything shown. Pages are filled by measuring, so nothing is cut off. */
   const unitsText = (it) => { const u = A.engine().unitsFor(it, isReorder() ? "reorder" : "first"); return A.HT() ? A.qtyWord(u) : `${u} pcs`; };
-  function tileHTML(it, badge) {
-    return `<div class="t"><img src="${esc(it.img)}" alt=""><span class="s"><b>${esc(it.sku)}</b> · ${esc(colorName(it))}</span><span>${esc(it.name)}</span>${badge ? `<i>${esc(badge)}</i>` : ""}${S.prices ? `<span class="p">${money(A.engine().lineCost(it, isReorder() ? "reorder" : "first").each)} wholesale</span>` : ""}<span class="q">Qty ${esc(unitsText(it))}</span></div>`;
+  // v1.8.2 (Dan): the same per-style choices as the line sheet (SKU, name, wholesale, price breaks, MSRP, minimum per style),
+  // and what she bought before is marked above its photo
+  function tileHTML(it, badge, mark) {
+    const f = state.sheet.fields, u = A.engine().unitsFor(it, isReorder() ? "reorder" : "first");
+    return `<div class="t">${mark ? `<div class="yt"><span class="yp">${esc(mark)}</span></div>` : ""}<img src="${esc(it.img)}" alt="">`
+      + `<span class="s">${f.sku ? `<b>${esc(it.sku)}</b> · ` : ""}${esc(colorName(it))}</span>${f.name ? `<span>${esc(it.name)}</span>` : ""}${badge ? `<i>${esc(badge)}</i>` : ""}`
+      + `${f.wholesale && it.ws != null ? `<span class="p">Wholesale ${esc(A.wsText(it))}</span>` : ""}${f.msrp && it.msrp ? `<span class="p m">MSRP ${money(it.msrp)}</span>` : ""}`
+      + `${f.units ? `<span class="q">${A.HT() ? `Qty ${esc(A.qtyWord(u))}` : `Minimum ${u} per style`}</span>` : ""}</div>`;
   }
+  // everything she bought before that is in this line's catalog (reordered or not), for the marks
+  function boughtSet() { const Bx = B || bought(); return new Set(Bx.per[A.line()].owned); }
   function pageParts() {
     const cfg = A.cfg(), L = A.line(), ref = orderRef(), per = (B || bought()).per[L], link = S.link ? followLink(linkItems()) : null, miss = missingStones(), rs = reoSet(L);
     const owned = per.rows.filter((r) => r.kind !== "off"), who = state.buyer.trim();
@@ -532,7 +544,12 @@
     blocks.push(`<div class="fu-intro">${S.note ? `${esc(S.note)} ` : ""}${ref.length ? `Thank you for your order ${esc(ref.join(", "))}. ` : ""}Here's ${owned.length || offList.length ? "what you bought, and " : ""}what we have in the stones you asked about.</div>`);
     if (owned.length || offList.length) blocks.push(`<div class="fu-keep"><div class="fu-h">What you bought</div><div class="fu-bought">${owned.map((r) => { const it = r.items[0]; const q = r.entry.qty != null ? ` × ${r.entry.qty}` : ""; return `<div class="b"><img src="${esc(it.img)}" alt=""><div><b>${esc(r.kind === "colorway" ? r.items.map((i) => i.sku).join(", ") : r.entry.style)}</b>${esc(q)}<br>${esc(it.name)}${r.kind === "colorway" ? `<br><i>${esc(r.items.map((i) => i.cname || "").join(", "))}</i>` : ""}${r.items.some((i) => rs.has(i.sku)) ? `<br><span class="ro">In your reorder</span>` : ""}</div></div>`; }).join("")}</div>${offList.length ? `<div class="fu-also">${owned.length ? "Also on your order" : "On your order"}: ${esc(offList.join(" · "))}</div>` : ""}</div>`);
     blocks.push(`<div class="fu-keep"><div class="fu-h">You asked about</div><div class="fu-ask">${photos.length ? `<div class="ph">${photos.map((p) => `<img src="${esc(p.thumb)}" alt="">`).join("")}</div>` : ""}<div class="tx">${esc(askLine())}.${miss.length ? `<small>We don't have ${esc(listWords(miss))} in the line right now; the pieces below are the closest in look and color.</small>` : ""}</div></div></div>`);
-    const sections = [{ title: "What we have in those stones", tiles: selItems().map((it) => tileHTML(it, badgeOf(it))) }, { title: "More pieces that go with them", tiles: extraItems().map((it) => tileHTML(it, "")) }].filter((x) => x.tiles.length);
+    const mk = state.sheet.markPick, bs = boughtSet(), mark = (it) => (mk && bs.has(it.sku) ? "You bought this" : "");
+    const sections = [
+      { title: "Your reorder", tiles: reoItems().map((it) => tileHTML(it, "", mk ? "You bought this" : "")) },
+      { title: "What we have in those stones", tiles: selItems().map((it) => tileHTML(it, badgeOf(it), mark(it))) },
+      { title: "More pieces that go with them", tiles: extraItems().map((it) => tileHTML(it, "", mark(it))) },
+    ].filter((x) => x.tiles.length);
     const band = `<div class="sh-order fu-order">${link ? A.qrBox(link.url) : ""}<div class="tx"><b>How to order</b>${esc(howToOrder())}${link ? ` Scan the code or <a href="${esc(link.url)}">click here</a>: our order page opens with ${rs.size ? `your reorder and every style shown here (${link.n} in all)` : `every style shown here (${link.n})`} filled in. Adjust quantities there, add your details and submit.` : ""}${link && link.off.length ? `<br><i>Not on the order page (email us to add): ${esc(link.off.join(", "))}</i>` : ""}</div></div>`;
     return { cfg, head, blocks, sections, band };
   }
@@ -675,5 +692,6 @@
     d.appendChild(fb);
   });
   mount();
-  window.CB_SIMILAR = { setMode, draw, state: () => S, query, describe, followText, followLink: () => followLink(linkItems()), layoutPages, makePDF, extraItems, selItems, results: (L) => results(L || A.line(), bought()), bought, moreLike, importOrderCSV };
+  window.CB_SIMILAR = { setMode, draw, state: () => S, query, describe, followText, followLink: () => followLink(linkItems()), boughtSet: () => {   // for the line sheet: only on the capsule built from these Find similar picks (not another buyer's capsule)
+      try { const L = A.line(); if (!S.built || S.built.line !== L || !state.capsule) return new Set(); const on = new Set(A.orderedItems().map((o) => o.it.sku)); return (S.built.skus || []).some((k) => on.has(k)) ? boughtSet() : new Set(); } catch (e) { return new Set(); } }, layoutPages, makePDF, extraItems, selItems, results: (L) => results(L || A.line(), bought()), bought, moreLike, importOrderCSV };
 })();

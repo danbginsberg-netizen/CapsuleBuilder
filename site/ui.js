@@ -732,8 +732,11 @@
     if (f.msrp && it.msrp) tx += `<div class="p m">MSRP ${money(it.msrp)}</div>`;
     if (f.units) tx += HT() ? `<div class="u">Qty ${qtyWord(minFor(it))}</div>` : `<div class="u">Minimum ${minFor(it)} per style</div>`;
     // v1.7.8: "Your pick" gets its own line above the photo (every tile keeps the same line so the rows stay aligned)
-    const mark = S.markPick && orderedItems().some((x) => x.anchor);
-    return `<div class="it">${mark ? `<div class="yt">${o.anchor ? '<span class="yp">Your pick</span>' : ""}</div>` : ""}<div class="ph"><img src="${esc(it.img)}" alt=""></div><div class="tx">${tx}</div></div>`;
+    // v1.8.2: what the buyer bought before (her order, read in Find similar) is marked "You bought this"
+    const bought = S.markPick && window.CB_SIMILAR && window.CB_SIMILAR.boughtSet ? window.CB_SIMILAR.boughtSet() : new Set();
+    const mark = S.markPick && orderedItems().some((x) => x.anchor || bought.has(x.it.sku));
+    const tag = bought.has(it.sku) ? "You bought this" : o.anchor ? "Your pick" : "";
+    return `<div class="it">${mark ? `<div class="yt">${tag ? `<span class="yp">${tag}</span>` : ""}</div>` : ""}<div class="ph"><img src="${esc(it.img)}" alt=""></div><div class="tx">${tx}</div></div>`;
   }
   // [label, text] pairs for the terms block and the Excel header, in print order; blank entries are skipped
   function termsRows() {
@@ -1539,7 +1542,7 @@
     line: () => line, cfg: () => cfg, engine: () => engine, catalog: () => catalog,
     build, renderBoard, setAnchor, switchLine, setMode, setBudget, drawPresets, persist, applyContext, normCtx,
     orderLink, capsuleLink, capId, capTitle, qrSVG, orderedItems, allItems, explainNow, trendNow, fmtDay, activeUnits, unitsLabel, qtyWord, minFor, wsShort, priceLine,
-    buildSheet: () => { setPageRule(); return buildSheet(); }, sheetPDF, qrBox, pdfOverlay, openSheet, renderSheetPreview, openSend, openDlg, closeDlg, flash, toast, copyText, logSend, download, zipStore, simpleXLSX, fileSafe, parseCSV, csvCell,
+    buildSheet: () => { setPageRule(); return buildSheet(); }, sheetPDF, qrBox, pdfOverlay, wsText, openSheet, renderSheetPreview, openSend, openDlg, closeDlg, flash, toast, copyText, logSend, download, zipStore, simpleXLSX, fileSafe, parseCSV, csvCell,
     newCapsule, openRecord, lib, saveCapsule, recordFromState, restoreBoard: (b) => restoreBoard(b), HT, sheetMailText,
     // v1.7.6: a capsule of exactly these SKUs (Find similar picks), or those added to the capsule on the board
     buildFromPicks: (skus, o) => {
