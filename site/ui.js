@@ -1496,6 +1496,17 @@
     orderLink, capsuleLink, capId, capTitle, qrSVG, orderedItems, allItems, explainNow, trendNow, fmtDay, activeUnits, unitsLabel, qtyWord, minFor, wsShort, priceLine,
     buildSheet: () => { setPageRule(); return buildSheet(); }, sheetPDF, openSheet, renderSheetPreview, openSend, openDlg, closeDlg, flash, toast, copyText, logSend, download, zipStore, simpleXLSX, fileSafe, parseCSV, csvCell,
     newCapsule, openRecord, lib, saveCapsule, recordFromState, restoreBoard: (b) => restoreBoard(b), HT, sheetMailText,
+    // v1.7.6: a capsule of exactly these SKUs (Find similar picks), or those added to the capsule on the board
+    buildFromPicks: (skus, o) => {
+      o = o || {}; skus = [...new Set(skus)].filter((s) => engine.bySku.has(s)); if (!skus.length) return false;
+      let anchors, picks;
+      if (o.add && state.capsule) {
+        anchors = state.anchors.filter(Boolean);
+        const cur = state.capsule.anchors.map((a) => a.sku).concat(state.capsule.picks.map((p) => p.item.sku));
+        picks = [...new Set(cur.concat(skus))].filter((s) => !anchors.includes(s));
+      } else { anchors = [skus[0]]; picks = skus.slice(1); }
+      return restoreBoard({ line, anchors, picks, exact: true, name: o.name || "", size: anchors.length + picks.length });
+    },
     setSize: (n) => { state.size = n; if (state.mode !== "pieces") { state.mode = "pieces"; $("modePieces").classList.add("on"); $("modeBudget").classList.remove("on"); $("piecesBox").classList.remove("hide"); $("budgetBox").classList.add("hide"); } resetMix(true); persist(); if (state.anchors[0]) build(); },
   };
   function restoreBoard(b) {   // open a board: its anchors, and its picks if it has them (else a fresh build at its size or budget)
@@ -1509,7 +1520,7 @@
     $("modePieces").classList.toggle("on", state.mode === "pieces"); $("modeBudget").classList.toggle("on", state.mode === "budget");
     $("piecesBox").classList.toggle("hide", state.mode !== "pieces"); $("budgetBox").classList.toggle("hide", state.mode !== "budget");
     renderSlot(0); renderSlot(1); drawPresets(); resetMix(true); $("buildBtn").disabled = false;
-    if (b.picks && b.picks.length) {
+    if (b.picks && (b.picks.length || b.exact)) {
       applyContext();
       state.capsule = engine.restore(state.anchors.filter(Boolean), b.picks, { colorwayStory: state.story, minQty: state.minQty });
       if (state.mode === "budget") { state.capsule.budget = { budget: state.budget, units: state.units }; recalcBudget(); }

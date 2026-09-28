@@ -1,4 +1,4 @@
-/* Capsule Builder v1.7.4 — Find similar · What she bought · Follow-up sheet (in the Her store tab).
+/* Capsule Builder v1.7.4 — Find similar (v1.7.6: pick many styles and colorways into a capsule; every result shows which source it matched) · What she bought · Follow-up sheet (in the Her store tab).
    A buyer sends a photo or describes a look ("small faceted stone strands, in different stones"). The rep finds what we
    have that looks like it (same stones, same kind of strand, same size and colors), next to what she already bought, and
    sends her a one-page follow-up: "here's what you bought, and here's what we have in the stones you asked about."
@@ -16,9 +16,16 @@
 
   /* ---------------- state (kept in this browser) ---------------- */
   const DEF = { words: "", q: null, photos: [], orderText: "", orderRef: "", orderDate: "", sel: { RF: [], OIYK: [] }, touched: { RF: false, OIYK: false },
-    ask: "", note: "", showPhoto: true, prices: false, link: true, missing: true, reorder: null, email: "", n: 12, ref: "" };
+    ask: "", note: "", showPhoto: true, prices: false, link: true, missing: true, reorder: null, email: "", n: 12, ref: "",
+    // v1.7.6: the sources that shape the results, each one you can see and switch off
+    refs: [], usePhoto: true, useOrder: true, photoOff: [], built: null,
+    // v1.7.7: her reorder: the colorways on her order go into the capsule and the order link with the new picks (on by default)
+    reo: { RF: [], OIYK: [] }, reoTouched: { RF: false, OIYK: false } };
   let S = Object.assign(JSON.parse(JSON.stringify(DEF)), A.store.get(KEY, {}));
   S.sel = Object.assign({ RF: [], OIYK: [] }, S.sel); S.touched = Object.assign({ RF: false, OIYK: false }, S.touched);
+  ["refs", "photoOff"].forEach((k) => { if (!Array.isArray(S[k])) S[k] = []; });
+  S.reo = Object.assign({ RF: [], OIYK: [] }, S.reo); S.reoTouched = Object.assign({ RF: false, OIYK: false }, S.reoTouched);
+  if (S.q && S.q.ref && !S.refs.includes(S.q.ref)) { S.refs.push(S.q.ref); S.q = null; }   // a v1.7.4/5 "more like it" look becomes a style reference
   const save = () => { const ok = A.store.set(KEY, S); if (ok === false) A.toast("This browser is blocking local storage, so this search won't be kept."); };
 
   /* ---------------- engines for both lines (the other line's is built-in, read only) ---------------- */
@@ -38,16 +45,22 @@
   const other = () => (A.line() === "RF" ? "OIYK" : "RF");
 
   /* ---------------- the look ---------------- */
+  // v1.7.6: the look = her words (or the chips you set) + her photo's colors, kept apart so every result can say which one it matched
+  const baseLook = () => JSON.parse(JSON.stringify(S.q || CE.parseLook(S.words)));
+  function photoColors(all) {
+    const out = [];
+    S.photos.forEach((p) => (p.colors || []).forEach((c) => { if (c !== "gold" && c !== "silver" && !out.includes(c) && (all || !S.photoOff.includes(c))) out.push(c); }));
+    return out.slice(0, 6);
+  }
+  const photoMetal = () => { for (const p of S.photos) for (const c of p.colors || []) if (c === "gold" || c === "silver") return c; return ""; };
   function query() {
-    if (S.q) return S.q;
-    const Q = CE.parseLook(S.words);
-    // her photo's colors join the words' colors (metal read from the photo sets the metal)
-    for (const p of S.photos) {
-      (p.colors || []).forEach((c) => { if (c === "gold" || c === "silver") { if (!Q.metal) Q.metal = c; } else if (!Q.colors.includes(c) && Q.colors.length < 5) Q.colors.push(c); });
-    }
+    const Q = baseLook();
+    Q.photoColors = S.usePhoto ? photoColors().filter((c) => !(Q.colors || []).includes(c)) : [];
+    if (S.usePhoto && !Q.metal && photoMetal()) { Q.metal = photoMetal(); Q.metalFromPhoto = true; }
     return Q;
   }
-  const edit = (fn) => { const Q = JSON.parse(JSON.stringify(query())); fn(Q); S.q = Q; S.ref = Q.ref || ""; resetSel(); save(); draw(); };
+  const edit = (fn) => { const Q = baseLook(); fn(Q); delete Q.photoColors; S.q = Q; resetSel(); save(); draw(); };
+  const findAny = (sku) => { for (const L of LINES) { const it = eng(L).bySku.get(sku); if (it) return it; } return null; };
   function resetSel() { LINES.forEach((L) => { if (!S.touched[L]) S.sel[L] = []; }); }
   const MATS = [["gemstone", "Natural stone"], ["pearl", "Pearl"], ["glass bead", "Glass bead"], ["seed bead", "Seed bead"], ["crystal/CZ", "Crystal"], ["shell", "Shell"], ["resin/epoxy", "Resin"], ["ceramic/clay", "Clay"], ["enamel", "Enamel"]];
   const SUBS = {
@@ -67,13 +80,17 @@
     const faceted = (Q.words || []).includes("faceted") ? "faceted" : "";
     let s = [size, faceted, mat, noun].filter(Boolean).join(" ");
     if ((Q.stones || []).length) s += ` in ${listWords(Q.stones)}`;
-    else if ((Q.colors || []).length) s += ` in ${listWords(Q.colors.map(cword))}`;
+    else if ((Q.colors || []).length || (Q.photoColors || []).length) s += ` in ${listWords((Q.colors || []).concat(Q.photoColors || []).map(cword))}`;
     if (Q.multi && !(Q.stones || []).length) s += ", in mixed colors";
     const extra = [(Q.words || []).includes("gold spacers") ? "gold spacers" : "", (Q.words || []).includes("knotted") ? "knotted between the beads" : ""].filter(Boolean);
     if (extra.length) s += `, with ${extra.join(" and ")}`;
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
-  const hasLook = (Q) => (Q.mats || []).length + (Q.stones || []).length + (Q.subs || []).length + (Q.colors || []).length + (Q.scale ? 1 : 0) + (Q.multi ? 1 : 0) > 0;
+  const hasLook = (Q) => CE.hasLook(Q);
+  // what the results are built from, per line: the look, style references (any line), and her order (this line only)
+  const refItems = () => S.refs.map(findAny).filter(Boolean);
+  const boughtItems = (L, B) => (S.useOrder ? B.per[L].rows.filter((r) => r.kind !== "off").map((r) => r.items[0]) : []);
+  const anySource = (L, B) => hasLook(query()) || refItems().length || boughtItems(L, B).length;
 
   /* ---------------- what she bought ---------------- */
   function bought() {
@@ -86,11 +103,25 @@
     return out;
   }
 
+  /* ---------------- v1.7.7: her reorder ---------------- */
+  // what she bought that we can ship again: in stock (at this line's stock rule) and on the order page
+  const canReorder = (L, it) => eng(L).inStock(it, minQtyOf(L)) && eng(L).orderable(it);
+  function reorderInfo(L, Bx) {
+    const ok = [], out = [];
+    for (const r of Bx.per[L].rows) if (r.kind === "colorway") r.items.forEach((it) => (canReorder(L, it) ? ok : out).push(it.sku));
+    return { ok, out };
+  }
+  const resetReo = () => { S.reoTouched = { RF: false, OIYK: false }; };
+  const reoSet = (L) => new Set(S.reo[L]);
+  // everything that goes into the capsule and the order link: her reorder first, then the new picks
+  const allPicks = (L) => S.reo[L].concat(S.sel[L].filter((k) => !S.reo[L].includes(k)));
+  function toggleReo(L, sku) { const a = S.reo[L], i = a.indexOf(sku); if (i >= 0) a.splice(i, 1); else a.push(sku); S.reoTouched[L] = true; save(); draw(); }
+
   /* ---------------- results ---------------- */
   function results(L, B, n) {
     const Q = query();
-    if (!hasLook(Q)) return null;
-    return eng(L).similar(Q, { owned: B.per[L].owned, minQty: minQtyOf(L), n: n || S.n });
+    if (!anySource(L, B)) return null;
+    return eng(L).similar(Q, { owned: B.per[L].owned, minQty: minQtyOf(L), n: n || S.n, refs: refItems(), bought: boughtItems(L, B) });
   }
   // default picks for the follow-up: the best new colorway of each top style, plus close colorways (stones matter), up to 8
   function defaultSel(R) {
@@ -121,9 +152,8 @@
       const im = await loadImg(url);
       const p = window.CB_CONTEXT ? window.CB_CONTEXT.paletteOf(im, "jewelry") : { families: [], swatches: [] };
       S.photos.push({ thumb: thumbOf(im, 360), colors: p.families, swatches: p.swatches });
-      if (S.q) { const Q = S.q; p.families.forEach((c) => { if (c !== "gold" && c !== "silver" && !Q.colors.includes(c) && Q.colors.length < 5) Q.colors.push(c); }); }
-      resetSel(); save(); draw();
-      A.flash("simNote", "Read the colors in her photo. Tap the colors below to fix them, and name the stones if you know them.");
+      S.usePhoto = true; resetSel(); save(); draw();
+      A.flash("simNote", `Read ${p.families.filter((c) => c !== "gold" && c !== "silver").map(cword).join(", ") || "no clear colors"} in her photo. Those colors now shape the results (marked “photo”). Tap a color to turn it off, and name the stones in her words if you know them.`);
     } catch (e) { A.toast("That picture couldn't be read."); } finally { URL.revokeObjectURL(url); }
   }
 
@@ -148,7 +178,7 @@
         ${S.photos.length ? `<div class="sim-ph">${S.photos.map((p, i) => `<div><img src="${esc(p.thumb)}" alt=""><div class="cx-sw">${(p.swatches || []).map((c) => `<i style="background:${c}"></i>`).join("")}</div><button class="x" data-rmph="${i}" title="Remove">✕</button></div>`).join("")}</div>` : ""}</div>
       <label class="lbl" for="simWords">Describe it in her words</label>
       <textarea id="simWords" rows="2" placeholder="e.g. small faceted stone strands in tourmaline, hematite and tiger's eye, gold spacers">${esc(S.words)}</textarea>
-      <div class="row sim-ref"><input type="text" id="simRef" list="simRefList" placeholder="…or start from one of our styles (SKU)" value="${esc(S.ref)}"><datalist id="simRefList">${A.catalog().items.slice(0, 600).map((it) => `<option value="${esc(it.sku)}">${esc(it.name)}</option>`).join("")}</datalist><button class="btn" id="simRefGo">More like it</button></div>
+      <div class="row sim-ref"><input type="text" id="simRef" list="simRefList" placeholder="…or start from one of our styles (SKU)" value="${esc(S.ref)}"><datalist id="simRefList">${A.catalog().items.slice(0, 600).map((it) => `<option value="${esc(it.sku)}">${esc(it.name)}</option>`).join("")}</datalist><button class="btn" id="simRefGo" title="Adds this style as a reference; your photo and words still count">+ Add as a style reference</button></div>
       <div class="note" id="simNote"></div>
       <div class="sim-q">
         <div><small>Find</small><div class="chips">${[["", "Any"], ["necklace", "Necklaces"], ["bracelet", "Bracelets"], ["earring", "Earrings"]].map(([k, t]) => chip(Q.cat === k, `data-cat="${k}"`, t)).join("")}</div></div>
@@ -159,10 +189,10 @@
         <div><small>Size</small><div class="chips">${[["", "Any"], ["delicate", "Delicate"], ["medium", "Medium"], ["statement", "Statement"]].map(([k, t]) => chip((Q.scale || "") === k, `data-scale="${k}"`, t)).join("")}</div></div>
         <div><small>Details</small><div class="chips">${WORDS.map(([k, t]) => chip((Q.words || []).includes(k), `data-word="${esc(k)}"`, t)).join("")}${chip(Q.multi, `data-multi="1"`, "Mixed stones / multicolor")}</div></div>
         <div><small>Metal</small><div class="chips">${[["", "Any"], ["gold", "Gold"], ["silver", "Silver"]].map(([k, t]) => chip((Q.metal || "") === k, `data-metal="${k}"`, t)).join("")}</div></div>
-        <div><small>Colors</small><div class="cx-cols sim-cols">${Object.keys(SW).filter((f) => f !== "gold" && f !== "silver").map((f) => `<button data-col="${esc(f)}" class="${(Q.colors || []).includes(f) ? "on" : ""}" style="--c:${SW[f]}" title="${esc(cword(f))}"></button>`).join("")}</div>
-          <div class="note">${(Q.colors || []).length ? esc((Q.colors || []).map(cword).join(" · ")) : (Q.stones || []).length ? "From the stones she named." : "No colors yet."}</div></div>
+        <div><small>Colors</small><div class="cx-cols sim-cols">${Object.keys(SW).filter((f) => f !== "gold" && f !== "silver").map((f) => { const ph = (Q.photoColors || []).includes(f); return `<button data-col="${esc(f)}" class="${(Q.colors || []).includes(f) ? "on" : ""} ${ph ? "on ph" : ""}" style="--c:${SW[f]}" title="${esc(cword(f))}${ph ? " (from her photo: tap to turn off)" : ""}"></button>`; }).join("")}</div>
+          <div class="note">${[(Q.colors || []).length ? esc((Q.colors || []).map(cword).join(" · ")) : "", (Q.photoColors || []).length ? `<span class="src-ph">from her photo: ${esc(Q.photoColors.map(cword).join(" · "))}</span>` : ""].filter(Boolean).join(" · ") || ((Q.stones || []).length ? "From the stones she named." : "No colors yet.")}</div></div>
       </div>
-      <p class="note">${S.q ? "Adjusted by hand. Editing the description reads it again." : "Read from her words and photo. Tap to adjust."}</p>`;
+      <p class="note">${S.q ? "Adjusted by hand. Editing the description reads it again." : "Read from her words. Her photo adds its colors (dotted ring). Tap to adjust."}</p>`;
   }
   function boughtHTML(B) {
     const L = A.line(), P = B.P;
@@ -171,9 +201,12 @@
       return `<div class="sim-bl"><div class="sim-bl-h">${esc(NAME[L2])}</div>${rows.map((r) => {
         const e = r.entry, q = e.qty != null ? ` × ${e.qty}` : "";
         if (r.kind === "off") return `<div class="sb off"><div class="im">?</div><div><b>${esc(e.style)}</b>${q}<small>${esc(e.raw.slice(0, 60))}</small><small class="warn">Not in the builder catalog (a sample or an older style)</small></div></div>`;
-        const it = r.items[0];
+        const it = r.items[0], here = L2 === L, rs = reoSet(L2);
+        // v1.7.7: tick what she's reordering; for an unclear colorway, tick the one(s) she means
+        const opts = (r.kind === "colorway" ? r.items : r.items).map((c) => { const ok = canReorder(L2, c); return `<button class="rk ${rs.has(c.sku) ? "on" : ""}" data-reo="${esc(c.sku)}" ${here && ok ? "" : "disabled"} title="${esc(c.sku)}${ok ? "" : " · not enough stock to reorder"}"><i class="bx"></i>${esc(c.cname || A.label(c.dom))}${ok ? "" : " · out"}</button>`; }).join("");
         return `<div class="sb"><img src="${esc(it.img)}" alt=""><div><b>${esc(r.kind === "colorway" ? r.items.map((i) => i.sku).join(", ") : e.style)}</b>${q}<small>${esc(it.name)}${r.kind === "colorway" ? " · " + esc(r.items.map((i) => i.cname || A.label(i.dom)).join(", ")) : ""}</small>
-          ${r.kind === "style" ? `<small class="warn">Colorway not clear from the order (${esc(e.suffixes.join(" ") || "no code")}); this style comes in ${r.items.length}.</small>` : ""}
+          ${r.kind === "style" ? `<small class="warn">Colorway not clear from the order (${esc(e.suffixes.join(" ") || "no code")}); tick the one she's reordering.</small>` : ""}
+          <div class="sb-reo"><span>Reorder:</span>${opts}</div>${here ? "" : `<small class="note">Switch to ${esc(NAME[L2])} to put this in its capsule.</small>`}
           <button class="lnk" data-more="${esc(it.sku)}">More like this</button></div></div>`;
       }).join("")}</div>`;
     };
@@ -182,18 +215,46 @@
       <textarea id="simOrder" rows="4" placeholder="Paste her order: select the items on the Shopify order page (or the order email / invoice) and paste. Style numbers are enough, e.g.&#10;FN2933GDAMZ × 3&#10;FN1358GDPP × 2">${esc(S.orderText)}</textarea>
       <div class="row"><button class="btn" id="simOrderGo">Read the order</button><button class="btn" id="simOrderCsv" title="Shopify admin: Orders > Export (CSV)">Import order CSV…</button><input type="file" id="simOrderFile" accept=".csv,text/csv" hidden>${S.orderText ? `<button class="btn" id="simOrderClr">Clear</button>` : ""}</div>
       <div class="row sim-ref"><input type="text" id="simOrderRef" placeholder="Order # (optional)" value="${esc(S.orderRef || P.order)}"><input type="text" id="simOrderDate" placeholder="Date (optional)" value="${esc(S.orderDate || P.date)}"></div>
-      ${n ? `<div class="note">${n} line${n === 1 ? "" : "s"} read. Nothing is looked up online.</div>${line(L)}${line(other())}` : `<p class="note">Optional. With her order in, the sheet opens with “here's what you bought,” the styles she already has are left out of the suggestions, and a style she bought in a new stone moves up.</p>`}`;
+      ${n ? `<div class="note">${n} line${n === 1 ? "" : "s"} read. Nothing is looked up online. <b>Ticked colorways go into the capsule and the order link as her reorder.</b></div>${line(L)}${line(other())}` : `<p class="note">Optional. With her order in, what she bought goes into the capsule as her reorder (ticked below), the suggestions lean toward it, and the sheet opens with “here's what you bought.”</p>`}`;
   }
+  // v1.7.6: each reason says where it came from: her photo, her words / your chips, a style you pointed to, or her order
+  const SRC = { photo: "photo", look: "look", style: "style", order: "order" };
+  const pct = (v) => (v == null ? "" : Math.round(v * 100) + "%");
   function cardHTML(L, g, selectable) {
     const b = g.best, it = b.item;
     const sel = new Set(S.sel[L]);
-    const cws = g.colorways.slice(0, 8);
-    return `<div class="sm ${cws.some((c) => sel.has(c.item.sku)) ? "on" : ""}" data-style="${esc(g.style)}">
-      <div class="sm-im"><img src="${esc(it.img)}" alt="" loading="lazy">${g.boughtStyle ? `<span class="sm-tag">Her style · new stone</span>` : ""}<span class="sm-pc" title="How closely it matches the look">${Math.round(b.s * 100)}%</span></div>
+    const cws = g.colorways.slice(0, 10), fresh = cws.filter((c) => !c.owned), nOn = fresh.filter((c) => sel.has(c.item.sku)).length;
+    const brk = [b.src.look != null ? `look ${pct(b.src.look)}` : "", b.src.style != null ? `style reference ${pct(b.src.style)}` : "", b.src.order != null ? `her order ${pct(b.src.order)}` : ""].filter(Boolean).join(" · ");
+    return `<div class="sm ${nOn ? "on" : ""}" data-style="${esc(g.style)}">
+      <div class="sm-im"><img src="${esc(it.img)}" alt="" loading="lazy">${g.boughtStyle ? `<span class="sm-tag">Her style · new stone</span>` : ""}<span class="sm-pc" title="Match: ${esc(brk)}">${Math.round(b.s * 100)}%</span></div>
       <div class="sm-b"><b>${esc(it.name)}</b><small>${esc(it.sku)} · ${esc(it.cname || A.label(it.dom))}</small>
-        <div class="sm-why">${b.why.slice(0, 6).map((w) => `<span>${esc(w)}</span>`).join("")}</div>
-        <div class="sm-cw">${cws.map((c) => `<button class="cw ${sel.has(c.item.sku) ? "on" : ""} ${c.owned ? "own" : ""}" data-sku="${esc(c.item.sku)}" ${!selectable || c.owned ? "disabled" : ""} title="${esc(c.item.sku)} · ${esc(c.item.cname || "")}${c.owned ? " · she has this" : ""}${c.item.mto ? " · made to order" : ` · ${c.item.qty} in stock`}"><img src="${esc(c.item.img)}" alt="" loading="lazy"><span>${esc(c.item.cname || A.label(c.item.dom))}${c.owned ? " · has it" : ""}</span></button>`).join("")}</div>
-        ${selectable ? `<div class="row"><button class="btn" data-more="${esc(it.sku)}">More like this</button><button class="btn" data-build="${esc(it.sku)}" title="Build a capsule around this piece">Build capsule</button></div>` : ""}</div></div>`;
+        <div class="sm-why">${(b.tags || []).slice(0, 7).map((w) => `<span class="s-${SRC[w.src] || "look"}" title="${esc({ photo: "From her photo", look: "From her words / your chips", style: "From a style you pointed to", order: "From what she bought" }[w.src] || "")}">${esc(w.t)}</span>`).join("")}</div>
+        <div class="sm-cw">${cws.map((c) => `<button class="cw ${(c.owned ? reoSet(L).has(c.item.sku) : sel.has(c.item.sku)) ? "on" : ""} ${c.owned ? "own" : ""}" ${c.owned ? `data-reo="${esc(c.item.sku)}"` : `data-sku="${esc(c.item.sku)}"`} ${!selectable ? "disabled" : ""} title="${esc(c.item.sku)} · ${esc(c.item.cname || "")}${c.owned ? " · she bought this: tick to reorder" : ""}${c.item.mto ? " · made to order" : ` · ${c.item.qty} in stock`}"><i class="bx"></i><img src="${esc(c.item.img)}" alt="" loading="lazy"><span>${esc(c.item.cname || A.label(c.item.dom))}${c.owned ? " · her reorder" : ""}</span></button>`).join("")}</div>
+        ${selectable ? `<div class="row">${fresh.length > 1 ? `<button class="btn" data-all="${esc(g.style)}">${nOn === fresh.length ? "Unpick all colorways" : `Pick all ${fresh.length} colorways`}</button>` : ""}<button class="btn" data-more="${esc(it.sku)}" title="Adds it as a style reference; your photo, words and her order still count">More like this</button></div>` : ""}</div></div>`;
+  }
+  // the sources panel: what is shaping the results, each with an on/off switch
+  function sourcesHTML(L, B) {
+    const Q = query(), base = baseLook(), bi = B.per[L].rows.filter((r) => r.kind !== "off"), owned = B.per[L].owned;
+    const lookOn = hasLook(Object.assign({}, base, { photoColors: [] }));
+    const phAll = photoColors(true), phOn = photoColors();
+    return `<div class="sim-src"><div class="sim-src-h"><b>What's shaping these results</b><span class="note">Every card's reasons are colored by the source they came from. Switch a source off to see what the others find.</span></div>
+      <div class="src-row s-photo"><span class="dot"></span><b>Her photo</b>${S.photos.length ? `<label class="tog"><input type="checkbox" id="srcPhoto" ${S.usePhoto ? "checked" : ""}> use it</label><span>colors read: ${phAll.map((c) => `<em class="${phOn.includes(c) ? "" : "off"}">${esc(cword(c))}</em>`).join(" ") || "none clear"}${photoMetal() ? ` · ${esc(photoMetal())} metal` : ""}. A photo gives colors only; name the stones and the kind of piece in her words.</span>` : `<span class="note">No photo yet (step 1).</span>`}</div>
+      <div class="src-row s-look"><span class="dot"></span><b>Her words / your chips</b>${lookOn ? `<span>“${esc(describe(base))}”</span>` : `<span class="note">Nothing yet (step 1).</span>`}</div>
+      <div class="src-row s-style"><span class="dot"></span><b>Styles you pointed to</b>${S.refs.length ? S.refs.map((k) => { const it = findAny(k); return `<button class="refchip" data-unref="${esc(k)}" title="Remove">${it ? `<img src="${esc(it.img)}" alt="">` : ""}${esc(k)} ✕</button>`; }).join("") : `<span class="note">None. “More like this” on any card or order line adds one.</span>`}</div>
+      <div class="src-row s-order"><span class="dot"></span><b>What she bought</b>${bi.length ? `<label class="tog"><input type="checkbox" id="srcOrder" ${S.useOrder ? "checked" : ""}> lean toward it</label><span>${bi.length} of our ${esc(NAME[L])} style${bi.length === 1 ? "" : "s"} on her order (${esc(bi.map((r) => r.entry.style).join(", "))}): ${S.useOrder ? "pieces like them rank higher, " : ""}her styles in a new colorway move up${owned.length ? `, and ${owned.length} colorway${owned.length === 1 ? "" : "s"} she already has ${owned.length === 1 ? "is" : "are"} never suggested` : ""}.</span>` : `<span class="note">${B.P.entries.length ? `Nothing on her order is in ${esc(NAME[L])}'s catalog.` : "No order yet (step 2)."}</span>`}</div></div>`;
+  }
+  // v1.7.6: your picks, across every card and colorway, kept while you go back and forth; they build a capsule and fill the follow-up
+  function trayHTML(L) {
+    const e = eng(L), all = allPicks(L).map((k) => e.bySku.get(k)).filter(Boolean), rs = reoSet(L);
+    const nReo = all.filter((it) => rs.has(it.sku)).length, nNew = all.length - nReo, sel = all;
+    const styles = new Set(sel.map((it) => (it.sku.match(/^[A-Z]+\d+/) || [it.sku])[0])).size;
+    const onBoard = state.capsule && A.line() === L;
+    return `<div class="sim-tray ${sel.length ? "" : "empty"}" id="simTray"><div class="tr-l"><b>In the capsule: ${nReo ? `her reorder ${nReo} · ` : ""}new picks ${nNew}${sel.length ? ` · ${styles} style${styles === 1 ? "" : "s"}` : ""}</b>
+        <div class="tr-im">${sel.slice(0, 16).map((it) => `<img src="${esc(it.img)}" alt="" class="${rs.has(it.sku) ? "reo" : ""}" title="${esc(it.sku)} · ${esc(it.cname || "")}${rs.has(it.sku) ? " · her reorder" : ""}">`).join("")}${sel.length > 16 ? `<span>+${sel.length - 16}</span>` : ""}</div>
+        ${nNew ? "" : `<span class="note">Tap colorways on the cards to add new picks. Her reorder (ticked in step 2) is already in.</span>`}</div>
+      <div class="tr-a"><button class="btn primary" id="simBuild" ${sel.length ? "" : "disabled"} title="A capsule of her reorder plus your new picks, with its line sheet, Excel and order link">Build the capsule: reorder + picks</button>
+        <button class="btn" id="simAdd" ${sel.length && onBoard ? "" : "disabled"} title="Keeps the capsule on the board and adds these">Add to the capsule on the board</button>
+        <button class="btn" id="simTop">Pick the top matches for me</button>${sel.length ? `<button class="btn" id="simClearSel2">Clear picks</button>` : ""}</div></div>`;
   }
   function stoneLine(L, R) {
     if (!R || !R.stoneReport.length) return "";
@@ -202,13 +263,12 @@
   }
   function resHTML(B) {
     const L = A.line(), O = other(), Q = query();
-    if (!hasLook(Q)) return `<h3><span class="n">3</span> What we have that looks like it</h3><p class="note">Add her photo, describe the look, or start from one of our styles. Results show here, ${esc(NAME[L])} first.</p>`;
+    if (!anySource(L, B)) return `<h3><span class="n">3</span> What we have that looks like it</h3>${sourcesHTML(L, B)}<p class="note">Add her photo, describe the look, point to one of our styles, or paste her order. Results show here, ${esc(NAME[L])} first.</p>`;
     const R = results(L, B), RO = results(O, B, 4);
-    if (!S.touched[L] && !S.sel[L].length) S.sel[L] = defaultSel(R);
     const nSel = S.sel[L].length;
     return `<h3><span class="n">3</span> What we have that looks like it</h3>
-      <p class="sim-desc">“${esc(describe(Q))}”</p>
-      <div class="sim-sec"><div class="sim-sec-h"><h4>${esc(NAME[L])}</h4><span class="note">${R.total} style${R.total === 1 ? "" : "s"} match · in stock and on the order page · tap a colorway to put it on the follow-up (${nSel} chosen)</span></div>
+      ${sourcesHTML(L, B)}
+      <div class="sim-sec"><div class="sim-sec-h"><h4>${esc(NAME[L])}</h4><span class="note">${R.total} style${R.total === 1 ? "" : "s"} match · in stock and on the order page · tap colorways to pick them (${nSel} picked)</span></div>
         ${stoneLine(L, R)}
         <div class="sm-grid">${R.groups.map((g) => cardHTML(L, g, true)).join("") || `<p class="note">Nothing in stock matches yet. Loosen the look: remove a stone or set Size to Any.</p>`}</div>
         ${R.total > R.groups.length ? `<button class="btn" id="simMore">Show more (${R.total - R.groups.length} more)</button>` : ""}</div>
@@ -216,10 +276,10 @@
         ${stoneLine(O, RO)}<div class="sm-grid">${RO.groups.map((g) => cardHTML(O, g, false)).join("")}</div></div>` : ""}`;
   }
   function sendHTML(B) {
-    const L = A.line(), n = S.sel[L].length, has = B.per[L].rows.length > 0;
+    const L = A.line(), n = S.sel[L].length + S.reo[L].length, has = B.per[L].rows.length > 0;
     const reorder = S.reorder == null ? has : S.reorder;
     return `<h3><span class="n">4</span> Send her the follow-up</h3>
-      <p class="note">One page from ${esc(NAME[L])}: what she bought, her photo and request, and the ${n || "chosen"} style${n === 1 ? "" : "s"} in those stones, with how to order. ${n > MAX_ON_SHEET ? `<span class="warn">The page holds ${MAX_ON_SHEET}; the first ${MAX_ON_SHEET} chosen are used.</span>` : ""}</p>
+      <p class="note">One page from ${esc(NAME[L])}: what she bought, her photo and request, your new picks from step 3, and how to order, with a link that fills in her reorder and the new picks. ${n > MAX_ON_SHEET ? `<span class="warn">The page holds ${MAX_ON_SHEET}; the first ${MAX_ON_SHEET} chosen are used.</span>` : ""}</p>
       <div class="sim-f">
         <label>For<input type="text" id="simFor" value="${esc(state.buyer)}" placeholder="Her name or store"></label>
         <label>Her email<input type="email" id="simEmail" value="${esc(S.email)}" placeholder="optional, for Email as PDF"></label>
@@ -233,18 +293,34 @@
         <label class="tog"><input type="checkbox" id="simLink" ${S.link ? "checked" : ""}> Order link + QR code (these styles filled in)</label>
         <label class="tog"><input type="checkbox" id="simPrices" ${S.prices ? "checked" : ""}> Show wholesale prices</label>
       </div>
-      <div class="row sim-acts"><button class="btn primary" id="simMail" ${n ? "" : "disabled"}>Email as PDF</button><button class="btn" id="simShare" ${n ? "" : "disabled"} title="On a phone or tablet: WhatsApp, Messages, Mail">Share…</button><button class="btn" id="simPdf" ${n ? "" : "disabled"}>Download PDF</button><button class="btn" id="simCopy" ${n ? "" : "disabled"}>Copy as text</button><button class="btn" id="simPrev" ${n ? "" : "disabled"}>Preview</button>${n ? `<button class="btn" id="simClearSel">Clear choices</button>` : ""}</div>
+      <div class="row sim-acts"><button class="btn primary" id="simMail" ${n ? "" : "disabled"}>Email as PDF</button><button class="btn" id="simShare" ${n ? "" : "disabled"} title="On a phone or tablet: WhatsApp, Messages, Mail">Share…</button><button class="btn" id="simPdf" ${n ? "" : "disabled"}>Download PDF</button><button class="btn" id="simCopy" ${n ? "" : "disabled"}>Copy as text</button><button class="btn" id="simPrev" ${n ? "" : "disabled"}>Preview</button>${n ? `<button class="btn" id="simClearSel">Clear picks</button>` : ""}</div>
       <div class="note" id="simSendNote"></div>
       <div class="sim-prev hide" id="simPrevBox"></div>`;
   }
   let B = null;
+  // v1.7.6: build a capsule of exactly your picks (or add them to the one on the board); the picks stay here to add more
+  function buildPicks(add) {
+    const L = A.line(), skus = allPicks(L).filter((k) => A.engine().bySku.has(k));
+    if (!skus.length) return;
+    const name = add ? state.capName : `Picks for ${state.buyer.trim() || "her store"}`;
+    // v1.7.7: a buyer who has ordered before gets reorder quantities (a dozen per style) on the capsule, like the follow-up
+    if (isReorder() && $("units") && $("units").value !== "reorder" && [...$("units").options].some((o) => o.value === "reorder")) { $("units").value = "reorder"; state.units = "reorder"; A.persist(); }
+    S.built = { line: L, at: new Date().toISOString(), skus };   // set first: the board draws (and shows the way back) while it builds
+    if (!A.buildFromPicks(skus, { add, name })) { S.built = null; A.toast("Those pieces aren't in the catalog."); return; }
+    S.built.skus = A.orderedItems().map((o) => o.it.sku); save(); A.renderBoard();
+    window.CB_PANE && window.CB_PANE("capsule");
+    const nr = skus.filter((k) => reoSet(L).has(k)).length;
+    A.toast(add ? `Added: the capsule now has ${A.orderedItems().length} pieces.` : `Built the capsule: ${nr ? `her reorder (${nr}) + ` : ""}${skus.length - nr} new pick${skus.length - nr === 1 ? "" : "s"}. Your picks stay in Find similar to add more.`);
+  }
   function draw() {
     const sp = $("simPane"); if (!sp || mode !== "similar") return;
     B = bought();
+    LINES.forEach((L) => { if (!S.reoTouched[L]) S.reo[L] = reorderInfo(L, B).ok; });   // her reorder is in by default
     const scroll = window.scrollY;
     sp.innerHTML = `<div class="sp-head"><div><h1>Find similar</h1><p class="note">A buyer sends a photo or describes a look. Find what we have that looks like it, next to what she already bought, and send her one page: <b>here's what you bought, and here's what we have in the stones you asked about.</b> Her photo stays on this device. Lines never mix.</p></div><div class="sp-hd-r"><button class="btn" id="simReset">Start over</button></div></div>
       <div class="sim-top"><section class="panel sim-ask">${askHTML(query())}</section><section class="panel sim-bought">${boughtHTML(B)}</section></div>
       <section class="sim-res">${resHTML(B)}</section>
+      ${trayHTML(A.line())}
       <section class="panel sim-send">${sendHTML(B)}</section>`;
     wire();
     window.scrollTo({ top: scroll, behavior: "instant" });
@@ -263,7 +339,7 @@
     ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
     drop.addEventListener("drop", (e) => [...(e.dataTransfer.files || [])].forEach(addPhoto));
     sp.querySelectorAll("[data-rmph]").forEach((b) => (b.onclick = () => { S.photos.splice(+b.dataset.rmph, 1); resetSel(); save(); draw(); }));
-    $("simWords").oninput = () => { S.words = $("simWords").value; clearTimeout(tWords); tWords = setTimeout(() => { S.q = null; S.ref = ""; resetSel(); save(); draw(); const w = $("simWords"); if (w) { w.focus(); w.setSelectionRange(w.value.length, w.value.length); } }, 700); };
+    $("simWords").oninput = () => { S.words = $("simWords").value; clearTimeout(tWords); tWords = setTimeout(() => { S.q = null; resetSel(); save(); draw(); const w = $("simWords"); if (w) { w.focus(); w.setSelectionRange(w.value.length, w.value.length); } }, 700); };
     $("simRefGo").onclick = () => moreLike($("simRef").value);
     $("simRef").onkeydown = (e) => { if (e.key === "Enter") moreLike($("simRef").value); };
     sp.querySelectorAll("[data-cat]").forEach((b) => (b.onclick = () => edit((Q) => { Q.cat = b.dataset.cat; Q.subs = (Q.subs || []).filter((s) => !Q.cat || (SUBS[Q.cat] || []).some((x) => x[0] === s)); })));
@@ -273,16 +349,22 @@
     sp.querySelectorAll("[data-mat]").forEach((b) => (b.onclick = () => edit(tog("mats", b.dataset.mat))));
     sp.querySelectorAll("[data-sub]").forEach((b) => (b.onclick = () => edit(tog("subs", b.dataset.sub))));
     sp.querySelectorAll("[data-word]").forEach((b) => (b.onclick = () => edit(tog("words", b.dataset.word))));
-    sp.querySelectorAll("[data-col]").forEach((b) => (b.onclick = () => edit(tog("colors", b.dataset.col))));
+    sp.querySelectorAll("[data-col]").forEach((b) => (b.onclick = () => {
+      const c = b.dataset.col;
+      if (b.classList.contains("ph")) { S.photoOff.push(c); resetSel(); save(); draw(); return; }   // a photo color: turn it off
+      if (S.photoOff.includes(c) && photoColors(true).includes(c)) { S.photoOff = S.photoOff.filter((x) => x !== c); resetSel(); save(); draw(); return; }
+      edit(tog("colors", c));
+    }));
     sp.querySelectorAll("[data-scale]").forEach((b) => (b.onclick = () => edit((Q) => { Q.scale = b.dataset.scale; })));
     sp.querySelectorAll("[data-metal]").forEach((b) => (b.onclick = () => edit((Q) => { Q.metal = b.dataset.metal; })));
     sp.querySelectorAll("[data-multi]").forEach((b) => (b.onclick = () => edit((Q) => { Q.multi = !Q.multi; })));
     // order
     $("simOrder").oninput = () => { S.orderText = $("simOrder").value; save(); };
-    $("simOrderGo").onclick = () => { S.orderText = $("simOrder").value; S.orderRef = ""; S.orderDate = ""; S.reorder = null; resetSel(); save(); draw(); };
+    $("simOrderGo").onclick = () => { S.orderText = $("simOrder").value; S.orderRef = ""; S.orderDate = ""; S.reorder = null; resetReo(); resetSel(); save(); draw(); };
     $("simOrderCsv").onclick = () => $("simOrderFile").click();
     $("simOrderFile").onchange = async (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) importOrderCSV(await f.text(), f.name); };
-    if ($("simOrderClr")) $("simOrderClr").onclick = () => { S.orderText = ""; S.orderRef = ""; S.orderDate = ""; S.reorder = null; resetSel(); save(); draw(); };
+    if ($("simOrderClr")) $("simOrderClr").onclick = () => { S.orderText = ""; S.orderRef = ""; S.orderDate = ""; S.reorder = null; resetReo(); resetSel(); save(); draw(); };
+    sp.querySelectorAll("[data-reo]").forEach((b) => (b.onclick = () => toggleReo(A.line(), b.dataset.reo)));
     $("simOrderRef").onchange = () => { S.orderRef = $("simOrderRef").value.trim(); save(); };
     $("simOrderDate").onchange = () => { S.orderDate = $("simOrderDate").value.trim(); save(); };
     sp.querySelectorAll("[data-more]").forEach((b) => (b.onclick = () => moreLike(b.dataset.more)));
@@ -292,7 +374,19 @@
       if (i >= 0) L0.splice(i, 1); else L0.push(sku);
       S.touched[L] = true; save(); draw();
     }));
-    sp.querySelectorAll("[data-build]").forEach((b) => (b.onclick = () => { state.anchors = [null, null]; A.setAnchor(0, b.dataset.build); window.CB_PANE && window.CB_PANE("capsule"); }));
+    sp.querySelectorAll("[data-all]").forEach((b) => (b.onclick = () => {
+      const L = A.line(), card = b.closest(".sm"), skus = [...card.querySelectorAll(".cw:not(.own)")].map((x) => x.dataset.sku), L0 = S.sel[L];
+      const allOn = skus.every((k) => L0.includes(k));
+      S.sel[L] = allOn ? L0.filter((k) => !skus.includes(k)) : L0.concat(skus.filter((k) => !L0.includes(k)));
+      S.touched[L] = true; save(); draw();
+    }));
+    sp.querySelectorAll("[data-unref]").forEach((b) => (b.onclick = () => { S.refs = S.refs.filter((k) => k !== b.dataset.unref); resetSel(); save(); draw(); }));
+    if ($("srcPhoto")) $("srcPhoto").onchange = () => { S.usePhoto = $("srcPhoto").checked; save(); draw(); };
+    if ($("srcOrder")) $("srcOrder").onchange = () => { S.useOrder = $("srcOrder").checked; save(); draw(); };
+    $("simBuild").onclick = () => buildPicks(false);
+    $("simAdd").onclick = () => buildPicks(true);
+    $("simTop").onclick = () => { const L = A.line(), R = results(L, B); if (!R) { A.toast("Add her photo, words, a style or her order first."); return; } const d = defaultSel(R); S.sel[L] = S.sel[L].concat(d.filter((k) => !S.sel[L].includes(k))); S.touched[L] = true; save(); draw(); };
+    if ($("simClearSel2")) $("simClearSel2").onclick = () => { S.sel[A.line()] = []; S.touched[A.line()] = true; save(); draw(); };
     if ($("simMore")) $("simMore").onclick = () => { S.n += 12; save(); draw(); };
     if ($("simSwitch")) $("simSwitch").onclick = () => { const O = other(); document.querySelector(`.lines button[data-line="${O}"]`).click(); };
     // send
@@ -316,8 +410,11 @@
     sku = String(sku || "").trim().toUpperCase(); if (!sku) return;
     let it = null; for (const L of LINES) { it = eng(L).bySku.get(sku); if (it) break; }
     if (!it) { A.flash("simNote", `<span class="warn">${esc(sku)} isn't in either catalog.</span>`); return; }
-    S.q = CE.lookOf(it); S.ref = it.sku; resetSel(); save(); draw();
-    A.flash("simNote", `Looking for pieces like ${esc(it.sku)} ${esc(it.name)} (${esc(it.cname || "")}).`);
+    // v1.7.6: a style reference adds to her photo, words and order; it no longer replaces them
+    if (!S.refs.includes(it.sku)) S.refs.push(it.sku);
+    if (S.refs.length > 4) S.refs.shift();
+    S.ref = ""; resetSel(); save(); draw();
+    A.flash("simNote", `Added ${esc(it.sku)} ${esc(it.name)} (${esc(it.cname || "")}) as a style reference. Her photo, words and order still count; see “What's shaping these results.”`);
   }
   // a Shopify order export (Orders > Export): Name, Lineitem quantity, Lineitem name, Lineitem sku
   function importOrderCSV(text, name) {
@@ -330,12 +427,14 @@
       if (cOrd && rows[0][cOrd]) S.orderRef = rows[0][cOrd];
       if (cDate && rows[0][cDate]) S.orderDate = String(rows[0][cDate]).slice(0, 10);
     }
-    S.reorder = null; resetSel(); save(); draw();
+    S.reorder = null; resetReo(); resetSel(); save(); draw();
     A.flash("simNote", `Read ${esc(name)}.`);
   }
 
   /* ---------------- the follow-up: text, link, page, PDF ---------------- */
-  const selItems = () => { const e = A.engine(); return S.sel[A.line()].map((s) => e.bySku.get(s)).filter(Boolean).slice(0, MAX_ON_SHEET); };
+  const selItems = () => { const e = A.engine(), rs = reoSet(A.line()); return S.sel[A.line()].filter((k) => !rs.has(k)).map((s) => e.bySku.get(s)).filter(Boolean).slice(0, MAX_ON_SHEET); };
+  const reoItems = () => { const e = A.engine(); return S.reo[A.line()].map((s) => e.bySku.get(s)).filter(Boolean); };
+  const linkItems = () => reoItems().concat(selItems());   // v1.7.7: the order link fills in her reorder and the new styles
   const isReorder = () => (S.reorder == null ? (B || bought()).per[A.line()].rows.length > 0 : S.reorder);
   const firstName = () => { const n = state.buyer.trim(); return n && !/\b(inc|llc|shop|store|boutique|co)\b/i.test(n) ? n.split(/\s+/)[0] : ""; };
   function orderRef() { const P = (B || bought()).P; return [S.orderRef || P.order, S.orderDate || P.date].filter(Boolean); }
@@ -388,22 +487,23 @@
     return st.length ? `${c} · ${st.join(", ")}` : c;
   }
   function followText() {
-    const items = selItems(), ref = orderRef(), fn = firstName(), link = S.link ? followLink(items) : null, miss = missingStones();
+    const items = selItems(), reo = reoItems(), ref = orderRef(), fn = firstName(), link = S.link ? followLink(linkItems()) : null, miss = missingStones();
     const lines = [`Hi${fn ? " " + fn : ""},`, ""];
     if (S.note) lines.push(S.note, "");
     lines.push(`${ref.length ? `Thank you for your order ${ref.join(", ")}. ` : ""}You asked about ${askLine().charAt(0).toLowerCase() + askLine().slice(1)}. Here's what we have in ${A.cfg().name}:`, "");
     items.forEach((it) => { const b = badgeOf(it); lines.push(`- ${it.name}, ${colorName(it)} (${it.sku})${b ? ` · ${b.toLowerCase()}` : ""}${S.prices ? ` · ${money(A.engine().lineCost(it, isReorder() ? "reorder" : "first").each)} wholesale` : ""}`); });
     if (miss.length) lines.push("", `We don't have ${listWords(miss)} in the line right now; these are the closest in look and color.`);
+    if (reo.length) { lines.push("", "Your reorder of what you bought:"); reo.forEach((it) => lines.push(`- ${it.name}, ${it.cname || A.label(it.dom)} (${it.sku})`)); }
     lines.push("", howToOrder());
-    if (link) lines.push(`This link opens our order page with these styles filled in:\n${link.url}`);
+    if (link) lines.push(`This link opens our order page with ${reo.length ? "your reorder and these new styles" : "these styles"} filled in:\n${link.url}`);
     lines.push("", "Best,");
     return lines.join("\n");
   }
   function pageHTML() {
-    const cfg = A.cfg(), L = A.line(), items = selItems(), ref = orderRef(), per = (B || bought()).per[L], link = S.link ? followLink(items) : null, miss = missingStones();
+    const cfg = A.cfg(), L = A.line(), items = selItems(), ref = orderRef(), per = (B || bought()).per[L], link = S.link ? followLink(linkItems()) : null, miss = missingStones(), rs = reoSet(L);
     const owned = per.rows.filter((r) => r.kind !== "off");
     const who = state.buyer.trim();
-    const boughtTiles = owned.slice(0, 8).map((r) => { const it = r.items[0]; const q = r.entry.qty != null ? ` × ${r.entry.qty}` : ""; return `<div class="b"><img src="${esc(it.img)}" alt=""><div><b>${esc(r.kind === "colorway" ? r.items.map((i) => i.sku).join(", ") : r.entry.style)}</b>${esc(q)}<br>${esc(it.name)}${r.kind === "colorway" ? `<br><i>${esc(r.items.map((i) => i.cname || "").join(", "))}</i>` : ""}</div></div>`; }).join("");
+    const boughtTiles = owned.slice(0, 8).map((r) => { const it = r.items[0]; const q = r.entry.qty != null ? ` × ${r.entry.qty}` : ""; return `<div class="b"><img src="${esc(it.img)}" alt=""><div><b>${esc(r.kind === "colorway" ? r.items.map((i) => i.sku).join(", ") : r.entry.style)}</b>${esc(q)}<br>${esc(it.name)}${r.kind === "colorway" ? `<br><i>${esc(r.items.map((i) => i.cname || "").join(", "))}</i>` : ""}${r.items.some((i) => rs.has(i.sku)) ? `<br><span class="ro">In your reorder</span>` : ""}</div></div>`; }).join("");
     const offList = per.off.map((e) => e.style + (e.qty != null ? ` × ${e.qty}` : ""));
     const photos = S.showPhoto ? S.photos.slice(0, 2) : [];
     const tiles = items.map((it) => { const b = badgeOf(it); return `<div class="t"><img src="${esc(it.img)}" alt=""><span class="s"><b>${esc(it.sku)}</b> · ${esc(colorName(it))}</span><span>${esc(it.name)}</span>${b ? `<i>${esc(b)}</i>` : ""}${S.prices ? `<span class="p">${money(A.engine().lineCost(it, isReorder() ? "reorder" : "first").each)} wholesale</span>` : ""}</div>`; }).join("");
@@ -414,7 +514,7 @@
       <div class="fu-ask">${photos.length ? `<div class="ph">${photos.map((p) => `<img src="${esc(p.thumb)}" alt="">`).join("")}</div>` : ""}<div class="tx">${esc(askLine())}.${miss.length ? `<small>We don't have ${esc(listWords(miss))} in the line right now; the pieces below are the closest in look and color.</small>` : ""}</div></div>
       <div class="fu-h">What we have in those stones</div>
       <div class="fu-grid" data-n="${items.length}">${tiles}</div>
-      <div class="sh-order fu-order">${link ? `<div class="qr">${A.qrSVG(link.url)}</div>` : ""}<div class="tx"><b>How to order</b>${esc(howToOrder())}${link ? ` Scan the code or <a href="${esc(link.url)}">click here</a>: our order page opens with these ${link.n} styles filled in. Adjust quantities there, add your details and submit.` : ""}</div></div>
+      <div class="sh-order fu-order">${link ? `<div class="qr">${A.qrSVG(link.url)}</div>` : ""}<div class="tx"><b>How to order</b>${esc(howToOrder())}${link ? ` Scan the code or <a href="${esc(link.url)}">click here</a>: our order page opens with ${rs.size ? `your reorder and the new styles (${link.n} in all)` : `these ${link.n} styles`} filled in. Adjust quantities there, add your details and submit.` : ""}</div></div>
       <div class="sh-foot"><span class="l">${esc(cfg.name)}</span><span class="c">${esc(cfg.lineSheet.contactLine)}</span><span class="r">${esc(cfg.contactEmail || "")}</span></div>`;
   }
   // size the style photos to the room left on the page (one page, always)
@@ -504,6 +604,17 @@
     setMode(m0);
   }
   A.hooks.line.push(() => { if (mode === "similar") draw(); });
+  // v1.7.6: on the capsule built from your picks, a way back to add more
+  A.hooks.board.push(() => {
+    const bd = $("board"); if (!bd || !S.built || S.built.line !== A.line() || !state.capsule || bd.querySelector(".simstrip")) return;
+    const on = new Set(A.orderedItems().map((o) => o.it.sku));
+    reoSet(A.line()).forEach((k) => { const c = bd.querySelector(`.card[data-sku="${k}"]`); if (c && !c.querySelector(".reo-tag")) { const t = document.createElement("span"); t.className = "reo-tag"; t.textContent = "Her reorder"; (c.firstElementChild || c).appendChild(t); } });
+    if (!(S.built.skus || []).every((k) => on.has(k))) return;   // only on the capsule built from your picks
+    const d = document.createElement("div"); d.className = "simstrip";
+    d.innerHTML = `Built from Find similar: ${S.reo[A.line()].length ? `her reorder (${S.reo[A.line()].length}) + ` : ""}${S.sel[A.line()].filter((k) => !S.reo[A.line()].includes(k)).length} new picks. <a class="link" id="simBack">← Back to Find similar</a> to pick more colorways or styles, then build again or add them to this capsule. (“Show another version” and “Back to best match” rebuild from scratch; your picks stay in Find similar.)`;
+    bd.prepend(d);
+    d.querySelector("#simBack").onclick = () => { window.CB_PANE && window.CB_PANE("store"); setMode("similar"); };
+  });
   mount();
-  window.CB_SIMILAR = { setMode, draw, state: () => S, query, describe, followText, followLink: () => followLink(selItems()), buildPage, fit, results: (L) => results(L || A.line(), bought()), bought, moreLike, importOrderCSV };
+  window.CB_SIMILAR = { setMode, draw, state: () => S, query, describe, followText, followLink: () => followLink(linkItems()), buildPage, fit, results: (L) => results(L || A.line(), bought()), bought, moreLike, importOrderCSV };
 })();

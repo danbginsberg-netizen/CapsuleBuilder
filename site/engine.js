@@ -354,69 +354,93 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
   const cword = (f) => CW[f] || f;
   const nearColor = (a, b) => (a === b ? 1 : NEAR.get(a + "|" + b) || 0);
   const nearSub = (a, b) => (a === b ? 1 : SUB_NEAR.get(a + "|" + b) || 0);
+  // v1.7.6: does the look say anything (words, chips, her photo's colors)?
+  const hasLook = (Q) => !!Q && ((Q.mats || []).length + (Q.stones || []).length + (Q.subs || []).length + (Q.colors || []).length + (Q.photoColors || []).length + (Q.words || []).length + (Q.scale ? 1 : 0) + (Q.multi ? 1 : 0) + (Q.metal ? 1 : 0)) > 0;
+  /** How closely one of our pieces looks like the look Q. v1.7.6: every reason is tagged with where it came from:
+      "photo" (a color read from her photo), "look" (her words or the chips you set). */
   Engine.prototype.similarScore = function (Q, it) {
     const txt = low([it.name, it.mtext, it.desc].join(" ")), ctxt = low(it.cname);
-    const parts = [], why = [];
+    const parts = [], tags = [];
+    const tag = (t, src) => { if (!tags.some((x) => x.t === t)) tags.push({ t, src: src || "look" }); };
     // materials: stone, pearl, glass...
     if ((Q.mats || []).length) {
       let s = 0;
-      for (const m of Q.mats) { if ((it.mats || []).includes(m)) { s += 1; why.push(m === "gemstone" ? "natural stone" : lab(m)); } else if (this.cfg.materialGroups.some((g) => g.includes(m) && (it.mats || []).some((x) => g.includes(x)))) s += 0.4; }
+      for (const m of Q.mats) { if ((it.mats || []).includes(m)) { s += 1; tag(m === "gemstone" ? "natural stone" : lab(m)); } else if (this.cfg.materialGroups.some((g) => g.includes(m) && (it.mats || []).some((x) => g.includes(x)))) s += 0.4; }
       parts.push([s / Q.mats.length, 0.22]);
     }
     // the stones she named
     const stonesHit = [];
     if ((Q.stones || []).length) {
-      for (const n of Q.stones) { const re = (STONES.find((s) => s[0] === n) || [])[1]; if (!re) continue; if (re.test(txt)) stonesHit.push({ stone: n, where: "stone" }); else if (re.test(ctxt)) stonesHit.push({ stone: n, where: "color" }); }
+      for (const n of Q.stones) { const re = (STONES.find((x) => x[0] === n) || [])[1]; if (!re) continue; if (re.test(txt)) stonesHit.push({ stone: n, where: "stone" }); else if (re.test(ctxt)) stonesHit.push({ stone: n, where: "color" }); }
       const s = stonesHit.some((h) => h.where === "stone") ? 1 : stonesHit.length ? 0.75 : (it.mats || []).includes("gemstone") ? 0.35 : 0;
       parts.push([s, 0.22]);
-      stonesHit.forEach((h) => why.push(h.where === "stone" ? h.stone : `${h.stone} color`));
+      stonesHit.forEach((h) => tag(h.where === "stone" ? h.stone : `${h.stone} color`));
     }
     // the kind of piece: strand, layered, pendant...
     if ((Q.subs || []).length) {
       let s = 0; for (const u of Q.subs) s = Math.max(s, nearSub(u, it.sub));
-      parts.push([s, 0.14]); if (s >= 0.99) why.push(it.sub);
+      parts.push([s, 0.14]); if (s >= 0.99) tag(it.sub);
     }
-    if (Q.scale) { const R = { delicate: 0, medium: 1, statement: 2 }, d = Math.abs((R[Q.scale] ?? 1) - (R[it.scale] ?? 1)); parts.push([d === 0 ? 1 : d === 1 ? 0.4 : 0, 0.14]); if (!d) why.push(it.scale); }
-    // colors: the same colors (or next to them), not colors that go with them
-    const qc = lookColors(Q);
+    if (Q.scale) { const R = { delicate: 0, medium: 1, statement: 2 }, d = Math.abs((R[Q.scale] ?? 1) - (R[it.scale] ?? 1)); parts.push([d === 0 ? 1 : d === 1 ? 0.4 : 0, 0.14]); if (!d) tag(it.scale); }
+    // colors: the same colors (or next to them), not colors that go with them. Her words' colors lead; her photo's follow.
+    const own = lookColors(Q), ph = (Q.photoColors || []).filter((c) => !own.includes(c));
+    const qc = own.concat(ph);
     if (qc.length || Q.multi) {
       const fams = (it.fams || []).filter((f) => !this.metals.has(f) || (it.fams || []).length === 1);
       let s = 0, wsum = 0; const hit = [];
-      qc.forEach((c, i) => { const w = i === 0 ? 1 : 0.7; let m = 0, f0 = null; for (const f of fams) { const v = nearColor(c, f); if (v > m) { m = v; f0 = f; } } s += w * m; wsum += w; if (m >= 0.99 && f0) hit.push(f0); });
+      qc.forEach((c, i) => { const w = i === 0 ? 1 : 0.7; let m = 0, f0 = null; for (const f of fams) { const v = nearColor(c, f); if (v > m) { m = v; f0 = f; } } s += w * m; wsum += w; if (m >= 0.99 && f0) hit.push([f0, (Q.photoColors || []).includes(c) ? "photo" : "look"]); });   // a color her photo shows is credited to the photo
       s = wsum ? s / wsum : 0;
-      if (Q.multi) { s = it.multi ? Math.min(1, (qc.length ? s : 0.6) + 0.35) : qc.length ? s * 0.85 : 0.35; if (it.multi) why.push("multicolor"); }
-      parts.push([s, 0.2]); hit.slice(0, 2).forEach((f) => why.push(cword(f)));
+      if (Q.multi) { s = it.multi ? Math.min(1, (qc.length ? s : 0.6) + 0.35) : qc.length ? s * 0.85 : 0.35; if (it.multi) tag("multicolor"); }
+      parts.push([s, 0.2]); hit.slice(0, 3).forEach(([f, src]) => tag(cword(f), src));
     }
-    if (Q.metal) { parts.push([it.metal === Q.metal ? 1 : it.metal === "mixed" ? 0.5 : 0, 0.05]); if (it.metal === Q.metal) why.push(Q.metal); }
+    if (Q.metal) { parts.push([it.metal === Q.metal ? 1 : it.metal === "mixed" ? 0.5 : 0, 0.05]); if (it.metal === Q.metal) tag(Q.metal); }
     if ((Q.words || []).length) {
       const hits = Q.words.filter((w) => { const re = (LOOK_WORDS.find((x) => x[0] === w) || [])[1]; return (re && re.test(txt)) || (w === "multi-strand" && it.sub === "layered"); });
-      parts.push([hits.length / Q.words.length, 0.07]); hits.forEach((w) => why.push(w));
+      parts.push([hits.length / Q.words.length, 0.07]); hits.forEach((w) => tag(w));
     }
     const W = parts.reduce((a, p) => a + p[1], 0);
     let s = W ? parts.reduce((a, p) => a + p[0] * p[1], 0) / W : 0;
     if (Q.cat && it.cat !== Q.cat) s *= 0.5;
-    return { s, why: why.filter((v, i, a) => a.indexOf(v) === i), stones: stonesHit };
+    return { s, why: tags.map((x) => x.t), tags, stones: stonesHit };
   };
-  /** Lookalikes: in stock and on the order page, grouped by style number, every matching colorway kept (stones matter). */
+  /** Lookalikes: in stock and on the order page, grouped by style number, every matching colorway kept (stones matter).
+      v1.7.6: three sources blend into one score, each shown on the card as a reason:
+        the look (her words, the chips, her photo's colors)  weight 1
+        opts.refs  = our styles she pointed to ("more like this")  weight 0.8   -> "like FN0761"
+        opts.bought = our styles on her order                   weight 0.35  -> "like her FN2933" (her order leans the ranking)
+      Colorways she already has (opts.owned) are marked and never suggested; her styles in a new colorway move up. */
   Engine.prototype.similar = function (Q, opts) {
     opts = opts || {};
     const own = new Set((opts.owned || []).map((s) => String(s).toUpperCase()));
     const min = opts.min == null ? 0.45 : opts.min;
-    const scored = this.items.filter((it) => this.inStock(it, opts.minQty) && this.orderable(it) && (!Q.cat || !opts.strictCat || it.cat === Q.cat))
-      .map((it) => Object.assign({ item: it, owned: own.has(it.sku) }, this.similarScore(Q, it))).filter((r) => r.s >= min && !(Q.ref && r.item.sku === Q.ref));
+    const refs = (opts.refs || []).filter(Boolean), bought = (opts.bought || []).filter(Boolean);
+    const look = hasLook(Q);
+    const refQ = refs.map((r) => [r, lookOf(r)]), boughtQ = bought.map((b) => [b, lookOf(b)]);
+    const empty = { groups: [], stoneReport: [], total: 0 };
+    if (!look && !refs.length && !bought.length) return empty;
+    const best = (list, it) => { let m = { s: 0, ref: null }; for (const [r, q] of list) { const v = r.sku === it.sku ? 1 : this.similarScore(q, it).s; if (v > m.s) m = { s: v, ref: r }; } return m; };
+    const scored = this.items.filter((it) => this.inStock(it, opts.minQty) && this.orderable(it) && (!Q || !Q.cat || !opts.strictCat || it.cat === Q.cat)).map((it) => {
+      const r = look ? this.similarScore(Q, it) : { s: 0, tags: [], stones: [] };
+      let num = look ? r.s : 0, den = look ? 1 : 0;
+      const tags = r.tags.slice(), src = { look: look ? r.s : null };
+      if (refQ.length) { const b = best(refQ, it); num += 0.8 * b.s; den += 0.8; src.style = b.s; if (b.ref && b.s >= 0.62) tags.unshift({ t: b.ref.sku === it.sku ? "your reference" : `like ${b.ref.sku}`, src: "style" }); }
+      if (boughtQ.length) { const b = best(boughtQ, it); num += 0.35 * b.s; den += 0.35; src.order = b.s; if (b.ref && b.s >= 0.62) tags.push({ t: `like her ${(b.ref.sku.match(/^[A-Z]+\d+/) || [b.ref.sku])[0]}`, src: "order" }); /* the style she bought: the order may not say which colorway */ }
+      const s = den ? num / den : 0;
+      return { item: it, owned: own.has(it.sku), s, tags, why: tags.map((x) => x.t), stones: r.stones, src };
+    }).filter((r) => r.s >= min);
     const styleOf = (sku) => (String(sku).match(/^[A-Z]+\d+/) || [sku])[0];
     const by = new Map();
     for (const r of scored) { const k = styleOf(r.item.sku); if (!by.has(k)) by.set(k, []); by.get(k).push(r); }
     const ownedStyles = new Set([...own].map(styleOf));
     const groups = [...by.entries()].map(([style, list]) => {
       list.sort((a, b) => b.s - a.s || a.item.sku.localeCompare(b.item.sku));
-      const fresh = list.filter((r) => !r.owned), bought = ownedStyles.has(style);
+      const fresh = list.filter((r) => !r.owned), isBought = ownedStyles.has(style);
       // the style she already bought, in a colorway she doesn't have: the easiest yes, so it moves up a little
-      return { style, best: fresh[0] || list[0], colorways: list, boughtStyle: bought, rank: (fresh[0] || list[0]).s + (bought ? 0.05 : 0) };
+      return { style, best: fresh[0] || list[0], colorways: list, boughtStyle: isBought, rank: (fresh[0] || list[0]).s + (isBought ? 0.05 : 0) };
     }).filter((g) => g.colorways.some((r) => !r.owned)).sort((a, b) => b.rank - a.rank || a.style.localeCompare(b.style));
     // which of the stones she named we carry at all (in stock), so the rep can say so plainly
-    const stoneReport = (Q.stones || []).map((n) => {
-      const re = (STONES.find((s) => s[0] === n) || [])[1];
+    const stoneReport = ((Q && Q.stones) || []).map((n) => {
+      const re = (STONES.find((x) => x[0] === n) || [])[1];
       const skus = this.items.filter((it) => this.inStock(it, opts.minQty) && this.orderable(it) && re && re.test(low([it.name, it.mtext, it.desc].join(" ")))).map((it) => it.sku);
       return { stone: n, skus };
     });
@@ -444,9 +468,10 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
       const words = (lineU.replace(SKU_RE, " ").match(/\b[A-Z]{2,6}\b/g) || []).filter((w) => !STOPWORDS.has(w));
       // "SKU: FN2933GDSOD" under a title line for the same style: it refines that entry rather than adding one
       if (cur && cur.style === style && /SKU/i.test(raw) && !cur.refined) { cur.suffixes.unshift(suffix); cur.refined = true; if (q != null && cur.qty == null) cur.qty = q; continue; }
-      cur = { raw: raw.trim(), style, suffixes: [suffix].concat(toks.slice(1).filter((m) => m[1] === style).map((m) => m[2].replace(/-/g, ""))), hints: words, qty: q, line: /^OY/.test(style) ? "OIYK" : "RF" };
+      const multi = toks.some((m) => m[1] !== style);   // several styles on one line ("FN1358, RN0009, FN2933GDAMZ"): each entry shows its own code
+      cur = { raw: multi ? toks[0][0] : raw.trim(), style, suffixes: [suffix].concat(toks.slice(1).filter((m) => m[1] === style).map((m) => m[2].replace(/-/g, ""))), hints: words, qty: q, line: /^OY/.test(style) ? "OIYK" : "RF" };
       out.entries.push(cur);
-      toks.slice(1).filter((m) => m[1] !== style).forEach((m) => out.entries.push({ raw: raw.trim(), style: m[1], suffixes: [m[2].replace(/-/g, "")], hints: [], qty: null, line: /^OY/.test(m[1]) ? "OIYK" : "RF" }));
+      toks.slice(1).filter((m) => m[1] !== style).forEach((m) => out.entries.push({ raw: m[0], style: m[1], suffixes: [m[2].replace(/-/g, "")], hints: [], qty: null, line: /^OY/.test(m[1]) ? "OIYK" : "RF" }));
     }
     return out;
   }
@@ -1047,7 +1072,8 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
     for (const sku of pickSkus) {
       let e = pool.find((p) => p.item.sku === sku);
       const it = this.bySku.get(sku);
-      if (!e && it) { const sc = this.score(anchors, it); e = { item: it, score: sc.total, sc, stale: true }; }
+      // v1.7.6: a piece outside the build pool (e.g. a second colorway of one style, picked by hand) is only "stale" when it fails stock or the order page
+      if (!e && it) { const sc = this.score(anchors, it); e = { item: it, score: sc.total, sc, stale: !(this.inStock(it, opts.minQty) && this.orderable(it)) }; }
       if (!e) { missing.push(sku); continue; }
       e.reason = this.reason(anchors, e.item, e.sc);
       picks.push(e);
@@ -1197,7 +1223,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
   }
   Engine.prototype.trendNotes = function (file, items, today, opts) { return trendNotes(file, this.line, items, today, opts); };
 
-  const api = { Engine, CATS, label: lab, trendNotes, parseLook, lookOf, parseOrder, STONES: STONES.map((s) => s[0]) };
+  const api = { Engine, CATS, label: lab, trendNotes, parseLook, lookOf, parseOrder, hasLook, STONES: STONES.map((s) => s[0]) };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.CapsuleEngine = api;
 })(typeof window !== "undefined" ? window : globalThis);

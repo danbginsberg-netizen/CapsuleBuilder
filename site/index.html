@@ -398,6 +398,37 @@
   .sm-cw .cw img { width: 26px; height: 26px; object-fit: contain; border-radius: 4px; background: #fafafa; }
   .sm-cw .cw.on { border-color: var(--lav-ink); background: var(--lav-soft); color: var(--lav-ink); font-weight: 700; } .sm-cw .cw.on::before { content: "✓"; }
   .sm-cw .cw.own { opacity: .55; cursor: default; } .sm-cw .cw:disabled:not(.own) { cursor: default; }
+  /* v1.7.6: sources (photo / look / style / order), checkbox colorways, your picks tray */
+  #simPane { --s-photo: #2f6fb3; --s-look: var(--lav-ink); --s-style: #2f7d4f; --s-order: #a15c00; }
+  .sim-src { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; margin: 0 0 12px; }
+  .sim-src-h { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin-bottom: 4px; } .sim-src-h .note { margin: 0; }
+  .src-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 6px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .src-row > b { min-width: 170px; } .src-row .dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 10px; }
+  .src-row.s-photo .dot { background: var(--s-photo); } .src-row.s-look .dot { background: var(--s-look); } .src-row.s-style .dot { background: var(--s-style); } .src-row.s-order .dot { background: var(--s-order); }
+  .src-row em { font-style: normal; font-weight: 700; color: var(--s-photo); } .src-row em.off { color: var(--muted); text-decoration: line-through; font-weight: 400; }
+  .src-row .tog { margin: 0; font-size: 12.5px; } .src-row .tog input { width: 16px; height: 16px; flex-basis: 16px; }
+  .refchip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--s-style); color: var(--s-style); background: #eef7f1; border-radius: 99px; padding: 1px 8px 1px 2px; font-size: 12px; font-weight: 700; }
+  .refchip img { width: 22px; height: 22px; object-fit: contain; border-radius: 50%; background: #fff; }
+  .sm-why span.s-photo { background: #e8f0fa; color: var(--s-photo); } .sm-why span.s-style { background: #eef7f1; color: var(--s-style); } .sm-why span.s-order { background: #fff3e0; color: var(--s-order); }
+  .src-ph { color: var(--s-photo); } .sim-cols button.ph { outline: 2.5px dashed var(--s-photo); outline-offset: 1.5px; }
+  .sm-cw .cw .bx { width: 14px; height: 14px; border: 1.5px solid #b9b4c4; border-radius: 3px; flex: 0 0 14px; background: #fff; display: grid; place-items: center; font-style: normal; font-size: 11px; line-height: 1; }
+  .sm-cw .cw.on .bx { background: var(--lav-ink); border-color: var(--lav-ink); color: #fff; } .sm-cw .cw.on .bx::after { content: "✓"; } .sm-cw .cw.on::before { content: none; }
+  .sim-tray { position: sticky; bottom: 0; z-index: 30; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; background: #fff; border: 2px solid var(--lav-ink); border-radius: 14px; padding: 10px 14px; margin: 0 0 14px; box-shadow: 0 -4px 16px #0001; }
+  .sim-tray.empty { border-color: var(--line); border-style: dashed; box-shadow: none; }
+  .sim-tray .tr-l { min-width: 0; flex: 1 1 320px; } .sim-tray .tr-im { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; align-items: center; }
+  .sim-tray .tr-im img { width: 34px; height: 34px; object-fit: contain; border: 1px solid var(--line); border-radius: 6px; background: #fafafa; } .sim-tray .tr-im span { font-size: 12px; color: var(--muted); }
+  .sim-tray .tr-a { display: flex; gap: 6px; flex-wrap: wrap; } .sim-tray .tr-a .btn { width: auto; margin: 0; white-space: nowrap; padding: 8px 11px; font-size: 13px; }
+  /* v1.7.7: her reorder */
+  .sb-reo { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 4px 0 2px; } .sb-reo > span { font-size: 11px; font-weight: 700; color: var(--s-order, #a15c00); letter-spacing: .04em; text-transform: uppercase; }
+  .sb-reo .rk { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 2px 7px 2px 3px; font-size: 11.5px; cursor: pointer; }
+  .sb-reo .rk .bx, .sm-cw .cw.own .bx { width: 14px; height: 14px; border: 1.5px solid #b9b4c4; border-radius: 3px; flex: 0 0 14px; background: #fff; display: grid; place-items: center; font-style: normal; font-size: 11px; line-height: 1; visibility: visible; }
+  .sb-reo .rk.on { border-color: #a15c00; background: #fff3e0; color: #7a4500; font-weight: 700; } .sb-reo .rk.on .bx, .sm-cw .cw.own.on .bx { background: #a15c00; border-color: #a15c00; color: #fff; } .sb-reo .rk.on .bx::after { content: "✓"; }
+  .sb-reo .rk:disabled { opacity: .5; cursor: default; }
+  .sm-cw .cw.own { opacity: 1; cursor: pointer; border-style: dashed; border-color: #d9b27a; } .sm-cw .cw.own.on { border-style: solid; border-color: #a15c00; background: #fff3e0; color: #7a4500; }
+  .sim-tray .tr-im img.reo { border: 2px solid #a15c00; }
+  #board .card .reo-tag { position: absolute; left: 8px; bottom: 8px; background: #a15c00; color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; z-index: 2; }
+  .sheet.fu-page .fu-bought .ro { color: #a15c00; font-weight: 700; font-size: 6.8pt; letter-spacing: .04em; text-transform: uppercase; }
+  .simstrip { background: var(--lav-soft); border: 1px solid var(--lav); color: var(--ink); border-radius: 10px; padding: 8px 12px; margin: 0 0 10px; font-size: 13px; }
   .sm .row { margin: 4px 0 0; gap: 4px; } .sm .row .btn { font-size: 11.5px; padding: 4px 8px; white-space: nowrap; border-radius: 8px; }
   #simPane .sim-bought .row .btn, #simPane .sim-acts .btn { white-space: nowrap; padding: 8px 11px; font-size: 13px; }
   .sim-f { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; } .sim-f label { font-size: 12px; font-weight: 700; color: var(--muted); } .sim-f label.w { grid-column: 1 / -1; } .sim-f input { margin-top: 3px; font-weight: 400; color: var(--ink); }
@@ -573,7 +604,7 @@
 <body>
 <div class="app">
   <aside>
-    <div class="brand"><img id="brandLogo" src="logo_rf.png" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.7.5</small></div></div>
+    <div class="brand"><img id="brandLogo" src="logo_rf.png" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.7.7</small></div></div>
     <div class="lines">
       <button class="on" id="lineRF" data-line="RF">Retro Forever</button>
       <button id="lineOIYK" data-line="OIYK">OIYK</button>
