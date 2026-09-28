@@ -75,6 +75,10 @@
     necklace: "M22 18c0 40 56 40 56 0 M50 58m-7 0a7 7 0 1 0 14 0a7 7 0 1 0-14 0", earrings: "M34 20v12 M66 20v12 M34 44m-9 0a9 9 0 1 0 18 0a9 9 0 1 0-18 0 M66 44m-9 0a9 9 0 1 0 18 0a9 9 0 1 0-18 0",
     bracelet: "M50 50m-26 0a26 20 0 1 0 52 0a26 20 0 1 0-52 0", ring: "M50 58m-18 0a18 18 0 1 0 36 0a18 18 0 1 0-36 0 M42 32l8-12 8 12z", watch: "M40 12h20v20H40z M40 68h20v20H40z M50 50m-18 0a18 18 0 1 0 36 0a18 18 0 1 0-36 0",
   };
+  const DETAIL = {   // light lines drawn over the shape (waist, openings, leg split) so each type reads at a glance
+    dress: "M38 30h24", jumpsuit: "M33 38h34 M50 50v38", "pants / skirt": "M50 22v66", "jacket / coat": "M50 26v70 M40 10l10 16 10-16",
+    top: "M42 12c4 6 12 6 16 0", "shirt / blouse": "M50 20v74", "sweater / knit": "M36 86h28 M42 12c4 6 12 6 16 0", scarf: "M32 30h36", bag: "M28 50h44",
+  };
   const STROKE_ONLY = new Set(["necklace", "earrings", "bracelet", "ring"]);
   function silhouette(x) {
     const cs = (x.colors || []).length ? x.colors : ["grey"];
@@ -82,7 +86,8 @@
     const d = SIL[x.type] || SIL.top, c1 = SW[cs[0]] || "#ccc", c2 = SW[cs[1]] || c1;
     const pat = x.pattern && x.pattern !== "solid" ? `<defs><pattern id="p${x.id}" width="10" height="10" patternUnits="userSpaceOnUse">${x.pattern === "stripe" ? `<rect width="10" height="5" fill="${c2}"/>` : x.pattern === "plaid" ? `<path d="M0 5h10M5 0v10" stroke="${c2}" stroke-width="2"/>` : `<circle cx="5" cy="5" r="2.4" fill="${c2}"/>`}</pattern></defs>` : "";
     if (STROKE_ONLY.has(x.type)) return `<svg viewBox="0 0 100 100" class="sil"><path d="${d}" fill="none" stroke="${c1}" stroke-width="6" stroke-linecap="round"/></svg>`;
-    return `<svg viewBox="0 0 100 100" class="sil">${pat}<path d="${d}" fill="${c1}" stroke="#0003" stroke-width="1.5"/>${pat ? `<path d="${d}" fill="url(#p${x.id})" opacity=".7"/>` : ""}</svg>`;
+    const light = /^#(f|e|d)/i.test(c1) ? "#0005" : "#fff9";
+    return `<svg viewBox="0 0 100 100" class="sil">${pat}<path d="${d}" fill="${c1}" stroke="#0003" stroke-width="1.5"/>${pat ? `<path d="${d}" fill="url(#p${x.id})" opacity=".7"/>` : ""}${DETAIL[x.type] ? `<path d="${DETAIL[x.type]}" fill="none" stroke="${light}" stroke-width="2.5" stroke-linecap="round"/>` : ""}</svg>`;
   }
   window.CB_SILHOUETTE = silhouette;
 
@@ -164,7 +169,14 @@
   /* ---------------- model ---------------- */
   const ctx = () => state.context;
   const newId = () => "x" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-  function autoName(x) { return x.kind === "palette" ? `${x.label || "store"} palette` : `${(x.colors || [])[0] ? cword(x.colors[0]) + " " : ""}${x.type || "piece"}`; }
+  // the card's name follows what it is: color, fabric (one clothing fabric), and a plain noun for the type (v1.7.2)
+  const NOUN = { "shirt / blouse": "blouse", "sweater / knit": "sweater", "jacket / coat": "jacket", "pants / skirt": "pants", "hair accessory": "hair clip" };
+  function autoName(x) {
+    if (x.kind === "palette") return `${x.label || "store"} palette`;
+    const fab = x.kind === "apparel" && (x.materials || []).length === 1 ? (x.materials[0].split(" / ")[0] + " ") : "";
+    const other = x.kind === "jewelry" && x.source === "stand-in" ? " (other brand)" : "";
+    return `${(x.colors || [])[0] ? cword(x.colors[0]) + " " : ""}${fab}${NOUN[x.type] || x.type || "piece"}${other}`;
+  }
   function addItem(x) {
     const L = ctx().items;
     if (L.length >= MAX_ITEMS) { A.toast(`Her store holds up to ${MAX_ITEMS} items. Remove one to add more.`); return null; }
@@ -319,13 +331,24 @@
       ${Object.keys(P.styles).length ? `<div class="note">Look: ${top(P.styles).map((k) => esc((STYLES.find((s) => s[0] === k) || [k, k])[1])).join(", ")}</div>` : ""}
       ${P.apparel ? `<div class="note">${P.busy ? `${P.busy} of ${P.apparel} clothing pieces are prints, so quieter jewelry leads.` : "Her clothing is mostly solid, so statement pieces can lead."}</div>` : ""}`;
   }
+  const STRENGTH_NOTE = {
+    light: "<b>Light:</b> the buyer's pick decides; her store only breaks ties between close matches, so often little or nothing changes.",
+    medium: "<b>Medium:</b> her store and the buyer's pick share the say; a few pieces usually change.",
+    strong: "<b>Strong:</b> her store leads; the most pieces change toward her palette, metal and look (fewer when the buyer's pick already suits her store).",
+  };
+  const STRENGTH_ALWAYS = "At every level the buyer's pick stays in, and stock, minimums, the category mix and variety rules still hold. The list below is ranked on her store alone, so it doesn't change with the level.";
+  function drawImpact() {
+    const el = $("ctxImpact"); if (!el) return;
+    const c = ctx(), im = state.ctxImpact;
+    el.innerHTML = !c.items.length ? "" : !c.on ? "Switched off: the capsule is built on the buyer's pick alone." : !state.capsule ? "Build a capsule (or tap “Build from this” below) to see what her store changes." : im ? `On the board now: her store changed <b>${im.changed} of ${im.total}</b> pieces from the capsule built on the buyer's pick alone.${im.changed ? " Those pieces are marked “Chosen for her store.”" : " Try a stronger setting to let it lead."}` : "";
+  }
   let compCat = "";
   function compHTML() {
     const e = A.engine();
     if (!e.ctxProfile) return "";
     const list = e.complements({ n: 9, cat: compCat || undefined, minQty: state.minQty });
     const cats = [["", "All"], ["necklace", "Necklaces"], ["earring", "Earrings"], ["bracelet", "Bracelets"]];
-    return `<h4>Best from our line for her store</h4><div class="chips cx-cat">${cats.map(([k, t]) => `<button data-cat="${k}" class="${compCat === k ? "on" : ""}">${t}</button>`).join("")}</div>
+    return `<h4>Best from our line for her store</h4><p class="note">${STRENGTH_ALWAYS}</p><div class="chips cx-cat">${cats.map(([k, t]) => `<button data-cat="${k}" class="${compCat === k ? "on" : ""}">${t}</button>`).join("")}</div>
       <div class="cx-comp">${list.map((r) => `<div class="cc" data-sku="${esc(r.item.sku)}"><img src="${esc(r.item.img)}" alt="" loading="lazy"><b>${esc(r.item.name)}</b><small>${esc(r.item.sku)}${r.ctx.why ? ` · goes with her ${esc(r.ctx.why.item)}` : ""}</small>
         <div class="cc-a"><button class="btn" data-use="0">Build from this</button>${state.anchors[0] && state.anchors[0] !== r.item.sku ? `<button class="btn" data-use="1">Add as pick 2</button>` : ""}</div></div>`).join("") || '<p class="note">Nothing in stock fits yet.</p>'}</div>`;
   }
@@ -334,6 +357,9 @@
     const c = ctx();
     $("ctxItems").innerHTML = c.items.length ? c.items.map(itemCard).join("") : `<div class="cx-empty"><b>Nothing here yet.</b>Add photos of what she carries, tap a quick stand-in, pick her store's palette or import her vendor list.</div>`;
     $("ctxOn").checked = c.on; $("ctxStrength").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.s === c.strength));
+    // v1.7.2: what the strength does, and what it did to the capsule on the board
+    $("ctxStrengthNote").innerHTML = STRENGTH_NOTE[c.strength] || "";
+    drawImpact();
     $("ctxSummary").innerHTML = summaryHTML();
     $("ctxComp").innerHTML = compHTML();
     $("ctxCount").textContent = c.items.length ? `${c.items.length} item${c.items.length === 1 ? "" : "s"}` : "";
@@ -347,10 +373,10 @@
       const x = find(card);
       card.querySelector('[data-f="del"]').onclick = () => { ctx().items = ctx().items.filter((y) => y !== x); changed(true); };
       const nm = card.querySelector('[data-f="name"]'); nm.oninput = () => { x.name = nm.value; x.autoName = false; A.persist(); }; nm.onchange = () => changed(false);
-      const kt = card.querySelector('[data-f="kindtype"]'); if (kt) kt.onchange = () => { const [k, t] = kt.value.split("|"); x.kind = k; x.type = t; x.needsType = false; if (k !== "apparel") x.neckline = ""; if (x.autoName) x.name = autoName(x); changed(true); };
+      const kt = card.querySelector('[data-f="kindtype"]'); if (kt) kt.onchange = () => { const [k, t] = kt.value.split("|"); if (k !== x.kind) { x.materials = (x.materials || []).filter((m) => (FABRICS[k] || []).includes(m)); if (k === "jewelry") x.pattern = "solid"; } x.kind = k; x.type = t; x.needsType = false; if (k !== "apparel" || !NECK_TYPES.includes(t)) x.neckline = ""; if (x.autoName) x.name = autoName(x); changed(true); };
       ["pattern", "neckline", "metal", "scale"].forEach((f) => { const el = card.querySelector(`[data-f="${f}"]`); if (el) el.onchange = () => { x[f] = el.value; x.needsType = false; changed(true); }; });
       card.querySelectorAll(".cx-cols button").forEach((b) => (b.onclick = () => { const f = b.dataset.c, L = x.colors || (x.colors = []); const i = L.indexOf(f); if (i >= 0) L.splice(i, 1); else if (L.length < 4) L.push(f); else A.toast("Up to 4 colors per piece."); if (x.autoName) x.name = autoName(x); changed(true); }));
-      card.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => { const L = x.materials || (x.materials = []); const i = L.indexOf(b.dataset.m); i >= 0 ? L.splice(i, 1) : L.push(b.dataset.m); changed(true); keepOpen(x.id); }));
+      card.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => { const L = x.materials || (x.materials = []); const i = L.indexOf(b.dataset.m); i >= 0 ? L.splice(i, 1) : L.push(b.dataset.m); if (x.autoName) x.name = autoName(x); changed(true); keepOpen(x.id); }));
       card.querySelectorAll("[data-s]").forEach((b) => (b.onclick = () => { const L = x.styles || (x.styles = []); const i = L.indexOf(b.dataset.s); i >= 0 ? L.splice(i, 1) : L.push(b.dataset.s); changed(true); keepOpen(x.id); }));
     });
     $("ctxComp").querySelectorAll(".cx-cat button").forEach((b) => (b.onclick = () => { compCat = b.dataset.cat; $("ctxComp").innerHTML = compHTML(); wireComp(); }));
@@ -369,7 +395,7 @@
   function mount() {
     const pane = $("paneStore");
     pane.innerHTML = `
-      <div class="sp-head"><div><h1>Her store</h1><p class="note">Show what she already carries: her clothing and bags, and other jewelry lines on her floor. The builder finds the pieces from our line that go with them. <b>Context only:</b> never on the order, the QR code, the Excel or any total. Photos stay on this device.</p></div><span class="pill" id="ctxCount"></span></div>
+      <div class="sp-head"><div><h1>Her store</h1><p class="note">Show what she already carries: her clothing and bags, and other jewelry lines on her floor. The builder finds the pieces from our line that go with them. <b>Context only:</b> never on the order, the QR code, the Excel or any total. Photos stay on this device.</p></div><div class="sp-hd-r"><span class="pill" id="ctxCount"></span><button class="btn soft" id="ctxTour">▶ Her store training</button></div></div>
       <div class="sp-add">
         <div class="drop" id="ctxDrop"><b>Add photos</b><span>Drop pictures here, paste a screenshot (Ctrl+V / ⌘V), or</span>
           <div class="row"><button class="btn primary" id="ctxPick">Choose photos…</button><button class="btn" id="ctxCam">Take a photo</button><button class="btn" id="ctxLinkBtn">Image link…</button></div>
@@ -388,10 +414,12 @@
           <h4>Her store at a glance</h4><div id="ctxSummary"></div>
           <label class="tog"><input type="checkbox" id="ctxOn"> Use her store when building the capsule</label>
           <div class="seg" id="ctxStrength"><button data-s="light">Light</button><button data-s="medium">Medium</button><button data-s="strong">Strong</button></div>
+          <div class="note" id="ctxStrengthNote"></div><div class="ctx-impact" id="ctxImpact"></div>
           <div class="row"><button class="btn primary" id="ctxRebuild">Rebuild the capsule with it</button><button class="btn" id="ctxClear">Clear her store</button></div>
           <div id="ctxComp"></div>
         </div>
       </div>`;
+    $("ctxTour").onclick = () => window.CB_STORETOUR && window.CB_STORETOUR.start();
     $("ctxPick").onclick = () => $("ctxFiles").click();
     $("ctxCam").onclick = () => $("ctxCamIn").click();
     $("ctxFiles").onchange = (e) => { [...e.target.files].forEach((f) => addPhotoFile(f, "photo")); e.target.value = ""; };
@@ -414,7 +442,7 @@
       const fs = [...(e.clipboardData ? e.clipboardData.files : [])].filter((f) => /^image\//.test(f.type));
       if (fs.length) { e.preventDefault(); fs.forEach((f) => addPhotoFile(f, "paste")); }
     });
-    pane.querySelectorAll(".standins button").forEach((b) => (b.onclick = () => { const s = JSON.parse(JSON.stringify(STANDINS[+b.dataset.i])); addItem(Object.assign(s, { source: "stand-in", autoName: false })); }));
+    pane.querySelectorAll(".standins button").forEach((b) => (b.onclick = () => { const s = JSON.parse(JSON.stringify(STANDINS[+b.dataset.i])); addItem(Object.assign(s, { source: "stand-in", autoName: true })); }));
     pane.querySelectorAll(".pals button").forEach((b) => (b.onclick = () => { const [n, cs] = PALETTES[+b.dataset.p]; addItem({ kind: "palette", type: "palette", label: n, colors: cs.slice(), source: "palette", name: `${n} palette` }); }));
     $("ctxImport").onclick = () => $("ctxFile").click();
     $("ctxFile").onchange = (e) => { const f = e.target.files[0]; if (f) importFile(f); e.target.value = ""; };
@@ -427,6 +455,6 @@
   }
   A.hooks.context.push(draw);
   A.hooks.line.push(() => draw());
-  A.hooks.board.push(() => { const a = document.querySelector("#board .ctxstrip [data-pane]"); if (a) a.onclick = () => window.CB_PANE && window.CB_PANE("store"); });
-  window.CB_CONTEXT = { mount, draw, SW, CNAME, cword, silhouette, family, colorsFrom, kindFrom, paletteOf };
+  A.hooks.board.push(() => { const a = document.querySelector("#board .ctxstrip [data-pane]"); if (a) a.onclick = () => window.CB_PANE && window.CB_PANE("store"); drawImpact(); });
+  window.CB_CONTEXT = { mount, draw, addItem, STANDINS, PALETTES, SW, CNAME, cword, silhouette, family, colorsFrom, kindFrom, paletteOf };
 })();

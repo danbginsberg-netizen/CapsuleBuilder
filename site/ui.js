@@ -317,6 +317,20 @@
       state.halves = new Set([...state.halves].filter((s) => inCap.has(s)));
     }
     syncHalves();
+    // v1.7.2: what her store changed — the same build with her store switched off, compared piece by piece
+    state.ctxImpact = null;
+    if (engine.ctxProfile && state.context.on) {
+      const keepHalves = new Set(state.halves);
+      engine.setContext(null);
+      try {
+        const base = state.mode === "budget"
+          ? engine.buildBudget(state.anchors.filter(Boolean), Object.assign({ budget: state.budget || 300, mix: mixShares(), halves: [...keepHalves] }, common, extra || {}))
+          : engine.build(state.anchors.filter(Boolean), Object.assign({ counts: state.counts, size: sum(state.counts) }, common, extra || {}));
+        const was = new Set(base.picks.map((p) => p.item.sku));
+        const added = state.capsule.picks.filter((p) => !was.has(p.item.sku)).map((p) => p.item.sku);
+        state.ctxImpact = { added: new Set(added), changed: added.length, total: state.capsule.picks.length, strength: state.context.strength };
+      } finally { applyContext(); state.halves = keepHalves; syncHalves(); }
+    }
     state.lastMs = Math.round(performance.now() - t0);
     state.alt = !!(extra && extra.exclude && extra.exclude.length);   // true only while another version is showing
     ["regenBtn", "anotherBtn", "sheetBtn", "xlsxBtn", "orderPageBtn", "csvBtn", "saveBtn", "saveNewBtn", "sendBtn", "sendToBtn", "whyBtn"].forEach((id) => ($(id).disabled = false));
@@ -348,7 +362,8 @@
     const why = isAnchor ? (anchorItems().length > 1 ? `Buyer's pick ${idx + 1}.` : "The buyer's pick — everything else is chosen to go with it.") : e.reason;
     const locked = !isAnchor && state.locked.has(it.sku);
     const stale = e && e.stale ? `<div class="px stale">No longer passes the stock rule — swap it</div>` : "";
-    const cx = !isAnchor && e && e.sc && e.sc.ctx && e.sc.ctx.why && e.sc.ctx.pts > 0.5 && state.context.on ? `<div class="ctxwhy">Her store: goes with her ${esc(e.sc.ctx.why.item)}</div>` : "";
+    const newForHer = !isAnchor && state.ctxImpact && state.ctxImpact.added.has(it.sku);
+    const cx = !isAnchor && e && e.sc && e.sc.ctx && state.context.on && (newForHer || (e.sc.ctx.why && e.sc.ctx.pts > 0.5)) ? `<div class="ctxwhy">${newForHer ? "<b>Chosen for her store.</b> " : "Her store: "}${e.sc.ctx.why ? `goes with her ${esc(e.sc.ctx.why.item)}` : "fits her store's palette and look"}</div>` : "";
     return `<div class="card ${isAnchor ? "anchor" : ""}" data-sku="${esc(it.sku)}">
       <div class="im"><img src="${esc(it.img)}" alt="${esc(it.name)}" loading="lazy">${isAnchor ? `<span class="tag">${anchorItems().length > 1 ? "Pick " + (idx + 1) : "Anchor"}</span>` : ""}${locked ? `<span class="tag lock">Locked</span>` : ""}${it.lowres ? `<span class="tag lr">Low-res image</span>` : ""}</div>
       <div class="b"><div class="sku"><span>${esc(it.sku)}</span>${scoreBit}</div><div class="nm">${esc(it.name)}</div><div class="px">${priceLine(it)}</div>${stale}<div class="why">${esc(why)}</div>${cx}${attrs}
@@ -405,7 +420,7 @@
   function trendNoteHTML() {
     const r = trendNow();
     if (!r.notes.length) return "";
-    return `<div class="trendnote" title="From In the Know, ${esc(fmtDay(r.asOf))}. Shown because pieces in this capsule match; hidden after ${esc(fmtDay(r.expires))}.">` +
+    return `<div class="trendnote" title="From our In the Know research, ${esc(fmtDay(r.asOf))}. Shown because pieces in this capsule match; replaced with new insights from current research by ${esc(fmtDay(r.expires))}.">` +
       `<b>Market note</b>${r.notes.map((n) => `<span>${esc(n.text)}</span>`).join("")}<small>In the Know · ${esc(fmtDay(r.asOf))}</small></div>`;
   }
   function renderBoard() {
@@ -440,7 +455,9 @@
   function ctxStripHTML() {
     const L = state.context.items;
     if (!L.length) return "";
-    return `<div class="ctxstrip"><div class="h"><b>Her store</b><span>Not ours · for context · never on the order${state.context.on ? "" : " · not used in matching"}</span><a class="link" data-pane="store">Edit</a></div><div class="tiles">${L.map((x) => `<div class="t" title="${esc(x.name || x.type || "")}">${ctxThumb(x)}<small>${esc(x.name || x.type || "")}</small></div>`).join("")}</div></div>`;
+    const im = state.ctxImpact, SL = { light: "Light", medium: "Medium", strong: "Strong" };
+    const impact = !state.context.on ? "Not used in matching (switched off)." : im ? `At <b>${SL[im.strength] || im.strength}</b>, her store changed <b>${im.changed} of ${im.total}</b> pieces from the capsule built on the buyer's pick alone${im.changed ? " (marked “Chosen for her store”)" : ""}.` : "";
+    return `<div class="ctxstrip"><div class="h"><b>Her store</b><span>Not ours · for context · never on the order</span><a class="link" data-pane="store">Edit</a></div>${impact ? `<div class="ctximpact">${impact}</div>` : ""}<div class="tiles">${L.map((x) => `<div class="t" title="${esc(x.name || x.type || "")}">${ctxThumb(x)}<small>${esc(x.name || x.type || "")}</small></div>`).join("")}</div></div>`;
   }
   function toggleLock(sku) { state.locked.has(sku) ? state.locked.delete(sku) : state.locked.add(sku); renderBoard(); }
   function toggleHalf(sku) {
@@ -1087,9 +1104,9 @@
     h += x.sisters.length ? ul(x.sisters) : `<p class="note">No matching pairs in this capsule.</p>`;
     h += `<h4>Balance</h4>${ul(x.balance)}`;
     const t = trendNow();
-    h += `<h4>Market notes</h4><p class="note">From In the Know, our market read of the ${line === "RF" ? "fashion jewelry field" : "premium peers"}. A note shows only on ${esc(cfg.name)} capsules whose pieces match it, and disappears 60 days after the read.</p>`;
-    h += t.notes.length ? `<ul>${t.notes.map((n) => `<li>${esc(n.text)} <span class="note">Matching pieces: ${n.pieces.map(esc).join(", ")}. Read ${esc(fmtDay(n.asOf))}; shown until ${esc(fmtDay(n.expires))}.</span></li>`).join("")}</ul>`
-      : `<p class="note">${window.TREND_SIGNALS && window.TREND_SIGNALS[line] ? (t.hiddenStale ? "The last market read is more than 60 days old, so no notes show until the next one." : "No current market note matches the pieces in this capsule.") : "No market notes are loaded."}</p>`;
+    h += `<h4>Market notes</h4><p class="note">From In the Know, our proprietary research on the ${line === "RF" ? "fashion jewelry field" : "premium jewelry market"}. A note shows only on ${esc(cfg.name)} capsules whose pieces match it, and each note is replaced with new insights from current research as the market moves.</p>`;
+    h += t.notes.length ? `<ul>${t.notes.map((n) => `<li>${esc(n.text)} <span class="note">Matching pieces: ${n.pieces.map(esc).join(", ")}. Research of ${esc(fmtDay(n.asOf))}; replaced with new insights from current research by ${esc(fmtDay(n.expires))}.</span></li>`).join("")}</ul>`
+      : `<p class="note">${window.TREND_SIGNALS && window.TREND_SIGNALS[line] ? (t.hiddenStale ? "New insights from current research are on the way; the notes return with the next research update." : "No current market note matches the pieces in this capsule.") : "No market notes are loaded."}</p>`;
     return h;
   }
   function explainNow() { return engine.explain(state.capsule.anchors, allItems(), state.halves, { minQty: state.minQty }); }

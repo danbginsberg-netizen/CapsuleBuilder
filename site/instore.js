@@ -40,10 +40,25 @@
     return new Set(r.notes.map((n) => n.id));
   }
   const expires = (f) => A.fmtDay(new Date((dayNum(f.edition) + (f.maxAgeDays == null ? 60 : f.maxAgeDays)) * 86400000).toISOString().slice(0, 10));
+  // v1.7.2: "About this research": proprietary, how wide, which kinds of sources, how often it's refreshed (buyer-safe)
+  const methodOf = (f) => f.method || null;
+  const cap1 = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+  function aboutText(f) {
+    const M = methodOf(f); if (!M) return [];
+    return ["ABOUT THIS RESEARCH", M.who, (M.stats || []).map((x) => `${x[0]} ${x[1]}`).join(" · ") + ".", M.design, M.retail, M.rigor, M.cadence].filter(Boolean);
+  }
+  function aboutHTML(f, compact) {
+    const M = methodOf(f); if (!M) return "";
+    if (compact) return `<div class="about"><b>About this research.</b> ${esc(M.who)} ${esc((M.stats || []).map((x) => `${x[0]} ${x[1]}`).join(" · "))}.<br><b>Design side:</b> ${esc(cap1(M.design.replace(/^What's being designed:\s*/, "")))}<br><b>Retail side:</b> ${esc(cap1(M.retail.replace(/^What's actually selling:\s*/, "")))}<br>${esc(M.rigor)} <b>${esc(M.cadence)}</b></div>`;
+    return `<div class="panel bf-about"><h3>About this research</h3><p>${esc(M.who)}</p>
+      <div class="bf-stats">${(M.stats || []).map((x) => `<div><b>${esc(x[0])}</b><span>${esc(x[1])}</span></div>`).join("")}</div>
+      <div class="bf-two"><p><b>The design side: what's being designed.</b> ${esc(cap1(M.design.replace(/^What's being designed:\s*/, "")))}</p><p><b>The retail side: what's actually selling.</b> ${esc(cap1(M.retail.replace(/^What's actually selling:\s*/, "")))}</p></div>
+      <p>${esc(M.rigor)}</p><p><b>${esc(M.cadence)}</b></p><p class="note">This edition: ${esc(A.fmtDay(f.edition))}. Shared text names no brand, retailer, price or sales figure.</p></div>`;
+  }
   function briefText(f) {
     const B = f.brief, sig = liveSignals(f);
     return [B.title.toUpperCase(), "", B.lede, "", "WHAT THE MARKET IS DOING", ...B.points.map((p) => "- " + p), "", "DISPLAY IDEAS A STORE CAN COPY", ...B.display.map((p) => "- " + p), "", "TIMING", ...B.timing.map((p) => "- " + p),
-      ...(sig.length ? ["", "TREND NOTES", ...sig.map((s) => "- " + s.buyerLine)] : []), "", `${A.cfg().name} · Market brief from In the Know, ${A.fmtDay(f.edition)}.`].join("\n");
+      ...(sig.length ? ["", "TREND NOTES", ...sig.map((s) => "- " + s.buyerLine)] : []), ...(methodOf(f) ? ["", ...aboutText(f)] : []), "", `${A.cfg().name} · Market brief from In the Know, ${A.fmtDay(f.edition)}.`].join("\n");
   }
   function dots(n) { return `<span class="dots" title="Confidence ${n} of 3">${[1, 2, 3].map((i) => `<i class="${i <= n ? "on" : ""}"></i>`).join("")}</span>`; }
   function drawBrief() {
@@ -52,7 +67,7 @@
     const B = f.brief, live = briefLive(f), sig = liveSignals(f), hit = matchedIds();
     el.innerHTML = `<div class="bf">
       <div class="bf-top"><span class="eyebrow">Market brief · ${esc(f.label || A.cfg().name)} · In the Know, ${esc(A.fmtDay(f.edition))} edition</span><span class="chip safe">No brand names · safe to share</span></div>
-      ${live ? "" : `<div class="short">This brief is ${briefAge(f)} days old, past the 60-day limit, so it stays off buyer-facing sends and line sheets until the next In the Know edition.</div>`}
+      ${live ? "" : `<div class="short">This brief is due to be replaced with new insights from current research. Until the next update arrives it stays off buyer-facing sends and line sheets.</div>`}
       <h1>${esc(B.title)}</h1><p class="lede">${esc(B.lede)}</p>
       <div class="row bf-acts"><button class="btn primary" id="bfMail" ${live ? "" : "disabled"}>Email the brief</button><button class="btn" id="bfShare" ${live ? "" : "disabled"}>Share…</button><button class="btn" id="bfCopy" ${live ? "" : "disabled"}>Copy as text</button><button class="btn" id="bfPdf" ${live ? "" : "disabled"}>Download PDF</button>
         <label class="tog"><input type="checkbox" id="bfSheet" ${state.sheet.brief ? "checked" : ""} ${live ? "" : "disabled"}> Add to the line sheet PDF</label>
@@ -62,9 +77,9 @@
         <div class="panel"><h3>What the market is doing</h3><ul>${B.points.map((p) => `<li>${esc(p)}</li>`).join("")}</ul></div>
         <div class="panel"><h3>Display ideas a store can copy</h3><ul>${B.display.map((p) => `<li>${esc(p)}</li>`).join("")}</ul><h3>Timing</h3><ul>${B.timing.map((p) => `<li>${esc(p)}</li>`).join("")}</ul></div>
       </div>
-      <h3 class="bf-h">Trend notes</h3><p class="note">A note shows on a ${esc(A.cfg().name)} capsule when its pieces match, and every note hides after ${esc(expires(f))}.${state.capsule ? " Marked: notes that match the capsule on the board." : ""}</p>
+      <h3 class="bf-h">Trend notes</h3><p class="note">A note shows on a ${esc(A.cfg().name)} capsule when its pieces match. These notes reflect research through ${esc(A.fmtDay(f.edition))} and will be replaced with new insights from current research by ${esc(expires(f))}.${state.capsule ? " Marked: notes that match the capsule on the board." : ""}</p>
       <div class="bf-sigs">${sig.map((s) => `<div class="panel sig ${hit.has(s.id) ? "hit" : ""}"><div class="meta"><span class="dir">${esc(s.direction)}</span>${dots(s.confidence || 1)}${hit.has(s.id) ? `<span class="pill">In this capsule</span>` : ""}</div><p>${esc(s.buyerLine)}</p></div>`).join("")}</div>
-      <p class="note">From In the Know, the internal market read, ${esc(A.fmtDay(f.edition))}. Shared text names no brand, retailer, price or sales figure.</p></div>`;
+      ${aboutHTML(f)}</div>`;
     const subj = () => `${A.cfg().name}: ${B.title}`;
     $("bfCopy").onclick = () => { A.copyText(briefText(f), "bfNote", "Brief"); A.logSend("brief-copy"); };
     $("bfMail").onclick = () => {
@@ -89,7 +104,7 @@
       <div class="cols"><div><h5>What the market is doing</h5><ul>${B.points.map((p) => `<li>${esc(p)}</li>`).join("")}</ul></div>
       <div><h5>Display ideas a store can copy</h5><ul>${B.display.map((p) => `<li>${esc(p)}</li>`).join("")}</ul><h5>Timing</h5><ul>${B.timing.map((p) => `<li>${esc(p)}</li>`).join("")}</ul></div></div>
       ${sig.length ? `<h5>Trend notes</h5><ul class="sig">${sig.map((s) => `<li>${esc(s.buyerLine)}${hit && hit.has(s.id) ? " <b>· in this capsule</b>" : ""}</li>`).join("")}</ul>` : ""}
-      <div class="src">Market brief from In the Know, ${esc(A.fmtDay(f.edition))}. No brand names.</div></div>`;
+      ${aboutHTML(f, true)}<div class="src">Market brief from In the Know, ${esc(A.fmtDay(f.edition))}. No brand names.</div></div>`;
   }
   // a stand-alone brief PDF (one Letter page), drawn the same way as the line sheet PDF
   async function briefPDF(f) {
@@ -98,7 +113,7 @@
     document.body.appendChild(host);
     try {
       const pg = document.createElement("div"); pg.className = "sheet sheet-" + A.line().toLowerCase(); pg.style.width = "7.6in"; pg.style.height = "10.1in";
-      pg.innerHTML = `<div class="sh-mini"><img src="${esc(A.cfg().logo)}" alt=""><div class="t"><small>${esc(A.cfg().sheetTagline || A.cfg().name)}</small>Market brief</div></div>` + briefPageHTML(f, null) + `<div class="sh-foot"><span class="l"></span><span class="c">${esc(A.cfg().lineSheet.contactLine)}</span><span class="r"></span></div>`;
+      pg.innerHTML = `<div class="sh-mini"><img src="${esc(A.cfg().logo)}" alt=""><div class="t"><small>${esc(A.cfg().name)}</small>Market brief</div></div>` + briefPageHTML(f, null) + `<div class="sh-foot"><span class="l"></span><span class="c">${esc(A.cfg().lineSheet.contactLine)}</span><span class="r"></span></div>`;
       host.appendChild(pg);
       await Promise.all([...host.querySelectorAll("img")].map((im) => (im.complete ? 0 : new Promise((r) => { im.onload = im.onerror = r; }))));
       const c = await window.html2canvas(pg, { scale: 2, backgroundColor: "#ffffff", logging: false });

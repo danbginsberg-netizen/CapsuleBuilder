@@ -217,15 +217,24 @@
   function openLauncher() {
     $("gmBody").innerHTML = Object.entries(MODES).map(([k, m]) => `<div class="gm-row"><div><b>${esc(m.title)}</b><div class="note">${esc(m.who)}. ${k === "guided" ? "Prices stay hidden until you tap Show prices; ends with the pre-filled order page." : k === "kiosk" ? "Prices stay hidden until someone taps Show prices; ends with “Request this capsule,” an email to us. Exit asks before leaving, and it starts over after 3 idle minutes." : k === "train" ? "Coach notes beside each step and the three training sessions." : "Featured styles, ending with a “Rep this line” card."}</div>
       <div class="gm-link">${esc(link(k))}</div></div><div class="gm-a"><button class="btn primary" data-go="${k}">Start here</button><button class="btn" data-copy="${k}">Copy link</button></div></div>`).join("") +
+      `<div class="gm-row"><div><b>Her store training</b><div class="note">Reps learning “Her store”: an eight-step walk-through on the real screen (add her pieces, fix them, read her palette, build from the best match, set Light/Medium/Strong, show and send it). Each step ticks itself off.</div>
+        <div class="gm-link">${esc(A.cfg().builderPage.url + "?mode=store&line=" + A.line())}</div></div><div class="gm-a"><button class="btn primary" id="gmStore">Start here</button><button class="btn" id="gmStoreCopy">Copy link</button></div></div>` +
       `<p class="note">Each link opens ${esc(A.cfg().name)} only${state.rep ? ` and carries your rep code ${esc(state.rep)} (booth and training)` : ". Set your rep code under Buyer first so booth and training links carry it"}.</p>`;
     $("gmBody").querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => start(b.dataset.go)));
     $("gmBody").querySelectorAll("[data-copy]").forEach((b) => (b.onclick = () => A.copyText(link(b.dataset.copy), "gmNote", "Link")));
+    $("gmStore").onclick = () => { A.closeDlg("gmDlg"); window.CB_STORETOUR && window.CB_STORETOUR.start(); };
+    $("gmStoreCopy").onclick = () => A.copyText(A.cfg().builderPage.url + "?mode=store&line=" + A.line(), "gmNote", "Link");
     A.openDlg("gmDlg");
   }
   $("guidedBtn").onclick = openLauncher;
 
   // from the link
   const q = new URLSearchParams(location.search), m = q.get("mode");
+  if (m === "store") {   // v1.7.2: Her store training
+    const L = String(q.get("line") || "").toUpperCase();
+    if ((L === "RF" || L === "OIYK") && L !== A.line()) A.switchLine(L, false);
+    setTimeout(() => window.CB_STORETOUR && window.CB_STORETOUR.start(), 0);
+  }
   if (m && MODES[m]) {
     const L = String(q.get("line") || "").toUpperCase();
     if (q.get("rep") && window.__capsule && window.__capsule.setRep) window.__capsule.setRep(q.get("rep"));

@@ -64,7 +64,8 @@ window.CAPSULE_CONFIG = {
   /* ---------- v1.7.0: her store (context) ---------- */
   // Other brands' pieces and her own apparel never enter a capsule or an order; they only nudge our picks.
   // A piece that suits her store perfectly gains up to max/2 x strength points, a poor fit loses up to max/2 x strength.
-  // (Light 0.5, Medium 1, Strong 1.6.) The anchor's own match is worth up to 100, so the anchor still leads.
+  // Strength (v1.7.2): Light 0.5 (her store breaks ties: about 1 in 6 picks change), Medium 1.5 (about 1 in 3),
+  // Strong 4 (her store leads: about half change). The buyer's pick, stock, minimums and variety rules always hold.
   contextPull: { max: 12 },
 
   /* ---------- two anchors ---------- */
