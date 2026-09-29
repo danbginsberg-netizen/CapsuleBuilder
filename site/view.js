@@ -2,6 +2,7 @@
    Buyer-facing, read-only. The capsule travels inside the link, nothing is stored anywhere:
      ?l=RF|OIYK  &i=SKU:pieces,SKU:pieces,...  &a=<number of buyer's picks at the front of i>
      &u=r (reorder)  &st=<store>  &n=<capsule name>  &p=1 (show wholesale prices)  &rep=<rep code>  &cap=<capsule ID>
+     &lb=b|p|n (v1.8.4: label on her own piece: b "You bought this", p "Built around this piece", n none; default "Your pick")
    Shown on onlyifyouknow.com/pages/capsule (unlisted, noindex), which passes the link through to this page. */
 (function () {
   "use strict";
@@ -49,8 +50,13 @@
   const halves = new Set(H ? lines.filter((x) => x.q === H.units).map((x) => x.it.sku) : []);
   engine.halfSet = halves;
   const restored = engine.restore(anchors.map((a) => a.sku), lines.slice(nA).map((x) => x.it.sku), { minQty: cfg.minQty });
-  // the engine's reasons say "the anchor"; buyers read "your pick"
-  const buyerWords = (r) => String(r || "").replace(/\bthe anchor (necklace|bracelet|earrings|earring)\b/g, "your $1").replace(/\bthe anchor's\b/g, "your pick's").replace(/\bthe anchor\b/g, "your pick").replace(/the buyer's two picks/g, "your two picks").replace(/the buyer's pick/g, "your pick");
+  // v1.8.4: lb= sets how her own piece is labeled. Default "Your pick" (booth and kiosk links); b = pieces she bought; p = the piece the capsule is built around; n = no label
+  const LB = { b: { tag: "You bought this", one: "You bought this. Everything else was chosen to go with it.", many: "One of the pieces you bought.", ref1: "the piece you bought", ref2: "the two pieces you bought", refP: "the pieces you bought" },
+    p: { tag: "Built around this piece", one: "The capsule is built around this piece. Everything else was chosen to go with it.", many: "One of the pieces this capsule is built around.", ref1: "this piece", ref2: "these two pieces", refP: "these pieces" },
+    n: { tag: "", one: "", many: "", ref1: "the lead piece", ref2: "the two lead pieces", refP: "the lead pieces" } }[P.get("lb")]
+    || { tag: "Your pick", one: "Your pick. Everything else was chosen to go with it.", many: "One of your picks.", ref1: "your pick", ref2: "your two picks", refP: "your picks" };
+  // the engine's reasons say "the anchor"; buyers read "your pick" (or the lb= wording)
+  const buyerWords = (r) => String(r || "").replace(/\bthe anchor (necklace|bracelet|earrings|earring)\b/g, "your $1").replace(/\bthe anchor's\b/g, LB.ref1 + "'s").replace(/\bthe anchor\b/g, LB.ref1).replace(/the buyer's two picks/g, LB.ref2).replace(/the buyer's pick/g, LB.ref1);
   const reasonOf = new Map(restored.picks.map((p) => [p.item.sku, buyerWords(p.reason)]));
   const qtyWord = (n) => (H ? (n === 6 ? "½ dozen" : n % 12 === 0 ? `${n / 12} dozen` : `${n} pcs`) : n % 12 === 0 ? `${n / 12} dozen (${n} pcs)` : `${n} pcs`);
 
@@ -98,9 +104,9 @@
     const xs = priced.filter((x) => x.it.cat === c);
     if (!xs.length) continue;
     h += `<section class="grp"><h2>${CAT_LABEL[c]} <span>${xs.length}</span></h2><div class="grid">` + xs.map((x) => {
-      const isA = anchors.includes(x.it);
-      const r = isA ? (anchors.length > 1 ? "One of your picks." : "Your pick. Everything else was chosen to go with it.") : reasonOf.get(x.it.sku) || "";
-      return `<div class="card${isA ? " a" : ""}"><div class="im"><img src="${esc(x.it.img)}" alt="${esc(x.it.name)}" loading="lazy">${isA ? '<span class="yp">Your pick</span>' : ""}</div>
+      const isA = anchors.includes(x.it), tagged = isA && !!LB.tag;
+      const r = isA ? (anchors.length > 1 ? LB.many : LB.one) : reasonOf.get(x.it.sku) || "";
+      return `<div class="card${tagged ? " a" : ""}"><div class="im"><img src="${esc(x.it.img)}" alt="${esc(x.it.name)}" loading="lazy">${tagged ? `<span class="yp">${esc(LB.tag)}</span>` : ""}</div>
         <div class="b"><div class="nm">${esc(x.it.name)}</div><div class="sku">${esc(x.it.sku)} · ${esc(qtyWord(x.q))}</div>
         ${showPrices ? `<div class="px">${money(x.each)} each · ${money(x.each * x.q)}${x.it.msrp ? ` · retail ${money(x.it.msrp)}` : ""}</div>` : ""}
         <div class="why">${esc(r)}</div></div></div>`;

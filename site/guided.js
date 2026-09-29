@@ -26,7 +26,7 @@
     1: { sees: "A photo grid of the line, filtered by category and color.", say: "“Which piece did you pick up twice?” Let her tap it herself.", why: "The capsule is built around one piece she already loves, and that piece stays in the order." },
     2: { sees: "Budget tiles and store sizes.", say: "“What's your opening budget for jewelry?” If she doesn't know: “Roughly how much jewelry do you sell in a month?”", why: "Store size sets the budget at about 38% of a month's jewelry sales, never below the line's first-order minimum." },
     3: { sees: "Her capsule: a balanced mix around her piece, with a market note when one fits.", say: "Tap a piece and read its reason aloud. Show prices only when she asks, then point to the retail value.", why: "Every pick has a reason she can repeat to her staff. The mix, stock and minimums are already handled." },
-    4: { sees: "A QR code that opens the order page with her capsule filled in.", say: "“Scan this. Your quantities are in; change anything you like and submit when you're ready.”", why: "Your rep code rides on the link, so the order is credited to you. Never submit for her." },
+    4: { sees: "Her capsule page (photos and why each piece was chosen) to preview or send, plus a QR code that opens the order page with her capsule filled in.", say: "“Here's your capsule. Scan this and your quantities are in; change anything you like and submit when you're ready.” If she'd rather think it over, send the capsule page first and the order link comes with it.", why: "The capsule page is what she shows her buyer or partner; the order page is where she buys. Your rep code rides on both links, so the order is credited to you, whether she submits it or you place it with her." },
   };
 
   /* ---------------- helpers ---------------- */
@@ -98,14 +98,14 @@
         <div class="g-acts"><button class="btn" id="gRestart">Start over</button></div>`;
     }
     const t = g.mode === "train" ? train() : null;
-    return `<div class="g-q"><h1>Take it with you</h1><p>Scan to open our order page with this capsule filled in. Change any quantity, add your details and submit when you're ready.</p></div>
+    return `<div class="g-q"><h1>Take it with you</h1><p>Preview the capsule page she will see, or scan to open our order page with this capsule filled in. Change any quantity, add your details and submit when you're ready.</p></div>
       <div class="g-end"><div class="g-qr big">${ol ? A.qrSVG(ol.url) : ""}<small>Order page, pre-filled${state.rep ? ` · rep ${esc(state.rep)}` : ""}</small></div>
         <div class="g-card-rep"><label>Store name <input type="text" id="gStore" value="${esc(state.buyer)}" autocomplete="organization"></label>
-          <div class="g-col"><button class="btn primary" id="gOrder">Open the order page</button><button class="btn" id="gMail">Email me this capsule</button><button class="btn" id="gShare">Text or share…</button></div>
+          <div class="g-col"><button class="btn primary" id="gPreview">Preview her capsule page ↗</button><button class="btn" id="gOrder">Open the order page</button><button class="btn" id="gMail">Email me this capsule</button><button class="btn" id="gShare">Text or share…</button><button class="btn" id="gCopyCap">Copy capsule link</button></div>
           <p class="note" id="gReqNote"></p>
           ${t ? `<div class="g-train"><h3>Training sessions</h3><ol>
             <li class="${t.anchors.length >= 5 ? "done" : ""}"><b>Five anchors.</b> Build five capsules from five different pieces (${Math.min(5, t.anchors.length)} of 5).</li>
-            <li class="${t.orderPage ? "done" : ""}"><b>The order path.</b> Open the pre-filled order page and change one quantity. Don't submit.</li>
+            <li class="${t.orderPage ? "done" : ""}"><b>The order path.</b> Open the pre-filled order page and change one quantity. When you practice, stop before Submit, since that places a real order.</li>
             <li class="${t.send && t.follow ? "done" : ""}"><b>Send it and follow up.</b> Two walk-throughs on the real screen: send a capsule (${t.send ? "done" : "not yet"}) and follow up a buyer who has ordered (${t.follow ? "done" : "not yet"}).
               <div class="g-trbtns"><button class="btn" id="gTrSend">${t.send ? "Repeat" : "Start"}: send a capsule</button><button class="btn" id="gTrFollow">${t.follow ? "Repeat" : "Start"}: follow up a buyer who ordered</button></div></li>
             <li class="${t.sent ? "done" : ""}"><b>Certification.</b> Send one real capsule to a buyer with your rep code${state.rep ? ` (${esc(state.rep)})` : " (set it in the builder first)"}.</li></ol></div>` : ""}</div></div>
@@ -166,6 +166,8 @@
       const tf = $("gTrFollow"); if (tf) tf.onclick = () => window.CB_SENDTOUR && window.CB_SENDTOUR.start("follow");
       const st = $("gStore"); if (st) st.oninput = () => { state.buyer = st.value; $("buyer").value = st.value; A.persist(); };
       const cfg = A.cfg();
+      const pv = $("gPreview"); if (pv) pv.onclick = () => { const l = A.capsuleLink(false); if (l) window.open(l, "_blank", "noopener"); };
+      const cc = $("gCopyCap"); if (cc) cc.onclick = () => { A.copyText(A.capsuleLink(false), "gReqNote", "Capsule link"); A.logSend("guided-copy-link"); };
       const od = $("gOrder"); if (od) od.onclick = () => { const l = A.orderLink(); if (!l) return; window.open(l.url, "_blank", "noopener"); A.logSend("guided-order-page"); if (g.mode === "train") { const tr = train(); tr.orderPage = true; setTrain(tr); } };
       const ml = $("gMail"); if (ml) ml.onclick = () => {
         const l = A.orderLink(), cl = A.capsuleLink(false);
