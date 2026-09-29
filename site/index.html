@@ -608,13 +608,19 @@
   #storeTour p { margin: 5px 0; line-height: 1.4; } #storeTour .why { color: var(--muted); font-size: 13px; }
   #storeTour .stt-check { margin: 8px 0 2px; font-size: 13px; color: var(--muted); } #storeTour .stt-check.ok { color: var(--ok); font-weight: 700; }
   #storeTour .stt-a { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; } #storeTour .stt-a .btn { width: auto; margin: 0; }
+  /* v1.8.3: the "Send it" walk-throughs reuse the training card; inside the Send dialog the card moves right and the dialog moves left */
+  #storeTour.tr-right { left: auto; right: 18px; }
+  #storeTour.tr-side { left: 8px; top: 96px; bottom: auto; width: 324px; max-height: calc(100vh - 110px); overflow-y: auto; }
+  body.send-tour-on .dlg.open { justify-content: flex-start; padding-left: 24px; }
+  .g-trbtns { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 2px; } .g-trbtns .btn { width: auto; margin: 0; padding: 6px 12px; font-size: 13px; }
+  @media (max-width: 900px) { #storeTour.tr-right, #storeTour.tr-side { left: 12px; right: 12px; top: auto; bottom: 12px; width: auto; max-height: 48vh; } body.send-tour-on .dlg.open { justify-content: center; padding-left: 20px; } }
   @media (max-width: 900px) { #storeTour { left: 12px; right: 12px; bottom: 12px; width: auto; max-height: 48vh; overflow-y: auto; } }
 </style>
 </head>
 <body>
 <div class="app">
   <aside>
-    <div class="brand"><img id="brandLogo" src="logo_rf.png?h=88500682" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.8.2</small></div></div>
+    <div class="brand"><img id="brandLogo" src="logo_rf.png?h=88500682" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.8.3</small></div></div>
     <div class="lines">
       <button class="on" id="lineRF" data-line="RF">Retro Forever</button>
       <button id="lineOIYK" data-line="OIYK">OIYK</button>
@@ -813,11 +819,12 @@
 <script src="boards.js?h=775a6d26"></script>
 <script src="context.js?h=d5eca56c"></script>
 <script src="instore.js?h=95b923b2"></script>
-<script src="guided.js?h=dd332ae0"></script>
+<script src="guided.js?h=21fca687"></script>
 <script src="storetour.js?h=246430e5"></script>
 <script src="similar.js?h=a9ce80c8"></script>
+<script src="sendtour.js?h=5eb4c853"></script>
 <script>/* v1.8.0: open the newest release, not a saved copy (GitHub Pages keeps pages up to 10 minutes) */
-(function(){var V="1.8.2",t0=Date.now();
+(function(){var V="1.8.3",t0=Date.now();
 function newest(cb){try{fetch("version.json?cb="+Date.now(),{cache:"no-store"}).then(function(r){return r.json()}).then(function(j){if(j&&j.version&&j.version!==V)cb(j.version)}).catch(function(){})}catch(e){}}
 function reload(v){try{if(sessionStorage.getItem("cb_fresh")===v)return false;sessionStorage.setItem("cb_fresh",v)}catch(e){}var u=new URL(location.href);u.searchParams.set("v",v);location.replace(u.toString());return true}
 function bar(v){if(document.getElementById("cbFresh"))return;var d=document.createElement("div");d.id="cbFresh";d.style.cssText="position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:99999;background:#1f1d24;color:#fff;padding:9px 14px;border-radius:10px;font:600 14px system-ui,sans-serif;box-shadow:0 4px 18px #0004";d.innerHTML="Version "+v+" is ready. <button style='margin-left:8px;border:0;border-radius:7px;padding:5px 10px;font-weight:700;cursor:pointer'>Reload</button>";d.querySelector("button").onclick=function(){try{sessionStorage.removeItem("cb_fresh")}catch(e){}reload(v)};document.body.appendChild(d)}

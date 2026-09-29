@@ -1,7 +1,8 @@
 /* Capsule Builder v1.7.0 — guided mode: one four-step flow, four uses, switched by the link.
      ?mode=guided&line=RF&rep=CODE   booth or storefront, rep present: prices hidden until the rep taps "Show prices"; ends with the pre-filled order page
      ?mode=kiosk&line=RF             unattended (program page, kiosk): prices hidden until "Show prices" is tapped; Exit asks first; ends with "Request this capsule"
-     ?mode=train&rep=CODE            new reps: coach notes beside each step and the three training sessions
+     ?mode=train&rep=CODE            new reps: coach notes beside each step and the four training sessions
+     ?mode=send / ?mode=follow       the two "Send it" walk-throughs (app/sendtour.js), also started from Training's fourth session
      ?mode=demo&line=RF              recruiting: the flow on featured styles, ending with "Rep this line"
    Each link is locked to one line, so RF and OIYK never mix. The rep's settings, tuning and saved lists stay hidden. */
 (function () {
@@ -17,7 +18,7 @@
   };
   const g = { on: false, mode: "guided", step: 1, cat: "all", col: "all", priced: false, locked: false, idle: null, confirmExit: false };
   const TRAIN_KEY = "capsule_training";
-  const train = () => Object.assign({ anchors: [], orderPage: false, sent: false }, A.store.get(TRAIN_KEY, {}));
+  const train = () => Object.assign({ anchors: [], orderPage: false, sent: false, send: false, follow: false }, A.store.get(TRAIN_KEY, {}));
   const setTrain = (t) => A.store.set(TRAIN_KEY, t);
 
   /* ---------------- coach notes (training) ---------------- */
@@ -105,6 +106,8 @@
           ${t ? `<div class="g-train"><h3>Training sessions</h3><ol>
             <li class="${t.anchors.length >= 5 ? "done" : ""}"><b>Five anchors.</b> Build five capsules from five different pieces (${Math.min(5, t.anchors.length)} of 5).</li>
             <li class="${t.orderPage ? "done" : ""}"><b>The order path.</b> Open the pre-filled order page and change one quantity. Don't submit.</li>
+            <li class="${t.send && t.follow ? "done" : ""}"><b>Send it and follow up.</b> Two walk-throughs on the real screen: send a capsule (${t.send ? "done" : "not yet"}) and follow up a buyer who has ordered (${t.follow ? "done" : "not yet"}).
+              <div class="g-trbtns"><button class="btn" id="gTrSend">${t.send ? "Repeat" : "Start"}: send a capsule</button><button class="btn" id="gTrFollow">${t.follow ? "Repeat" : "Start"}: follow up a buyer who ordered</button></div></li>
             <li class="${t.sent ? "done" : ""}"><b>Certification.</b> Send one real capsule to a buyer with your rep code${state.rep ? ` (${esc(state.rep)})` : " (set it in the builder first)"}.</li></ol></div>` : ""}</div></div>
       <div class="g-acts"><button class="btn" id="gBack3">Back to the capsule</button><button class="btn" id="gRestart">Start over</button></div>`;
   }
@@ -159,6 +162,8 @@
     const rs = $("gRestart"); if (rs) rs.onclick = restart;
     const b3 = $("gBack3"); if (b3) b3.onclick = () => go(3);
     if (g.step === 4) {
+      const ts = $("gTrSend"); if (ts) ts.onclick = () => window.CB_SENDTOUR && window.CB_SENDTOUR.start("send");
+      const tf = $("gTrFollow"); if (tf) tf.onclick = () => window.CB_SENDTOUR && window.CB_SENDTOUR.start("follow");
       const st = $("gStore"); if (st) st.oninput = () => { state.buyer = st.value; $("buyer").value = st.value; A.persist(); };
       const cfg = A.cfg();
       const od = $("gOrder"); if (od) od.onclick = () => { const l = A.orderLink(); if (!l) return; window.open(l.url, "_blank", "noopener"); A.logSend("guided-order-page"); if (g.mode === "train") { const tr = train(); tr.orderPage = true; setTrain(tr); } };
@@ -215,13 +220,18 @@
     return `${base}?${p.toString()}`;
   }
   function openLauncher() {
-    $("gmBody").innerHTML = Object.entries(MODES).map(([k, m]) => `<div class="gm-row"><div><b>${esc(m.title)}</b><div class="note">${esc(m.who)}. ${k === "guided" ? "Prices stay hidden until you tap Show prices; ends with the pre-filled order page." : k === "kiosk" ? "Prices stay hidden until someone taps Show prices; ends with “Request this capsule,” an email to us. Exit asks before leaving, and it starts over after 3 idle minutes." : k === "train" ? "Coach notes beside each step and the three training sessions." : "Featured styles, ending with a “Rep this line” card."}</div>
+    $("gmBody").innerHTML = Object.entries(MODES).map(([k, m]) => `<div class="gm-row"><div><b>${esc(m.title)}</b><div class="note">${esc(m.who)}. ${k === "guided" ? "Prices stay hidden until you tap Show prices; ends with the pre-filled order page." : k === "kiosk" ? "Prices stay hidden until someone taps Show prices; ends with “Request this capsule,” an email to us. Exit asks before leaving, and it starts over after 3 idle minutes." : k === "train" ? "Coach notes beside each step and the four training sessions." : "Featured styles, ending with a “Rep this line” card."}</div>
       <div class="gm-link">${esc(link(k))}</div></div><div class="gm-a"><button class="btn primary" data-go="${k}">Start here</button><button class="btn" data-copy="${k}">Copy link</button></div></div>`).join("") +
       `<div class="gm-row"><div><b>Her store training</b><div class="note">Reps learning “Her store”: an eight-step walk-through on the real screen (add her pieces, fix them, read her palette, build from the best match, set Light/Medium/Strong, show and send it). Each step ticks itself off.</div>
         <div class="gm-link">${esc(A.cfg().builderPage.url + "?mode=store&line=" + A.line())}</div></div><div class="gm-a"><button class="btn primary" id="gmStore">Start here</button><button class="btn" id="gmStoreCopy">Copy link</button></div></div>` +
+      [["send", "Send a capsule training", "Reps learning to send: rep code, build, Send capsule…, preview the page she will see, get it to her, and follow it. A seven-step walk-through on the real screen."],
+       ["follow", "Follow-up training", "Reps following up a buyer who has ordered: Find similar, paste her order, choose the pieces, build, send. A six-step walk-through on the real screen."]].map(([k, t, d]) => `<div class="gm-row"><div><b>${esc(t)}</b><div class="note">${esc(d)}</div>
+        <div class="gm-link">${esc(A.cfg().builderPage.url + "?mode=" + k + "&line=" + A.line())}</div></div><div class="gm-a"><button class="btn primary" data-tour="${k}">Start here</button><button class="btn" data-tourcopy="${k}">Copy link</button></div></div>`).join("") +
       `<p class="note">Each link opens ${esc(A.cfg().name)} only${state.rep ? ` and carries your rep code ${esc(state.rep)} (booth and training)` : ". Set your rep code under Buyer first so booth and training links carry it"}.</p>`;
     $("gmBody").querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => start(b.dataset.go)));
     $("gmBody").querySelectorAll("[data-copy]").forEach((b) => (b.onclick = () => A.copyText(link(b.dataset.copy), "gmNote", "Link")));
+    $("gmBody").querySelectorAll("[data-tour]").forEach((b) => (b.onclick = () => { A.closeDlg("gmDlg"); window.CB_SENDTOUR && window.CB_SENDTOUR.start(b.dataset.tour); }));
+    $("gmBody").querySelectorAll("[data-tourcopy]").forEach((b) => (b.onclick = () => A.copyText(A.cfg().builderPage.url + "?mode=" + b.dataset.tourcopy + "&line=" + A.line(), "gmNote", "Link")));
     $("gmStore").onclick = () => { A.closeDlg("gmDlg"); window.CB_STORETOUR && window.CB_STORETOUR.start(); };
     $("gmStoreCopy").onclick = () => A.copyText(A.cfg().builderPage.url + "?mode=store&line=" + A.line(), "gmNote", "Link");
     A.openDlg("gmDlg");
