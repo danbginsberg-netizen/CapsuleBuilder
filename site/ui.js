@@ -420,8 +420,11 @@
   function trendNoteHTML() {
     const r = trendNow();
     if (!r.notes.length) return "";
-    return `<div class="trendnote" title="From our In the Know research, ${esc(fmtDay(r.asOf))}. Shown because pieces in this capsule match; replaced with new insights from current research by ${esc(fmtDay(r.expires))}.">` +
-      `<b>Market note</b>${r.notes.map((n) => `<span>${esc(n.text)}</span>`).join("")}<small>In the Know · ${esc(fmtDay(r.asOf))}</small></div>`;
+    // v1.8.6: an evergreen (perennial) note has no research date and no expiry
+    const tip = r.asOf ? `From our In the Know research, ${esc(fmtDay(r.asOf))}. Shown because pieces in this capsule match; replaced with new insights from current research by ${esc(fmtDay(r.expires))}.`
+      : "From our In the Know research: a perennial that holds from season to season. Shown because pieces in this capsule match.";
+    return `<div class="trendnote" title="${tip}">` +
+      `<b>Market note</b>${r.notes.map((n) => `<span>${esc(n.text)}</span>`).join("")}<small>In the Know · ${r.asOf ? esc(fmtDay(r.asOf)) : "perennial"}</small></div>`;
   }
   function renderBoard() {
     const cap = state.capsule;
@@ -1152,8 +1155,8 @@
     h += x.sisters.length ? ul(x.sisters) : `<p class="note">No matching pairs in this capsule.</p>`;
     h += `<h4>Balance</h4>${ul(x.balance)}`;
     const t = trendNow();
-    h += `<h4>Market notes</h4><p class="note">From In the Know, our proprietary research on the ${line === "RF" ? "fashion jewelry field" : "premium jewelry market"}. A note shows only on ${esc(cfg.name)} capsules whose pieces match it, and each note is replaced with new insights from current research as the market moves.</p>`;
-    h += t.notes.length ? `<ul>${t.notes.map((n) => `<li>${esc(n.text)} <span class="note">Matching pieces: ${n.pieces.map(esc).join(", ")}. Research of ${esc(fmtDay(n.asOf))}; replaced with new insights from current research by ${esc(fmtDay(n.expires))}.</span></li>`).join("")}</ul>`
+    h += `<h4>Market notes</h4><p class="note">From In the Know, our proprietary research on the ${line === "RF" ? "fashion jewelry field" : "premium jewelry market"}. A note shows only on ${esc(cfg.name)} capsules whose pieces match it. Dated notes are replaced with new insights from current research as the market moves; perennial notes stay while the research shows them holding.</p>`;
+    h += t.notes.length ? `<ul>${t.notes.map((n) => `<li>${esc(n.text)} <span class="note">Matching pieces: ${n.pieces.map(esc).join(", ")}. ${n.evergreen ? "Perennial note; it stays while the research shows it holding." : `Research of ${esc(fmtDay(n.asOf))}; replaced with new insights from current research by ${esc(fmtDay(n.expires))}.`}</span></li>`).join("")}</ul>`
       : `<p class="note">${window.TREND_SIGNALS && window.TREND_SIGNALS[line] ? (t.hiddenStale ? "New insights from current research are on the way; the notes return with the next research update." : "No current market note matches the pieces in this capsule.") : "No market notes are loaded."}</p>`;
     return h;
   }
