@@ -1051,6 +1051,30 @@ applyFilter();renderGrid();renderSlots();
 return{picks:function(){return picks.map(byS);},prefix:pre,el:el};
 }
 function ejSend(params){try{fetch("https://api.emailjs.com/api/v1.0/email/send",{method:"POST",keepalive:true,headers:{"Content-Type":"application/json"},body:JSON.stringify({service_id:EJ.service,template_id:EJ.template,user_id:EJ.key,template_params:params})}).catch(function(){});}catch(e){}}
+var PARENT_ORIGIN="https://onlyifyouknow.com",pending=null;
+function nativeSubmit(form){form.setAttribute("data-go","1");HTMLFormElement.prototype.submit.call(form);}
+function setBusy(form,on,msg){var b=form.querySelector('button[type="submit"]');if(!b)return;
+if(on){b.setAttribute("data-label",b.textContent);b.disabled=true;b.textContent="Sending…";}
+else{b.disabled=false;b.textContent=b.getAttribute("data-label")||b.textContent;}
+var n=form.querySelector(".rf-err");if(!n&&msg){n=document.createElement("p");n.className="rf-err";n.setAttribute("role","alert");n.style.cssText="color:#b3261e;margin:10px 0 0;font-size:14px";form.appendChild(n);}
+if(n){n.textContent=msg||"";n.style.display=msg?"":"none";}}
+/* Shopify only protects (and accepts) contact forms that live on the storefront page itself. Inside this embedded page the form cannot get Shopify's spam-check token, so the fields go up to the storefront page, which posts them from there. If no storefront page answers, fall back to a direct post. */
+function rfSubmit(form){
+var fields={};[].slice.call(form.elements).forEach(function(el){var n=el.name;if(!n||el.disabled)return;if(n==="return_to"||/^contact\[/.test(n))fields[n]=String(el.value||"");});
+if(window.parent===window){nativeSubmit(form);return;}
+setBusy(form,true,"");
+var done=false;pending={form:form,ack:false};
+var t=setTimeout(function(){if(!pending||pending.ack)return;pending=null;nativeSubmit(form);},2500);
+pending.timer=t;
+try{window.parent.postMessage({rf:"form-submit",fields:fields},PARENT_ORIGIN);}catch(e){clearTimeout(t);pending=null;nativeSubmit(form);}
+}
+window.addEventListener("message",function(e){
+if(e.origin!==PARENT_ORIGIN||!e.data||!pending)return;
+if(e.data.rf==="ack"){pending.ack=true;clearTimeout(pending.timer);}
+else if(e.data.rf==="reset"){var f=pending.form;pending=null;setBusy(f,false,"We couldn’t send that just now. Please try again, or email dan@retroforeverllc.com.");}
+});
+["kit-form","rep-form"].forEach(function(id){var f=document.getElementById(id);if(!f)return;
+f.addEventListener("submit",function(e){if(f.getAttribute("data-go"))return;e.preventDefault();if(!f.reportValidity())return;rfSubmit(f);});});
 document.querySelectorAll("form.capform").forEach(function(form){
 var pk=Picker(form.querySelector(".pk"));
 form.addEventListener("submit",function(e){
@@ -1069,7 +1093,7 @@ to_name:v("name")||"there",store_name:v("Store name"),budget:budget,notes:notes,
 anchor1_name:p1.name,anchor1_sku:p1.sku,anchor1_img:imgUrl(pk.prefix,p1.sku,280),
 anchor2_name:p2?p2.name:"",anchor2_sku:p2?p2.sku:"",anchor2_img:p2?imgUrl(pk.prefix,p2.sku,280):""};
 ejSend(params);
-form.setAttribute("data-go","1");HTMLFormElement.prototype.submit.call(form);
+rfSubmit(form);
 });
 });
 try{
