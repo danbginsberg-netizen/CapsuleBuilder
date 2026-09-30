@@ -549,7 +549,7 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 <div class="sent" id="sent-store" role="status">Got it — your capsule is being built. A confirmation is on its way to your inbox, and we reply within 24 hours with a curated buy for your store.</div>
 <form method="post" action="https://onlyifyouknow.com/contact" target="_top" accept-charset="UTF-8" id="storeform" class="capform" data-brand="Retro Forever" data-reply="dan@retroforeverllc.com" data-terms="Sold by the dozen; first orders may include a limited number of ½-dozen styles. $100 first-order minimum. In stock, ships in 1–3 days from our U.S. warehouse.">
 <input type="hidden" name="form_type" value="contact">
-<input type="hidden" name="utf8" value="✓">
+<input type="hidden" name="utf8" value="✓"><input type="text" name="hp" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px">
 <input type="hidden" name="return_to" value="/pages/wholesale?sent=store">
 <input type="hidden" name="contact[Request]" value="Wholesale capsule request (store / Retro Forever in stock)">
 <input type="hidden" name="contact[Source]" value="wholesale page" class="wsp-utm">
@@ -647,7 +647,7 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 <div class="sent" id="sent-kit" role="status">Got it — your sample-kit request is in. We’ll confirm the kit and shipping details by email within one business day.</div>
 <form method="post" action="https://onlyifyouknow.com/contact" target="_top" accept-charset="UTF-8" id="kit-form">
 <input type="hidden" name="form_type" value="contact">
-<input type="hidden" name="utf8" value="✓">
+<input type="hidden" name="utf8" value="✓"><input type="text" name="hp" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px">
 <input type="hidden" name="return_to" value="/pages/wholesale?sent=kit">
 <input type="hidden" name="contact[Request]" value="Sample kit request (Retro Forever)">
 <input type="hidden" name="contact[Source]" value="wholesale page" class="wsp-utm">
@@ -707,7 +707,7 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 <div class="sent" id="sent-rep" role="status">Got it — we’ll be in touch within one business day.</div>
 <form method="post" action="https://onlyifyouknow.com/contact" target="_top" accept-charset="UTF-8" id="rep-form">
 <input type="hidden" name="form_type" value="contact">
-<input type="hidden" name="utf8" value="✓">
+<input type="hidden" name="utf8" value="✓"><input type="text" name="hp" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px">
 <input type="hidden" name="return_to" value="/pages/wholesale?sent=rep">
 <input type="hidden" name="contact[Request]" value="Sales rep inquiry">
 <input type="hidden" name="contact[Source]" value="wholesale page" class="wsp-utm">
@@ -1050,35 +1050,33 @@ more.addEventListener("click",function(){shown+=36;renderGrid();});
 applyFilter();renderGrid();renderSlots();
 return{picks:function(){return picks.map(byS);},prefix:pre,el:el};
 }
-function ejSend(params){try{fetch("https://api.emailjs.com/api/v1.0/email/send",{method:"POST",keepalive:true,headers:{"Content-Type":"application/json"},body:JSON.stringify({service_id:EJ.service,template_id:EJ.template,user_id:EJ.key,template_params:params})}).catch(function(){});}catch(e){}}
-var PARENT_ORIGIN="https://onlyifyouknow.com",pending=null;
-function nativeSubmit(form){form.setAttribute("data-go","1");HTMLFormElement.prototype.submit.call(form);}
-function setBusy(form,on,msg){var b=form.querySelector('button[type="submit"]');if(!b)return;
-if(on){b.setAttribute("data-label",b.textContent);b.disabled=true;b.textContent="Sending…";}
-else{b.disabled=false;b.textContent=b.getAttribute("data-label")||b.textContent;}
+var EJ_URL="https://api.emailjs.com/api/v1.0/email/send",PARENT_ORIGIN="https://onlyifyouknow.com";
+function ejPost(tpl,params,keep){return fetch(EJ_URL,{method:"POST",keepalive:!!keep,headers:{"Content-Type":"application/json"},body:JSON.stringify({service_id:EJ.service,template_id:tpl,user_id:EJ.key,template_params:params})}).then(function(r){if(!r.ok)throw new Error("ej "+r.status);return true;});}
+function withTimeout(p,ms){return Promise.race([p,new Promise(function(_,rej){setTimeout(function(){rej(new Error("timeout"));},ms);})]);}
+function setBusy(form,on,msg){var b=form.querySelector('button[type="submit"]');if(b){if(!b.getAttribute("data-label"))b.setAttribute("data-label",b.textContent);
+b.disabled=!!on;b.textContent=on?"Sending…":b.getAttribute("data-label");}
 var n=form.querySelector(".rf-err");if(!n&&msg){n=document.createElement("p");n.className="rf-err";n.setAttribute("role","alert");n.style.cssText="color:#b3261e;margin:10px 0 0;font-size:14px";form.appendChild(n);}
 if(n){n.textContent=msg||"";n.style.display=msg?"":"none";}}
-/* Shopify only protects (and accepts) contact forms that live on the storefront page itself. Inside this embedded page the form cannot get Shopify's spam-check token, so the fields go up to the storefront page, which posts them from there. If no storefront page answers, fall back to a direct post. */
-function rfSubmit(form){
-var fields={};[].slice.call(form.elements).forEach(function(el){var n=el.name;if(!n||el.disabled)return;if(n==="return_to"||/^contact\[/.test(n))fields[n]=String(el.value||"");});
-if(window.parent===window){nativeSubmit(form);return;}
+function showSent(kind){var el=document.getElementById("sent-"+kind),f=document.getElementById({store:"storeform",rep:"rep-form",kit:"kit-form"}[kind]);
+if(el){el.style.display="block";if(f)f.style.display="none";el.scrollIntoView({block:"center"});}}
+/* After a successful send, ask the storefront page to reload on the confirmation URL (so the ?sent= conversion page loads). If it does not, show the confirmation here. */
+function goDone(url,kind){
+if(window.parent!==window){try{window.parent.postMessage({rf:"done",url:url},PARENT_ORIGIN);}catch(e){}}
+setTimeout(function(){showSent(kind);},1500);}
+function leadText(form){var lines=[];[].slice.call(form.elements).forEach(function(el){var m=/^contact\[(.+)\]$/.exec(el.name||"");if(!m||m[1]==="body"||el.disabled)return;var v=String(el.value||"").trim();if(v)lines.push(m[1]+": "+v);});return lines.join("\n");}
+function submitLead(form,extra){
+var rt=(form.querySelector('input[name="return_to"]')||{}).value||"",km=/[?&]sent=(\w+)/.exec(rt),kind=km?km[1]:"store";
+var hp=form.querySelector('input[name="hp"]');if(hp&&hp.value){showSent(kind);return;}
+var g=function(n){var f=form.querySelector('[name="contact['+n+']"]');return f?f.value.trim():"";};
 setBusy(form,true,"");
-var done=false;pending={form:form,ack:false};
-var t=setTimeout(function(){if(!pending||pending.ack)return;pending=null;nativeSubmit(form);},2500);
-pending.timer=t;
-try{window.parent.postMessage({rf:"form-submit",fields:fields},PARENT_ORIGIN);}catch(e){clearTimeout(t);pending=null;nativeSubmit(form);}
-}
-window.addEventListener("message",function(e){
-if(e.origin!==PARENT_ORIGIN||!e.data||!pending)return;
-if(e.data.rf==="ack"){pending.ack=true;clearTimeout(pending.timer);}
-else if(e.data.rf==="reset"){var f=pending.form;pending=null;setBusy(f,false,"We couldn’t send that just now. Please try again, or email dan@retroforeverllc.com.");}
-});
+var who=g("Store name")||g("name")||g("email");
+var p=ejPost(EJ.template,{owner_lead:"yes",customer_email:"dan@onlyifyouknow.com",lead_subject:"Wholesale lead: "+g("Request")+" — "+who,lead_text:leadText(form),reply_to:g("email"),from_name:"Retro Forever wholesale page"});
+withTimeout(p,9000).then(function(){if(extra){try{extra();}catch(e){}}goDone(rt,kind);}).catch(function(){setBusy(form,false,"We couldn’t send that just now. Please try again, or email dan@retroforeverllc.com.");});}
 ["kit-form","rep-form"].forEach(function(id){var f=document.getElementById(id);if(!f)return;
-f.addEventListener("submit",function(e){if(f.getAttribute("data-go"))return;e.preventDefault();if(!f.reportValidity())return;rfSubmit(f);});});
+f.addEventListener("submit",function(e){e.preventDefault();if(!f.reportValidity())return;submitLead(f,null);});});
 document.querySelectorAll("form.capform").forEach(function(form){
 var pk=Picker(form.querySelector(".pk"));
 form.addEventListener("submit",function(e){
-if(form.getAttribute("data-go"))return;
 e.preventDefault();
 var picks=pk.picks();
 if(!picks.length){pk.el.classList.add("err");pk.el.scrollIntoView({behavior:"smooth",block:"center"});return;}
@@ -1086,14 +1084,12 @@ if(!form.reportValidity())return;
 var v=function(n){var f=form.querySelector('[name="contact['+n+']"]');return f?f.value.trim():"";};
 var budget=v("Budget")||"Not specified",notes=v("Notes"),brand=form.getAttribute("data-brand");
 form.querySelector(".wsp-body").value="Capsule request ("+brand+")\nAnchor 1: "+v("Anchor 1")+(v("Anchor 2")?"\nAnchor 2: "+v("Anchor 2"):"")+"\nBudget: "+budget+(notes?"\nNotes: "+notes:"");
-var btn=form.querySelector('button[type="submit"]');btn.disabled=true;btn.textContent="Sending…";
 var p1=picks[0],p2=picks[1];
 var params={capsule_request:"yes",customer_email:v("email"),email_subject:"Your capsule request — "+brand+" Wholesale",from_name:brand+" Wholesale",reply_to:form.getAttribute("data-reply"),brand:brand,
 to_name:v("name")||"there",store_name:v("Store name"),budget:budget,notes:notes,terms_line:form.getAttribute("data-terms").replace(/&frac12;/g,"½").replace(/&ndash;/g,"–"),
 anchor1_name:p1.name,anchor1_sku:p1.sku,anchor1_img:imgUrl(pk.prefix,p1.sku,280),
 anchor2_name:p2?p2.name:"",anchor2_sku:p2?p2.sku:"",anchor2_img:p2?imgUrl(pk.prefix,p2.sku,280):""};
-ejSend(params);
-rfSubmit(form);
+submitLead(form,function(){ejPost(EJ.template,params,true).catch(function(){});});
 });
 });
 try{
