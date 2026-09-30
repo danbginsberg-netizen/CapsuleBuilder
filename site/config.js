@@ -232,7 +232,7 @@ window.CAPSULE_CONFIG = {
       budgetPresets: [
         { amount: 100, label: "$100", note: "Order minimum / test order" },
         { amount: 200, label: "$200", note: "Starter" },
-        { amount: 300, label: "$300", note: "Standard opening order" },
+        { amount: 300, label: "$300", note: "Standard capsule" },
         { amount: 500, label: "$500", note: "Display / wall" },
         { amount: 1000, label: "$1,000", note: "Large / multi-door" },
       ],
@@ -277,8 +277,8 @@ window.CAPSULE_CONFIG = {
       budgetPresets: [
         // $500 is the minimum opening order (Dan, 26 Sep 2026). At a dozen per style it buys about 4 styles, with a
         // necklace, earrings and a bracelet for 77 of 114 picks; for 21 high-priced picks it covers the pick alone.
-        { amount: 500, label: "$500", note: "Minimum opening order" },
-        { amount: 1500, label: "$1,500", note: "Standard opening order" },
+        { amount: 500, label: "$500", note: "OIYK minimum order" },
+        { amount: 1500, label: "$1,500", note: "Standard capsule" },
         { amount: 3000, label: "$3,000", note: "Collection / window" },
       ],
     },

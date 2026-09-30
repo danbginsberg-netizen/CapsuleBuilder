@@ -61,7 +61,7 @@
   }
   function step2() {
     const it = A.engine().bySku.get(state.anchors[0]), S = A.cfg().storeSizes || { sizes: [] }, min = (A.cfg().terms || {}).orderMinimum || 0;
-    return `<div class="g-q"><div class="g-pick">${it ? `<img src="${esc(it.img)}" alt=""><span>Built around<br><b>${esc(it.name)}</b></span>` : ""}</div><h1>What's your opening budget?</h1><p>Wholesale, for a first order. Or tell us the store's size and we'll suggest one. ${esc(A.cfg().name)}'s first-order minimum is ${money(min, 0)}.</p></div>
+    return `<div class="g-q"><div class="g-pick">${it ? `<img src="${esc(it.img)}" alt=""><span>Built around<br><b>${esc(it.name)}</b></span>` : ""}</div><h1>What's the budget?</h1><p>Wholesale. Or tell us the store's size and we'll suggest one. ${esc(A.cfg().name)}'s first-order minimum is ${money(min, 0)}.</p></div>
       <div class="g-budget">${(A.cfg().budgetPresets || []).map((p) => `<button class="g-big" data-amt="${p.amount}"><b>${esc(p.label)}</b><small>${esc(p.note || "")}</small></button>`).join("")}</div>
       <h3 class="g-sub">Or by store size</h3>
       <div class="g-budget">${S.sizes.map((z) => `<button class="g-big" data-size="${z.id}"><b>${esc(z.label)} store</b><small>${esc(z.sales)} · ${esc(z.traffic)}</small></button>`).join("")}</div>
@@ -75,14 +75,14 @@
     const why = new Map(cap.picks.map((p) => [p.item.sku, p.reason]));
     return `<div class="g-q"><h1>${esc(A.capTitle())}</h1><p>${items.length} styles: ${cap.counts.necklace} necklaces, ${cap.counts.earring} earrings, ${cap.counts.bracelet} bracelets. Tap any piece to see why it's here.</p></div>
       ${notes.length ? `<div class="trendnote"><b>Market note</b>${notes.map((n) => `<span>${esc(n.text)}</span>`).join("")}</div>` : ""}
-      ${priced() ? `<div class="g-eco"><div><small>First order</small><b>${money(cur.total, 0)}</b></div><div><small>Retail value</small><b>${money(cur.retail, 0)}</b></div><div><small>Markup</small><b>${cur.total ? (cur.retail / cur.total).toFixed(1) : "–"}x</b></div><div><small>Pieces</small><b>${cur.units}</b></div></div>` : ""}
+      ${priced() ? `<div class="g-eco"><div><small>Wholesale</small><b>${money(cur.total, 0)}</b></div><div><small>Retail value</small><b>${money(cur.retail, 0)}</b></div><div><small>Markup</small><b>${cur.total ? (cur.retail / cur.total).toFixed(1) : "–"}x</b></div><div><small>Pieces</small><b>${cur.units}</b></div></div>` : ""}
       <div class="g-cap">${items.map((it, k) => `<button class="g-card ${k < cap.anchors.length ? "anchor" : ""}" data-sku="${esc(it.sku)}"><img src="${esc(it.img)}" alt="" loading="lazy">${k < cap.anchors.length ? `<span class="tag">Your pick</span>` : ""}<b>${esc(it.name)}</b>${priced() ? `<small>${esc(A.wsShort(it))} · ${esc(A.qtyWord(A.minFor(it)))}</small>` : ""}<span class="g-why">${esc(k < cap.anchors.length ? "The piece you picked. Everything else goes with it." : why.get(it.sku) || "")}</span></button>`).join("")}</div>
       <div class="g-acts"><button class="btn" id="gAnother">Show another version</button><button class="btn" id="gBudget">Change the budget</button><button class="btn" id="gRestart">Start over</button><button class="btn primary g-next" id="gNext">${g.mode === "demo" ? "Next: rep this line" : g.mode === "kiosk" ? "Keep this capsule" : "Take it with you"} →</button></div>`;
   }
   function step4() {
     const cfg = A.cfg(), ol = A.orderLink(), cl = A.capsuleLink(false);
     if (g.mode === "demo") {
-      return `<div class="g-q"><h1>Rep ${esc(cfg.name)}</h1><p>What you just did takes about two minutes with a buyer: one piece in, a balanced first order out, and a pre-filled order page carrying your rep code, so the order is credited to you.</p></div>
+      return `<div class="g-q"><h1>Rep ${esc(cfg.name)}</h1><p>What you just did takes about two minutes with a buyer: one piece in, a balanced capsule out that sells from the full catalog, and a pre-filled order page carrying your rep code, so the order is credited to you.</p></div>
         <div class="g-end"><div class="g-card-rep"><ul><li>Built for the booth, the showroom and follow-up emails: line sheets, order forms and platform files come from the same capsule.</li><li>${esc(cfg.name)} ${cfg.line === "OIYK" || A.line() === "OIYK" ? "is made to order, with premium pricing tiers." : "ships in stock from our U.S. warehouse."}</li><li>Terms, territories and the proof pack are on our program page.</li></ul>
           <div class="row"><a class="btn primary" href="${esc(A.cfg().programPage.url)}" target="_blank" rel="noopener">Open the program page ↗</a><a class="btn" href="mailto:${esc(cfg.contactEmail || "")}?subject=${encodeURIComponent("Repping " + cfg.name)}" target="_top">Email Dan Ginsberg</a></div>
           <p class="note">Dan Ginsberg · ${esc((cfg.lineSheet.contactLine || "").replace(/^For inquiries\s*/i, ""))}${cfg.contactEmail ? " · " + esc(cfg.contactEmail) : ""}</p></div>

@@ -96,10 +96,10 @@
   const ul = (a) => `<ul>${a.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>`;
   let h = `<header class="hd"><img src="${esc(cfg.logo)}" alt="${esc(cfg.name)}"><div class="tag">${esc(cfg.sheetTagline || cfg.name)}</div>
     <h1>${esc(title)}</h1>
-    <div class="meta">${lines.length} styles · ${CATS.filter((c) => cnt[c]).map((c) => `${cnt[c]} ${cnt[c] === 1 ? c : CAT_LABEL[c].toLowerCase()}`).join(" · ")} · ${reorder ? "reorder" : "first order"}${store ? ` · prepared for ${esc(store)}` : ""}</div>
+    <div class="meta">${lines.length} styles · ${CATS.filter((c) => cnt[c]).map((c) => `${cnt[c]} ${cnt[c] === 1 ? c : CAT_LABEL[c].toLowerCase()}`).join(" · ")}${reorder ? " · reorder" : ""}${store ? ` · prepared for ${esc(store)}` : ""}</div>
     <div class="acts">${ol ? `<a class="btn primary" href="${esc(ol)}" target="_top" rel="noopener">Order this capsule</a>` : ""}<a class="btn" href="#why">&#9432; Why these pieces</a><button class="btn" id="printBtn">Print / save as PDF</button></div>
     ${ol ? `<p class="small">Opens our wholesale order page with these ${lines.length} styles filled in. Adjust quantities there, add your details and submit.</p>` : ""}</header>`;
-  if (showPrices) h += `<div class="tot"><div><span>${reorder ? "Reorder" : "First order"}</span><b>${money(tot)}</b><small>${pcs} pieces</small></div><div><span>Retail value</span><b>${money0(retail)}</b><small>${tot ? (retail / tot).toFixed(1) + "× your cost" : ""}</small></div></div>`;
+  if (showPrices) h += `<div class="tot"><div><span>${reorder ? "Reorder" : "Wholesale total"}</span><b>${money(tot)}</b><small>${pcs} pieces</small></div><div><span>Retail value</span><b>${money0(retail)}</b><small>${tot ? (retail / tot).toFixed(1) + "× your cost" : ""}</small></div></div>`;
   for (const c of CATS) {
     const xs = priced.filter((x) => x.it.cat === c);
     if (!xs.length) continue;
