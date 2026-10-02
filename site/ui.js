@@ -156,11 +156,19 @@
     rep: cleanRep(store.get("capsule_rep", "")), tmpId: null,
     // v1.7.0: her store (context: never ordered) and the store size that pre-filled the budget
     context: normCtx(saved.context), storeSize: saved.storeSize || "",
+    account: saved.account || "",   // v1.9.0: the retailer this capsule is for (app/accounts.js); drives the fit check
   };
   function normCtx(c) { c = c || {}; return { items: Array.isArray(c.items) ? c.items : [], on: c.on !== false, strength: c.strength || "medium" }; }
-  const HOOKS = { board: [], sheetPages: [], context: [], record: [], restore: [], line: [], sendText: [], sheetOpts: [] };
+  const HOOKS = { board: [], sheetPages: [], context: [], record: [], restore: [], line: [], sendText: [], sheetOpts: [], account: [] };
   const runHooks = (k, ...a) => HOOKS[k].forEach((f) => { try { f(...a); } catch (e) { console.error(e); } });
-  function applyContext() { if (engine) engine.setContext(state.context.on ? state.context : null); }
+  function applyContext() { if (engine) { engine.setContext(state.context.on ? state.context : null); engine.setAccount(acctProfile(line)); } }
+  // v1.9.0: the chosen account's profile for a line, or null
+  function acctOf(id) { return (((window.ACCOUNTS || {}).accounts) || []).find((a) => a.id === id) || null; }
+  function acctProfile(L) {
+    const a = state && state.account ? acctOf(state.account) : null;
+    const P = a && a.lines ? a.lines[L || line] : null;
+    return P ? Object.assign({ accountName: a.name, accountId: a.id }, P) : null;
+  }
   function sheetDefaults(s, markPick) {
     const d = JSON.parse(JSON.stringify(BASE.lineSheet.defaults || {}));
     d.markPick = markPick != null ? markPick : BASE.lineSheet.markBuyerPick; d.note = "";
@@ -172,7 +180,7 @@
   const persist = () => store.set("capsule_ui", {
     buyer: state.buyer, capName: state.capName, capNameEdited: state.capNameEdited, mode: state.mode, size: state.size,
     budget: state.budget, units: state.units, story: state.story, showScores: state.showScores, sheet: state.sheet,
-    context: state.context, storeSize: state.storeSize,
+    context: state.context, storeSize: state.storeSize, account: state.account,
     [`anchors_${line}`]: state.anchors, [`counts_${line}`]: state.counts, [`minQty_${line}`]: state.minQty,
   });
   const anchorItems = () => state.anchors.filter(Boolean).map((s) => engine.bySku.get(s)).filter(Boolean);
@@ -547,6 +555,7 @@
       counts: state.counts, budget: state.budget, units: state.units, story: state.story, minQty: state.minQty,
       savedAt: new Date().toISOString(), summary: summaryOf(), sheet: JSON.parse(JSON.stringify(state.sheet)),
       context: state.context.items.length ? JSON.parse(JSON.stringify(state.context)) : undefined, storeSize: state.storeSize || undefined,
+      account: state.account || undefined,
     };
   }
   function saveCapsule(asNew) {
@@ -592,7 +601,8 @@
     state.locked = new Set(r.locked || []);
     state.halves = new Set(r.halves || []); syncHalves();
     if (r.sheet) state.sheet = Object.assign(sheetDefaults(), r.sheet, { fields: Object.assign(sheetDefaults().fields, r.sheet.fields || {}) });
-    state.context = normCtx(r.context); state.storeSize = r.storeSize || ""; applyContext(); runHooks("context");
+    state.account = r.account || "";
+    state.context = normCtx(r.context); state.storeSize = r.storeSize || ""; applyContext(); runHooks("context"); runHooks("account");
     $("buyer").value = state.buyer; $("capName").value = state.capName; $("story").checked = state.story; $("minQty").value = state.minQty;
     $("minQtyRow").classList.toggle("hide", line === "OIYK");
     $("modePieces").classList.toggle("on", state.mode === "pieces"); $("modeBudget").classList.toggle("on", state.mode === "budget");
@@ -610,7 +620,8 @@
   function newCapsule() {
     state.loadedId = null; state.tmpId = null; state.buyer = ""; state.capName = ""; state.capNameEdited = false;
     state.anchors = [null, null]; state.locked.clear(); state.halves = new Set(); syncHalves(); state.sheet.note = "";
-    state.context = normCtx(); state.storeSize = ""; applyContext(); runHooks("context");
+    state.account = "";
+    state.context = normCtx(); state.storeSize = ""; applyContext(); runHooks("context"); runHooks("account");
     $("buyer").value = ""; $("capName").value = ""; $("capName").placeholder = capTitle();
     renderSlot(0); renderSlot(1); resetMix(true); persist(); renderLib(); clearBoard();
   }
@@ -1177,6 +1188,8 @@
     if (withPrices) url += "&p=1";
     if (o.lb && /^[bpn]$/.test(o.lb)) url += `&lb=${o.lb}`;
     if (o.mb) url += "&mb=1";
+    const ap = acctProfile(line);   // v1.9.0: the account's buyer-facing line rides along (never the rep's notes)
+    if (ap && ap.pitch && ap.role !== "not a fit") url += `&ac=${encodeURIComponent(state.account)}`;
     return url + tagParams();
   }
 
@@ -1583,7 +1596,7 @@
   // v1.7.0: the API app/instore.js builds on (her store, boards, market brief, guided mode, buyer packet, rep kit)
   window.__cb = {
     state, hooks: HOOKS, store, esc, money, money0, label, CATS, CAT_LABEL, VOCAB, $,
-    line: () => line, cfg: () => cfg, engine: () => engine, catalog: () => catalog,
+    line: () => line, cfg: () => cfg, engine: () => engine, catalog: () => catalog, acctOf, acctProfile, runHooks,
     build, renderBoard, setAnchor, switchLine, setMode, setBudget, drawPresets, persist, applyContext, normCtx,
     orderLink, capsuleLink, capId, capTitle, qrSVG, absUrl, emailModel, drawSendSide, orderedItems, allItems, explainNow, trendNow, fmtDay, activeUnits, unitsLabel, qtyWord, minFor, wsShort, priceLine,
     buildSheet: () => { setPageRule(); return buildSheet(); }, sheetPDF, qrBox, pdfOverlay, wsText, openSheet, renderSheetPreview, openSend, openDlg, closeDlg, flash, toast, copyText, logSend, download, zipStore, simpleXLSX, fileSafe, parseCSV, csvCell,
@@ -1607,6 +1620,7 @@
     state.anchors = [b.anchors[0] || null, b.anchors[1] || null].map((x) => (x && engine.bySku.has(x) ? x : null));
     if (!state.anchors[0]) return false;
     state.capName = b.name || ""; state.capNameEdited = !!b.name; $("capName").value = state.capName;
+    if (b.account !== undefined) { state.account = b.account || ""; runHooks("account"); }
     state.locked.clear(); state.halves = new Set(); syncHalves();
     if (b.budget) { state.mode = "budget"; state.budget = b.budget; } else { state.mode = "pieces"; state.size = b.size || BASE.defaultSize; state.counts = null; }
     $("modePieces").classList.toggle("on", state.mode === "pieces"); $("modeBudget").classList.toggle("on", state.mode === "budget");

@@ -68,6 +68,11 @@ window.CAPSULE_CONFIG = {
   // Strong 4 (her store leads: about half change). The buyer's pick, stock, minimums and variety rules always hold.
   contextPull: { max: 12 },
 
+  /* ---------- v1.9.0: account fit ---------- */
+  // With an account chosen, a piece that fits how that retailer merchandises jewelry gains up to max/2 points and a poor fit
+  // loses up to max/2; pieces the account never carries are skipped unless locked. Profiles: app/accounts.js.
+  accountPull: { max: 30 },
+
   /* ---------- two anchors ---------- */
   twoAnchorBlend: { low: 0.6, high: 0.4 },   // score = 0.6 x weaker match + 0.4 x stronger match
 

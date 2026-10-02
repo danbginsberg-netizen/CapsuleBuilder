@@ -4,6 +4,7 @@
      &u=r (reorder)  &st=<store>  &n=<capsule name>  &p=1 (show wholesale prices)  &rep=<rep code>  &cap=<capsule ID>
      &lb=b|p|n (v1.8.4: label on her own piece: b "You bought this", p "Built around this piece", n none; default "Your pick")
      &mb=1 (v1.8.9: the In the Know market brief for this line, while it is current; same rules as the builder: line-locked, 60 days, no brand names)
+     &ac=<account id> (v1.9.0: the account's buyer-facing line from app/accounts.js)
    Shown on onlyifyouknow.com/pages/capsule (unlisted, noindex), which passes the link through to this page. */
 (function () {
   "use strict";
@@ -34,6 +35,10 @@
   const showPrices = P.get("p") === "1";
   const store = String(P.get("st") || "").trim().slice(0, 80);
   const title = String(P.get("n") || "").trim().slice(0, 90) || (store ? `Curated for ${store}` : "Your curated capsule");
+  // v1.9.0: &ac=<account id> adds that account's buyer-facing line (app/accounts.js); the rep's notes never reach this page
+  const acct = (((window.ACCOUNTS || {}).accounts) || []).find((a) => a.id === clean(P.get("ac"), /^[a-z0-9-]+$/, 40));
+  const pl = acct && acct.lines ? acct.lines[L] : null;
+  const pitch = pl && pl.role !== "not a fit" ? String(pl.pitch || "") : "";
 
   // the pieces and quantities from the link; unknown SKUs are listed, never guessed
   const lines = [], gone = [];
@@ -88,7 +93,7 @@
   const ul = (a) => `<ul>${a.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>`;
   let h = `<header class="hd"><img src="${esc(cfg.logo)}" alt="${esc(cfg.name)}"><div class="tag">${esc(cfg.sheetTagline || cfg.name)}</div>
     <h1>${esc(title)}</h1>
-    <div class="meta">${lines.length} styles · ${CATS.filter((c) => cnt[c]).map((c) => `${cnt[c]} ${cnt[c] === 1 ? c : CAT_LABEL[c].toLowerCase()}`).join(" · ")}${reorder ? " · reorder" : ""}${store ? ` · prepared for ${esc(store)}` : ""}</div>
+    <div class="meta">${lines.length} styles · ${CATS.filter((c) => cnt[c]).map((c) => `${cnt[c]} ${cnt[c] === 1 ? c : CAT_LABEL[c].toLowerCase()}`).join(" · ")}${reorder ? " · reorder" : ""}${store ? ` · prepared for ${esc(store)}` : ""}</div>${pitch ? `<div class="pitch">${esc(pitch)}</div>` : ""}
     <div class="acts">${ol ? `<a class="btn primary" href="${esc(ol)}" target="_top" rel="noopener">Order this capsule</a>` : ""}<a class="btn" href="#why">&#9432; Why these pieces</a>${P.get("mb") === "1" ? `<a class="btn" href="#brief">Market brief</a>` : ""}<button class="btn" id="printBtn">Print / save as PDF</button></div>
     ${ol ? `<p class="small">Opens our wholesale order page with these ${lines.length} styles filled in. Adjust quantities there, add your details and submit.</p>` : ""}</header>`;
   if (showPrices) h += `<div class="tot"><div><span>${reorder ? "Reorder" : "Wholesale total"}</span><b>${money(tot)}</b><small>${pcs} pieces</small></div><div><span>Retail value</span><b>${money0(retail)}</b><small>${tot ? (retail / tot).toFixed(1) + "× your cost" : ""}</small></div></div>`;

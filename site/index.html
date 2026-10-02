@@ -500,6 +500,25 @@
   .bf-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; } @media (max-width: 800px) { .bf-two { grid-template-columns: 1fr; } }
   .ctx-impact { font-size: 13px; background: var(--lav-soft); border-radius: 8px; padding: 7px 10px; margin: 6px 0 10px; } .ctx-impact:empty { display: none; }
   .ctxstrip .ctximpact { font-size: 13px; margin: -2px 0 8px; } .card .ctxwhy b { font-weight: 700; }
+  /* v1.9.0: account fit */
+  #acctWrap .note { margin-top: 4px; } #acctWrap .acaps { margin-top: 3px; }
+  .acctbox { border: 1px solid var(--lav); border-radius: 12px; padding: 10px 12px 12px; margin: 0 0 16px; background: #fff; }
+  .acctbox .h { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 14px; }
+  .acctbox .h .sp { flex: 1; }
+  .acctbox .h button, .acctbox .acapbtns button { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: #fff; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  .acctbox .acapbtns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .acctbox .grade { border-radius: 99px; padding: 1px 9px; font-size: 12px; font-weight: 700; }
+  .acctbox .atext, .acctbox .asum, .acctbox .apitch, .acctbox .awarn { font-size: 13px; margin-top: 6px; }
+  .acctbox .apitch { background: var(--lav-soft); border-radius: 8px; padding: 5px 9px; }
+  .acctbox .awarn { color: var(--warn); font-weight: 600; }
+  .acctbox .amore { display: inline-block; font-size: 13px; margin-top: 6px; }
+  .acctbox .adetail { font-size: 13px; margin-top: 6px; } .acctbox .adetail h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 10px 0 3px; }
+  .acctbox .adetail p { margin: 4px 0; } .acctbox .adetail ul { margin: 2px 0; padding-left: 18px; }
+  .acctbox .acomp { border-collapse: collapse; width: 100%; font-size: 12.5px; margin-top: 6px; } .acctbox .acomp td, .acctbox .acomp th { border-bottom: 1px solid var(--line); padding: 3px 6px; text-align: left; }
+  .fitline { font-size: 12.5px; border-radius: 8px; padding: 3px 8px; margin-top: 4px; line-height: 1.35; }
+  .g-strong { background: #e8f4ec; color: #22603c; } .g-good { background: #eef5ff; color: #24508f; }
+  .g-stretch { background: #fff3e0; color: #8a5300; } .g-off { background: #fdecea; color: #a1261e; }
+
   .sheet .sh-brief .about { margin-top: .1in; font-size: .79em; color: #444; line-height: 1.4; border-top: 1px solid #e3e0ea; padding-top: .06in; }
   /* extra line-sheet pages */
   .sheet .sh-brief { flex: 1 1 0; min-height: 0; overflow: hidden; font-size: 9.6pt; line-height: 1.42; color: #222; }
@@ -628,7 +647,7 @@
 <body>
 <div class="app">
   <aside>
-    <div class="brand"><img id="brandLogo" src="logo_rf.png?h=88500682" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.8.9</small></div></div>
+    <div class="brand"><img id="brandLogo" src="logo_rf.png?h=88500682" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.9.0</small></div></div>
     <div class="lines">
       <button class="on" id="lineRF" data-line="RF">Retro Forever</button>
       <button id="lineOIYK" data-line="OIYK">OIYK</button>
@@ -819,7 +838,7 @@
 <div id="guided"></div>
 <div id="sheetWrap"></div>
 
-<script src="config.js?h=b3245d27"></script>
+<script src="config.js?h=2d6162b3"></script>
 <script src="data_rf.js?h=189147ab"></script>
 <script src="data_oiyk.js?h=e00012b9"></script>
 <script src="faire_rf.js?h=977f58fa"></script>
@@ -829,9 +848,10 @@
 <script src="jspdf.umd.min.js?h=e6c65801" defer></script>
 <script src="html2canvas.min.js?h=d7530aa0" defer></script>
 <script src="guide.js?h=47973b5b"></script>
-<script src="engine.js?h=ae02babb"></script>
+<script src="engine.js?h=28c93c05"></script>
+<script src="accounts.js?h=f7ac532d"></script>
 <script src="email.js?h=f1d01085"></script>
-<script src="ui.js?h=ba7a3d6b"></script>
+<script src="ui.js?h=4dd3cb5a"></script>
 <script src="boards.js?h=775a6d26"></script>
 <script src="context.js?h=d5eca56c"></script>
 <script src="instore.js?h=e1124fe6"></script>
@@ -839,8 +859,9 @@
 <script src="storetour.js?h=246430e5"></script>
 <script src="similar.js?h=f289e774"></script>
 <script src="sendtour.js?h=efc1cf61"></script>
+<script src="accountfit.js?h=91eab45b"></script>
 <script>/* v1.8.0: open the newest release, not a saved copy (GitHub Pages keeps pages up to 10 minutes) */
-(function(){var V="1.8.9",t0=Date.now();
+(function(){var V="1.9.0",t0=Date.now();
 function newest(cb){try{fetch("version.json?cb="+Date.now(),{cache:"no-store"}).then(function(r){return r.json()}).then(function(j){if(j&&j.version&&j.version!==V)cb(j.version)}).catch(function(){})}catch(e){}}
 function reload(v){try{if(sessionStorage.getItem("cb_fresh")===v)return false;sessionStorage.setItem("cb_fresh",v)}catch(e){}var u=new URL(location.href);u.searchParams.set("v",v);location.replace(u.toString());return true}
 function bar(v){if(document.getElementById("cbFresh"))return;var d=document.createElement("div");d.id="cbFresh";d.style.cssText="position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:99999;background:#1f1d24;color:#fff;padding:9px 14px;border-radius:10px;font:600 14px system-ui,sans-serif;box-shadow:0 4px 18px #0004";d.innerHTML="Version "+v+" is ready. <button style='margin-left:8px;border:0;border-radius:7px;padding:5px 10px;font-weight:700;cursor:pointer'>Reload</button>";d.querySelector("button").onclick=function(){try{sessionStorage.removeItem("cb_fresh")}catch(e){}reload(v)};document.body.appendChild(d)}

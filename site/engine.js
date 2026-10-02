@@ -156,7 +156,10 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
     // v1.7.0: her store (context) nudges the pick toward what goes with what she already carries; the anchor still leads
     const ctx = this.ctxProfile ? this.contextScore(C) : null;
     if (ctx) total += ctx.pts;
-    return { total, per, ctx };
+    // v1.9.0: the chosen account pulls toward pieces that fit how it merchandises jewelry
+    const acct = this.acct ? this.accountFit(C) : null;
+    if (acct) { acct.pts = ((this.cfg.accountPull || {}).max || 30) * (acct.s - 0.5); total += acct.pts; }
+    return { total, per, ctx, acct };
   };
 
   /* ------------------------------------------------ v1.7.0: her store (context) ------------------------------------------------
@@ -585,6 +588,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
     return this.items.filter((it) =>
       !anchorSkus.has(it.sku) && !excl.has(it.sku) && it.img && this.inStock(it, opts.minQty) && this.orderable(it) &&
       !(opts.units === "reorder" && this.halfOnly(it)) &&   // a reorder is a dozen per style: skip styles with under a dozen left
+      !(this.acct && !(opts.locked || []).includes(it.sku) && ((this.accountFit(it) || {}).hard || (this.accountFit(it) || {}).out)) &&   // v1.9.0: never what the account doesn't carry, or prices it never sells at
       (!line || !it.line || it.line === line));
   };
 
@@ -1239,7 +1243,121 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
   }
   Engine.prototype.trendNotes = function (file, items, today, opts) { return trendNotes(file, this.line, items, today, opts); };
 
-  const api = { Engine, CATS, label: lab, trendNotes, parseLook, lookOf, parseOrder, hasLook, STONES: STONES.map((s) => s[0]) };
+  /* ------------------------------------------------ v1.9.0: account fit (Dan, 2 Oct 2026) ------------------------------------------------
+     An account profile (app/accounts.js, built from data/accounts.json) records how one retailer merchandises jewelry today,
+     read from its own site on the date shown: its price tiers, palette, metals, motifs, materials and what it never carries.
+     accountFit() scores one piece 0-1 against the chosen account's profile for this line and says why, in the account's terms.
+     When an account is chosen, a build adds accountPull.max x (fit - 0.5) points to every candidate and skips pieces the
+     account never carries (hard avoids, e.g. crosses at Anthropologie, shells at Cavender's) unless the rep locked them.
+     The buyer's pick, stock, minimums and variety rules always hold. */
+  const FIT_W = { price: 0.30, motif: 0.25, color: 0.15, mats: 0.15, style: 0.10, metal: 0.05 };
+  const FIT_GRADES = [[0.75, "strong", "Strong fit"], [0.6, "good", "Good fit"], [0.45, "stretch", "Stretch"], [-1, "off", "Off-brand"]];
+  const usd = (v) => "$" + (Math.round(v) === v ? v : (+v).toFixed(2));
+  const FLAB = { "ocean/shell": "shell & sea", "floral/botanical": "floral", "cross/faith": "cross & faith", "coin/medallion": "coin", "ivory/pearl": "ivory & pearl", "mother-of-pearl": "mother-of-pearl", "seed bead": "beadwork", "glass bead": "glass beads", "resin/epoxy": "resin", "crystal/CZ": "crystal" };
+  const range = (r) => `${usd(r[0])}-${usd(r[1])}`;
+  function accountFit(it, P) {
+    if (!it || !P || !P.price) return null;
+    const nm = String(it.name || "").toLowerCase();
+    const say = P.say || {}, plus = [], minus = [];
+    const L = (o, k) => ((o || {})[k] || []);
+    const inL = (o, k, v) => L(o, k).includes(v);
+    const said = new Set();
+    const add = (arr, key, fallback) => { const t = say[key] || fallback; if (t && !said.has(t)) { said.add(t); arr.push(t); } };
+    // price (MSRP: the price the shelf shows)
+    const pc = (P.price.cat || {})[it.cat] || P.price;   // a category can carry its own band (bracelets sell lower)
+    const m = +it.msrp || 0, sw = pc.sweet || P.price.sweet, ok = pc.ok || P.price.ok || sw;
+    let ps, pk;
+    if (m >= sw[0] && m <= sw[1]) { ps = 1; pk = "sweet"; }
+    else if (m >= ok[0] && m <= ok[1]) { ps = 0.6; pk = m < sw[0] ? "low" : "high"; }
+    else { ps = 0.1; pk = m < ok[0] ? "under" : "over"; }
+    // motifs and name words
+    const fams = [it.dom].concat(it.fams || []).filter((v, i, a) => v && a.indexOf(v) === i);
+    const leadM = (it.motifs || []).filter((x) => inL(P.motifs, "lead", x));
+    const avoidM = (it.motifs || []).filter((x) => inL(P.motifs, "avoid", x));
+    const hardM = (it.motifs || []).filter((x) => inL(P.motifs, "hardAvoid", x));
+    const nmp = nm.replace(/mother[- ]of[- ]pearl/g, "m-o-p");   // "pearl" alone means pearl, not mother-of-pearl
+    const hitW = (w) => (/mother/.test(w) ? nm : nmp).includes(w);
+    const leadW = L(P.words, "lead").filter(hitW);
+    const hardW = L(P.words, "hardAvoid").filter(hitW);
+    let ms = leadM.length || leadW.length ? 1 : (it.motifs || []).length ? 0.45 : 0.55;
+    if (avoidM.length) ms = Math.min(ms, 0.2);
+    // color
+    const cLead = fams.filter((f) => inL(P.colors, "lead", f));
+    let cs = inL(P.colors, "lead", it.dom) ? 1 : cLead.length ? 0.85 : inL(P.colors, "ok", it.dom) ? 0.65 : 0.45;
+    const cAvoid = inL(P.colors, "avoid", it.dom);
+    if (cAvoid) cs = 0.15;
+    // materials, style, metal
+    const mLead = (it.mats || []).filter((x) => inL(P.mats, "lead", x)), mAvoid = (it.mats || []).filter((x) => inL(P.mats, "avoid", x));
+    let mts = mLead.length ? 1 : 0.5;
+    if (mAvoid.length) mts = mLead.length ? 0.5 : 0.2;
+    const ss = inL(P.styles, "lead", it.style) ? 1 : inL(P.styles, "avoid", it.style) ? 0.2 : 0.55;
+    const mt = (P.metals || {})[it.metal] != null ? P.metals[it.metal] : 0.7;
+    let s = FIT_W.price * ps + FIT_W.motif * ms + FIT_W.color * cs + FIT_W.mats * mts + FIT_W.style * ss + FIT_W.metal * mt;
+    const hard = hardM.length > 0 || hardW.length > 0;
+    const out = pk === "under" || pk === "over";   // priced outside anything the account sells: never a good fit
+    if (hard) s = Math.min(s, 0.25);
+    else if (out) s = Math.min(s, 0.44);
+    // reasons, in the account's own terms where the profile has them (say[tag]); the strongest first
+    leadW.forEach((w) => { const k = say[w] ? w : say[w.replace(/ /g, "-")] ? w.replace(/ /g, "-") : null; if (k) add(plus, k); });
+    leadM.forEach((x) => add(plus, x, `${FLAB[x] || lab(x)} is a lead look there`));
+    mLead.forEach((x) => say[x] && add(plus, x));
+    if (inL(P.colors, "lead", it.dom) && say[it.dom]) add(plus, it.dom);
+    if (pk === "sweet") plus.push(`${usd(m)} retail: ${say.price_sweet || `in its ${range(sw)} sweet spot`}`);
+    if (!plus.length && cLead.length) plus.push(`${lab(cLead[0])} is in its palette`);
+    if (!plus.length && inL(P.styles, "lead", it.style)) plus.push(`${lab(it.style)} suits its look`);
+    hardM.forEach((x) => add(minus, x, `it doesn't carry ${FLAB[x] || lab(x)} jewelry`));
+    if (!hardM.length) hardW.forEach((w) => add(minus, "word:" + w, `${w.trim()} pieces aren't part of its jewelry`));
+    avoidM.forEach((x) => add(minus, x, `${FLAB[x] || lab(x)} is rarely seen there`));
+    if (pk === "low") minus.push(`${usd(m)} retail ${say.price_low || `is under its ${range(sw)} sweet spot`}`);
+    if (pk === "high") minus.push(`${usd(m)} retail ${say.price_high || `is above its ${range(sw)} sweet spot`}`);
+    if (pk === "under") minus.push(`${usd(m)} retail is below anything it sells (${range(ok)})`);
+    if (pk === "over") minus.push(`${usd(m)} retail is above anything it sells (${range(ok)})`);
+    if (cAvoid) minus.push(`${lab(it.dom)} isn't in its palette`);
+    if (mAvoid.length && !mLead.length) minus.push(`${lab(mAvoid[0])} reads off-brand there`);
+    if (inL(P.styles, "avoid", it.style)) minus.push(`a ${lab(it.style)} look is off its style`);
+    const g = FIT_GRADES.find((x) => s >= x[0]);
+    return { s: +s.toFixed(3), grade: g[1], label: hard ? "Off-brand" : out ? "Off-price" : g[2], hard, out, price: pk, plus, minus,
+      comps: { price: ps, motif: ms, color: cs, mats: mts, style: ss, metal: mt } };
+  }
+  // the whole capsule against the account: grade, price position, what leads, what doesn't belong
+  function accountReport(items, P, name) {
+    if (!P || !P.price || !items || !items.length) return null;
+    const fits = items.map((it) => ({ it, f: accountFit(it, P) }));
+    const n = fits.length, avg = fits.reduce((a, x) => a + x.f.s, 0) / n;
+    const by = (g) => fits.filter((x) => x.f.grade === g && !x.f.hard).length;
+    const off = fits.filter((x) => x.f.hard || x.f.grade === "off");
+    const sweet = fits.filter((x) => x.f.price === "sweet").length;
+    const ms = items.map((it) => +it.msrp || 0).filter(Boolean);
+    const lo = ms.length ? Math.min(...ms) : 0, hi = ms.length ? Math.max(...ms) : 0;
+    const looks = {};
+    fits.forEach(({ it }) => {
+      const fl = (x) => FLAB[x] || lab(x);
+      (it.motifs || []).filter((x) => L2(P.motifs, "lead").includes(x)).forEach((x) => (looks[fl(x)] = (looks[fl(x)] || 0) + 1));
+      (it.mats || []).filter((x) => L2(P.mats, "lead").includes(x)).slice(0, 1).forEach((x) => (looks[fl(x)] = (looks[fl(x)] || 0) + 1));
+    });
+    const top = Object.entries(looks).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    let grade = avg >= 0.72 && !off.length ? ["strong", "Strong fit"] : avg >= 0.6 && off.length <= 1 ? ["good", "Good fit"] : avg >= 0.48 ? ["mixed", "Mixed fit"] : ["poor", "Poor fit"];
+    const who = name || "this account";
+    const parts = [`${by("strong") + by("good")} of ${n} pieces fit ${who} well`];
+    parts.push(`${sweet} of ${n} sit ${P.say && P.say.price_sweet ? P.say.price_sweet : `in its ${range(P.price.sweet)} sweet spot`}`);
+    if (top.length) parts.push(`leading looks: ${top.map(([k, v]) => `${k} (${v})`).join(", ")}`);
+    let text = cap(parts.join("; ")) + ".";
+    if (off.length) text += ` Doesn't fit ${who} (off-brand or priced outside its range): ${off.map((x) => x.it.sku).join(", ")}${off.length === 1 ? ". Swap it" : ". Swap them"} before you send.`;
+    return { avg: +avg.toFixed(3), score: Math.round(avg * 100), grade: grade[0], label: grade[1], n, strong: by("strong"), good: by("good"), stretch: by("stretch"),
+      off: off.map((x) => x.it.sku), sweet, msrp: [lo, hi], looks: top, text, fits };
+  }
+  function L2(o, k) { return (o || {})[k] || []; }
+  Engine.prototype.setAccount = function (P) { this.acct = P && P.price ? P : null; this._fit = new Map(); return this.acct; };
+  Engine.prototype.accountFit = function (it, P) {
+    if (P) return accountFit(it, P);
+    if (!this.acct || !it) return null;
+    if (!this._fit) this._fit = new Map();
+    if (!this._fit.has(it.sku)) this._fit.set(it.sku, accountFit(it, this.acct));
+    return this._fit.get(it.sku);
+  };
+  Engine.prototype.accountReport = function (items, P, name) { return accountReport(items, P || this.acct, name || (this.acct && this.acct.accountName)); };
+
+  const api = { Engine, CATS, label: lab, trendNotes, parseLook, lookOf, parseOrder, hasLook, accountFit, accountReport, STONES: STONES.map((s) => s[0]) };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.CapsuleEngine = api;
 })(typeof window !== "undefined" ? window : globalThis);
