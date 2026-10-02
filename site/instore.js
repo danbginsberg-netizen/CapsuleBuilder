@@ -70,9 +70,9 @@
       <div class="bf-top"><span class="eyebrow">Market brief · ${esc(f.label || A.cfg().name)} · In the Know, ${esc(A.fmtDay(f.edition))} edition</span><span class="chip safe">No brand names · safe to share</span></div>
       ${live ? "" : `<div class="short">This brief is due to be replaced with new insights from current research. Until the next update arrives it stays off buyer-facing sends and line sheets.</div>`}
       <h1>${esc(B.title)}</h1><p class="lede">${esc(B.lede)}</p>
-      <div class="row bf-acts"><button class="btn primary" id="bfMail" ${live ? "" : "disabled"}>Email the brief</button><button class="btn" id="bfShare" ${live ? "" : "disabled"}>Share…</button><button class="btn" id="bfCopy" ${live ? "" : "disabled"}>Copy as text</button><button class="btn" id="bfPdf" ${live ? "" : "disabled"}>Download PDF</button>
+      <div class="row bf-acts"><button class="btn primary" id="bfMail" ${live ? "" : "disabled"} title="Copies the brief as a formatted email. Paste it into any email program.">Copy for email</button><button class="btn${window.CB_MAIL && window.CB_MAIL.touchDevice() ? "" : " hide"}" id="bfShare" ${live ? "" : "disabled"}>Share…</button><button class="btn" id="bfCopy" ${live ? "" : "disabled"}>Copy as text</button><button class="btn" id="bfPdf" ${live ? "" : "disabled"}>Download PDF</button>
         <label class="tog"><input type="checkbox" id="bfSheet" ${state.sheet.brief ? "checked" : ""} ${live ? "" : "disabled"}> Add to the line sheet PDF</label>
-        <label class="tog"><input type="checkbox" id="bfSend" ${A.store.get("capsule_brief_in_send", false) ? "checked" : ""} ${live ? "" : "disabled"}> Add to "Send capsule" emails</label></div>
+        <label class="tog"><input type="checkbox" id="bfSend" ${A.store.get("capsule_brief_in_send", false) ? "checked" : ""} ${live ? "" : "disabled"}> Add to "Send capsule" emails and capsule pages</label></div>
       <div class="note" id="bfNote"></div>
       <div class="bf-grid">
         <div class="panel"><h3>What the market is doing</h3><ul>${B.points.map((p) => `<li>${esc(p)}</li>`).join("")}</ul></div>
@@ -83,11 +83,16 @@
       ${aboutHTML(f)}</div>`;
     const subj = () => `${A.cfg().name}: ${B.title}`;
     $("bfCopy").onclick = () => { A.copyText(briefText(f), "bfNote", "Brief"); A.logSend("brief-copy"); };
-    $("bfMail").onclick = () => {
-      const to = ($("sdTo") && $("sdTo").value.trim().replace(/[\s,;]+/g, ",")) || "";
-      const a = document.createElement("a"); a.href = `mailto:${encodeURIComponent(to).replace(/%2C/g, ",").replace(/%40/g, "@")}?subject=${encodeURIComponent(subj())}&body=${encodeURIComponent("Hi,\n\nHere is our read of what the market is launching this season, with display ideas you can use.\n\n" + briefText(f) + "\n\nBest,")}`;
-      a.target = "_top"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove(); A.logSend("brief-email", { to });
-      A.flash("bfNote", "Your email app opened with the brief filled in. Review it and press Send there.");
+    // v1.8.9: a formatted email on the clipboard; nothing opens another app (Dan, 2 Oct 2026)
+    $("bfMail").onclick = async () => {
+      const M = window.CB_MAIL, cfg = A.cfg();
+      const bm = M.brief(f, A.line(), today(), state.capsule ? A.orderedItems().map((o) => o.it) : [], A.engine());
+      if (!bm) return;
+      const o = { accent: A.line() === "OIYK" ? "#8d7bb8" : "#cf4331", logo: A.absUrl(cfg.logo, `logo_${A.line().toLowerCase()}.png`), name: cfg.name, brief: bm,
+        note: "Hi,\n\nHere is our read of what the market is launching this season, with display ideas you can use.", signoff: "Best,", footer: (cfg.lineSheet || {}).contactLine || "" };
+      const ok = await M.copyRich(M.briefEmailHTML(o), M.briefEmailText(o));
+      if (ok) { A.logSend("brief-copy-email"); A.flash("bfNote", `Brief copied as an email. Paste it into a new message in any email program; subject: <b>${esc(subj())}</b>. Nothing is sent from here.`); }
+      else A.flash("bfNote", '<span class="warn">Copy is blocked in this browser.</span> Use Copy as text instead.');
     };
     $("bfShare").onclick = async () => {
       let file = null; try { file = await briefPDF(f); } catch (e) { /* no PDF from a local copy */ }
@@ -97,7 +102,7 @@
     };
     $("bfPdf").onclick = async () => { try { const file = await briefPDF(f); A.download(file.name, file, "application/pdf"); A.logSend("brief-pdf"); } catch (e) { A.flash("bfNote", "This copy can't make the PDF. Use the web copy (onlyifyouknow.com/pages/capsule-builder)."); } };
     $("bfSheet").onchange = () => { state.sheet.brief = $("bfSheet").checked; A.persist(); A.flash("bfNote", state.sheet.brief ? "The brief is now the last page of the line sheet." : "Off the line sheet."); };
-    $("bfSend").onchange = () => { A.store.set("capsule_brief_in_send", $("bfSend").checked); if ($("sdBrief")) $("sdBrief").checked = $("bfSend").checked; };
+    $("bfSend").onchange = () => { A.store.set("capsule_brief_in_send", $("bfSend").checked); if ($("sdBrief")) $("sdBrief").checked = $("bfSend").checked; if (state.capsule && A.drawSendSide) A.drawSendSide(); };
   }
   function briefPageHTML(f, hit) {
     const B = f.brief, sig = liveSignals(f);
@@ -128,10 +133,7 @@
       return new File([doc.output("blob")], `${A.fileSafe(A.cfg().name + " market brief " + f.edition)}.pdf`, { type: "application/pdf" });
     } finally { host.remove(); }
   }
-  A.hooks.sendText.push((box) => {
-    const f = briefFile();
-    if (f && briefLive(f) && $("sdBrief") && $("sdBrief").checked) box.text = box.text.replace(/\n*(Best,)\s*$/, "") + "\n\nWhat the market is doing this season (our In the Know read):\n\n" + briefText(f) + "\n\nBest,";
-  });
+  // v1.8.9: Send capsule builds the brief into the email itself (app/email.js), and onto the capsule page (&mb=1)
 
   /* ================================================= store size -> budget */
   function storeNote(msg) { $("storeNote").innerHTML = msg || ""; }

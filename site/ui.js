@@ -986,24 +986,23 @@
     download(file.name, file, "application/pdf"); logSend("line-sheet-pdf");
     flash("shMsg", `Saved <b>${esc(file.name)}</b> to this device's downloads.`);
   }
+  // v1.8.9: on a computer, save the PDF and copy the email text; paste into any email program and attach the PDF (Dan: don't open apps on my desktop).
+  // Phones and tablets keep the share sheet, which hands the PDF to Mail, Gmail or Outlook as an attachment.
   async function emailSheetPDF() {
     const subj = `${cfg.name}: ${capTitle()} line sheet`, body = sheetMailText();
+    const touch = window.CB_MAIL.touchDevice();
+    if (!touch) copyText(`Subject: ${subj}\n\n${body}`, "shMsg", "Email text");   // at the click, while the browser allows it
     let file = null;
     try { file = await busy($("emailPdfBtn"), "Making PDF…", sheetPDF); } catch (e) { file = null; }
-    // phones, tablets and Windows: the share sheet hands the PDF to Mail, Gmail or Outlook as an attachment
-    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+    if (touch && file && navigator.canShare && navigator.canShare({ files: [file] })) {
       try { await navigator.share({ files: [file], title: subj, text: body }); logSend("line-sheet-pdf-share"); flash("shMsg", "Shared. Check the email in your mail app and press Send there."); return; }
       catch (e) { if (e && e.name === "AbortError") return; }
     }
-    // elsewhere: save the PDF and open an email draft to attach it to (a mailto link can't carry a file)
-    const to = ($("sdTo") && $("sdTo").value.trim().replace(/[\s,;]+/g, ",")) || "";
+    if (touch) copyText(`Subject: ${subj}\n\n${body}`, "shMsg", "Email text");
     if (file) download(file.name, file, "application/pdf");
-    const a = document.createElement("a");
-    a.href = `mailto:${encodeURIComponent(to).replace(/%2C/g, ",").replace(/%40/g, "@")}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
-    a.target = "_top"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove();
-    logSend("line-sheet-email", { to });
-    if (file) flash("shMsg", `Saved <b>${esc(file.name)}</b> to your downloads and opened an email draft. Attach the PDF (drag it in from Downloads) and press Send. Nothing is sent from here.`);
-    else { flash("shMsg", "Opened an email draft. This copy can't make the PDF itself, so the print window opens: choose <b>Save as PDF</b>, then attach that file."); printSheet(); }
+    logSend("line-sheet-email", { to: ($("sdTo") && $("sdTo").value.trim()) || "" });
+    if (file) flash("shMsg", `Saved <b>${esc(file.name)}</b> to your downloads and copied the email text. Paste it into a new message in any email program and attach the PDF. Nothing is sent from here.`);
+    else { flash("shMsg", "Copied the email text. This copy can't make the PDF itself, so the print window opens: choose <b>Save as PDF</b>, then attach that file."); printSheet(); }
   }
   function wireSheetOpts() {
     const S = () => sheetOpts();
@@ -1164,7 +1163,9 @@
   function openWhy() { if (!state.capsule) return; $("whyBody").innerHTML = whyHTML(explainNow()); openDlg("whyDlg"); }
 
   /* ---------- "View your capsule" link (hosted page; the capsule travels inside the link) ---------- */
-  function capsuleLink(withPrices) {
+  // v1.8.9: o.lb = label on her own piece (b / p / n; none = "Your pick"), o.mb = show the In the Know market brief on the page
+  function capsuleLink(withPrices, o) {
+    o = o || {};
     const page = (BASE.capsulePage || {}).url;
     if (!page || !state.capsule) return null;
     const u = activeUnits();
@@ -1174,6 +1175,8 @@
     if (state.buyer.trim()) url += `&st=${encodeURIComponent(state.buyer.trim())}`;
     if (state.capName.trim()) url += `&n=${encodeURIComponent(state.capName.trim())}`;
     if (withPrices) url += "&p=1";
+    if (o.lb && /^[bpn]$/.test(o.lb)) url += `&lb=${o.lb}`;
+    if (o.mb) url += "&mb=1";
     return url + tagParams();
   }
 
@@ -1192,54 +1195,88 @@
     download(`capsule_send_log_${new Date().toISOString().slice(0, 10)}.csv`, "\ufeff" + rows.map((r) => r.map(csvCell).join(",")).join("\r\n"), "text/csv;charset=utf-8");
   }
 
-  /* ---------- Send capsule: email draft in the rep's own mail app, share sheet, copy ---------- */
+  /* ---------- Send capsule (v1.8.9): the capsule page as an email you copy and paste into any email program ----------
+     Nothing opens another app on a computer and nothing is sent from here. Copy email puts the formatted email (photos,
+     Order this capsule button, the market brief when ticked, terms) and a plain-text twin on the clipboard. */
+  const SEND_LB = "capsule_send_lb";
   function sendDefaults() {
-    const n = allItems().length, t = cfg.terms || {}, who = state.buyer.trim();
+    const n = allItems().length, who = state.buyer.trim();
     $("sdSubj").value = `${cfg.name}: ${capTitle()}`;
     const a = state.capsule.anchors;
     $("sdMsg").value = [
       "Hi,",
       "",
-      `Here is the ${cfg.name} capsule we put together${who ? " for " + who : ""}: ${n} styles${a.length ? `, built around the ${a[0].name.toLowerCase()} you liked` : ""}.`,
+      `Here is the ${cfg.name} capsule we put together${who ? " for " + who : ""}: ${n} styles${a.length ? `, built around the ${a[0].name.toLowerCase()} you liked` : ""}. Every piece is below, with why it was chosen.`,
       "",
-      "See the capsule (photos, why each piece was chosen, and a printable line sheet):",
-      "{capsule link}",
-      "",
-      "Ready to order? This opens our order page with the capsule already filled in:",
-      "{order link}",
-      "",
-      activeUnits() === "reorder" ? `Reorders are ${engine.reorderUnits()} pieces per style.` : [t.unitsNote, t.orderMinimum ? `${money(t.orderMinimum, 0)} minimum on a first order.` : ""].filter(Boolean).join(" "),
-      "",
-      "Best,",
+      "Ready to order? The Order this capsule button opens our order page with these styles already filled in. Quantities and terms are at the end.",
     ].join("\n");
+    $("sdSign").value = "Best,";
+    $("sdLabel").value = store.get(SEND_LB, "");
   }
-  function sendText() {
-    const cl = capsuleLink($("sdPrices").checked), ol = orderLink();
-    let t = $("sdMsg").value.replace("{capsule link}", cl || "").replace("{order link}", ol ? ol.url : "");
-    const box = { text: t }; runHooks("sendText", box);   // v1.7.0: the market brief can ride along
-    return box.text;
+  const sendPrices = () => $("sdPrices").checked;
+  const sendBriefOn = () => !!($("sdBrief") && $("sdBrief").checked && !$("sdBriefRow").classList.contains("hide"));
+  const sendLink = () => capsuleLink(sendPrices(), { lb: $("sdLabel").value, mb: sendBriefOn() });
+  const webBase = () => (BASE.webCopy || {}).url || "";
+  // photos and logo by https address: the web copy's own files (a copy opened from a folder points at the web copy's)
+  function absUrl(rel, fallback) {
+    try { if (location.protocol === "https:") return new URL(rel, location.href).href; } catch (e) { /* use the web copy */ }
+    return webBase() ? webBase() + fallback : "";
   }
+  const mailImg = (it) => absUrl(it.img, `i-${line.toLowerCase()}-${it.sku}.jpg`);
+  function emailModel() {
+    const M = window.CB_MAIL, u = activeUnits(), withP = sendPrices(), L = M.labels($("sdLabel").value);
+    const nA = state.capsule.anchors.length, ol = orderLink(), items = orderedItems();
+    const cats = { necklace: 0, bracelet: 0, earring: 0 }; items.forEach((o) => cats[o.it.cat]++);
+    let tot = 0, retail = 0, pcs = 0;
+    const rows = items.map((o) => {
+      const c = engine.lineCost(o.it, u); tot += c.total; retail += (o.it.msrp || 0) * c.units; pcs += c.units;
+      return { cat: o.it.cat, img: mailImg(o.it), name: o.it.name, sku: o.it.sku, qty: window.CB_MAIL.qty(c.units, !!HT()),
+        price: withP ? `${money(c.each)} each · ${money(c.total)}${o.it.msrp ? ` · retail ${money(o.it.msrp)}` : ""}` : "",
+        why: o.anchor ? (nA > 1 ? L.many : L.one) : M.buyerWords(o.reason, L), tag: o.anchor ? L.tag : "" };
+    });
+    const f = (window.TREND_SIGNALS || {})[line];
+    const contact = (cfg.lineSheet || {}).contactLine || "";
+    return {
+      accent: line === "OIYK" ? "#8d7bb8" : "#cf4331", logo: absUrl(cfg.logo, `logo_${line.toLowerCase()}.png`), name: cfg.name, tagline: cfg.sheetTagline || cfg.name,
+      title: state.capName.trim() || (state.buyer.trim() ? `Curated for ${state.buyer.trim()}` : capTitle()),
+      meta: M.meta(cats, items.length, u === "reorder", state.buyer.trim()),
+      note: $("sdMsg").value, signoff: $("sdSign").value, orderUrl: ol ? ol.url : "", pageUrl: sendLink() || "",
+      totals: withP ? { label: u === "reorder" ? "Reorder" : "Wholesale total", total: tot, pieces: pcs, retail } : null,
+      groups: CATS.map((c) => ({ label: CAT_LABEL[c], items: rows.filter((r) => r.cat === c) })).filter((g) => g.items.length),
+      brief: sendBriefOn() ? M.brief(f, line, new Date().toISOString().slice(0, 10), items.map((o) => o.it), engine) : null,
+      terms: M.terms(cfg, engine, u === "reorder", withP),
+      footer: [contact, state.rep ? `Your rep code: ${state.rep}` : "", `Capsule ${capId()}`].filter(Boolean).join(" · "),
+    };
+  }
+  function sendText() { return window.CB_MAIL.emailText(emailModel()); }   // plain text (Copy as plain text; the clipboard's fallback)
+  function sendHTML() { return window.CB_MAIL.emailHTML(emailModel()); }
   function drawSendSide() {
-    const cl = capsuleLink($("sdPrices").checked);
+    const cl = sendLink();
     $("sdQR").innerHTML = cl ? qrSVG(cl, "L") : "";   // low error correction keeps a long link scannable on screen
     $("sdLink").textContent = cl || "";
     $("sdRep").innerHTML = state.rep ? `Rep code <b>${esc(state.rep)}</b> and capsule ID <b>${esc(capId())}</b> ride on both links, so the order is credited to you.` : `<span class="warn">No rep code set.</span> Add yours under Buyer so orders from this capsule are credited to you. Capsule ID <b>${esc(capId())}</b>.`;
+    drawSendPreview();
   }
+  // the preview is the email itself: what Copy email puts on the clipboard
+  function drawSendPreview() {
+    const fr = $("sdPrev"); if (!fr || !window.CB_MAIL || !state.capsule) return;
+    fr.srcdoc = window.CB_MAIL.doc(sendHTML());
+  }
+  let sendT = 0;
+  const sendRedraw = () => { clearTimeout(sendT); sendT = setTimeout(drawSendSide, 250); };
   function openSend() {
     if (!state.capsule) return;
     sendDefaults(); drawSendSide(); $("sdNote").innerHTML = "";
-    $("sdShare").classList.toggle("hide", !navigator.share);
+    $("sdShare").classList.toggle("hide", !window.CB_MAIL.touchDevice());
     openDlg("sendDlg");
   }
-  function sendMail() {
-    const to = $("sdTo").value.trim().replace(/[\s,;]+/g, ",");
-    const href = `mailto:${encodeURIComponent(to).replace(/%2C/g, ",").replace(/%40/g, "@")}?subject=${encodeURIComponent($("sdSubj").value)}&body=${encodeURIComponent(sendText())}`;
-    const a = document.createElement("a"); a.href = href; a.target = "_top"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove();
-    logSend("email", { to: $("sdTo").value.trim() });
-    flash("sdNote", "Your email app opened with the message filled in. Review it and press Send there — nothing is sent from here.");
+  async function copyEmail() {
+    const ok = await window.CB_MAIL.copyRich(sendHTML(), sendText());
+    if (ok) { logSend("copy-email", { to: $("sdTo").value.trim() }); flash("sdNote", "Email copied. Paste it into a new message in Gmail, Outlook, Apple Mail or any email program, add the subject and send it from there. Nothing is sent from here."); }
+    else flash("sdNote", '<span class="warn">Copy is blocked in this browser.</span> Click inside the preview below, press Ctrl+A (⌘A on a Mac), then Ctrl+C (⌘C), and paste it into your email.');
   }
   function sendShare() {
-    const cl = capsuleLink($("sdPrices").checked);
+    const cl = sendLink();
     navigator.share({ title: $("sdSubj").value, text: sendText().replace(cl, "").replace(/\n{3,}/g, "\n\n"), url: cl })
       .then(() => { logSend("share"); flash("sdNote", "Shared."); })
       .catch((e) => { if (e && e.name === "AbortError") return; copyText(sendText(), "sdNote", "Sharing isn't available here, so the message was"); logSend("copy-message"); });
@@ -1450,12 +1487,16 @@
   $("sendToBtn").onclick = openSendTo; sendToLabel();
   $("whyBtn").onclick = openWhy;
   $("sendLogBtn").onclick = exportSendLog;
-  $("sdMail").onclick = sendMail;
+  $("sdCopyEmail").onclick = copyEmail;
   $("sdShare").onclick = sendShare;
-  $("sdCopy").onclick = () => { copyText(sendText(), "sdNote", "Message"); logSend("copy-message"); };
-  $("sdCopyLink").onclick = () => { copyText(capsuleLink($("sdPrices").checked), "sdNote", "Capsule link"); logSend("copy-capsule-link"); };
-  $("sdOpen").onclick = () => { window.open(capsuleLink($("sdPrices").checked), "_blank", "noopener"); };
+  $("sdCopy").onclick = () => { copyText(sendText(), "sdNote", "Plain-text email"); logSend("copy-message"); };
+  $("sdCopySubj").onclick = () => copyText($("sdSubj").value, "sdNote", "Subject");
+  $("sdCopyLink").onclick = () => { copyText(sendLink(), "sdNote", "Capsule link"); logSend("copy-capsule-link"); };
+  $("sdOpen").onclick = () => { window.open(sendLink(), "_blank", "noopener"); };
   $("sdPrices").onchange = drawSendSide;
+  $("sdLabel").onchange = () => { store.set(SEND_LB, $("sdLabel").value); drawSendSide(); };
+  ["sdMsg", "sdSign"].forEach((id) => ($(id).oninput = sendRedraw));
+  if ($("sdBrief")) $("sdBrief").addEventListener("change", drawSendSide);
   $("repCode").value = state.rep; drawRepNote();
   $("repCode").oninput = () => { state.rep = cleanRep($("repCode").value); store.set("capsule_rep", state.rep); drawRepNote(); };
   $("repCode").onchange = () => { $("repCode").value = state.rep; };
@@ -1544,7 +1585,7 @@
     state, hooks: HOOKS, store, esc, money, money0, label, CATS, CAT_LABEL, VOCAB, $,
     line: () => line, cfg: () => cfg, engine: () => engine, catalog: () => catalog,
     build, renderBoard, setAnchor, switchLine, setMode, setBudget, drawPresets, persist, applyContext, normCtx,
-    orderLink, capsuleLink, capId, capTitle, qrSVG, orderedItems, allItems, explainNow, trendNow, fmtDay, activeUnits, unitsLabel, qtyWord, minFor, wsShort, priceLine,
+    orderLink, capsuleLink, capId, capTitle, qrSVG, absUrl, emailModel, drawSendSide, orderedItems, allItems, explainNow, trendNow, fmtDay, activeUnits, unitsLabel, qtyWord, minFor, wsShort, priceLine,
     buildSheet: () => { setPageRule(); return buildSheet(); }, sheetPDF, qrBox, pdfOverlay, wsText, openSheet, renderSheetPreview, openSend, openDlg, closeDlg, flash, toast, copyText, logSend, download, zipStore, simpleXLSX, fileSafe, parseCSV, csvCell,
     newCapsule, openRecord, lib, saveCapsule, recordFromState, restoreBoard: (b) => restoreBoard(b), HT, sheetMailText,
     // v1.7.6: a capsule of exactly these SKUs (Find similar picks), or those added to the capsule on the board
@@ -1582,5 +1623,5 @@
     persist(); renderLib();
     return true;
   }
-  window.__capsule = { orderLink, state, engine: () => engine, build, buildSheet: () => { setPageRule(); return buildSheet(); }, openSheet, exportXLSX, setSheet: (o) => { Object.assign(state.sheet, o, { fields: Object.assign(state.sheet.fields, (o || {}).fields || {}) }); persist(); }, orderedItems, setAnchor, switchLine, setMode, setBudget, saveCapsule, openRecord, lib, line: () => line, capsuleLink, capId, explain: explainNow, sendText, openSend, openSendTo, exportLines, SEND_TO, openFaire, faireInfo, setRep: (v) => { state.rep = cleanRep(v); store.set("capsule_rep", state.rep); } };
+  window.__capsule = { orderLink, state, engine: () => engine, build, buildSheet: () => { setPageRule(); return buildSheet(); }, openSheet, exportXLSX, setSheet: (o) => { Object.assign(state.sheet, o, { fields: Object.assign(state.sheet.fields, (o || {}).fields || {}) }); persist(); }, orderedItems, setAnchor, switchLine, setMode, setBudget, saveCapsule, openRecord, lib, line: () => line, capsuleLink, capId, explain: explainNow, sendText, sendHTML, emailModel, openSend, openSendTo, exportLines, SEND_TO, openFaire, faireInfo, setRep: (v) => { state.rep = cleanRep(v); store.set("capsule_rep", state.rep); } };
 })();

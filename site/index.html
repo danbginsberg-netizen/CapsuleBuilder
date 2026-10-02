@@ -264,6 +264,13 @@
   .send .row .btn { margin-top: 8px; }
   .send-side .qrbox { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
   .send-side .qrbox svg { width: 100%; height: auto; display: block; }
+  /* v1.8.9: Send capsule is copy-and-paste: the email preview is what Copy email puts on the clipboard */
+  .sd-subj { display: flex; gap: 8px; align-items: center; } .sd-subj input { flex: 1; } .sd-subj .btn { width: auto; margin: 0; white-space: nowrap; }
+  #sendDlg select { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: 14px; background: #fff; }
+  .sd-opts { margin-top: 4px; }
+  .sd-prev { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .sd-prev-hd { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin-bottom: 8px; }
+  #sdPrev { width: 100%; height: 560px; border: 1px solid var(--line); border-radius: 10px; background: #fff; display: block; }
   .link-out { word-break: break-all; }
   .st-row { display: flex; gap: 14px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
   .st-row .st-t { flex: 1; min-width: 0; } .st-row .st-t .pill { margin-left: 8px; background: var(--lav-soft); color: var(--lav-ink); border-radius: 99px; padding: 1px 8px; font-size: 12px; }
@@ -612,6 +619,7 @@
   #storeTour.tr-right { left: auto; right: 18px; }
   #storeTour.tr-side { left: 8px; top: 96px; bottom: auto; width: 324px; max-height: calc(100vh - 110px); overflow-y: auto; }
   body.send-tour-on .dlg.open { justify-content: flex-start; padding-left: 24px; }
+  @media (min-width: 901px) { body.send-tour-on #sendDlg .box { width: min(1040px, calc(100vw - 440px)) !important; } }   /* v1.8.9: the wider Send dialog stays clear of the training card */
   .g-trbtns { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 2px; } .g-trbtns .btn { width: auto; margin: 0; padding: 6px 12px; font-size: 13px; }
   @media (max-width: 900px) { #storeTour.tr-right, #storeTour.tr-side { left: 12px; right: 12px; top: auto; bottom: 12px; width: auto; max-height: 48vh; } body.send-tour-on .dlg.open { justify-content: center; padding-left: 20px; } }
   @media (max-width: 900px) { #storeTour { left: 12px; right: 12px; bottom: 12px; width: auto; max-height: 48vh; overflow-y: auto; } }
@@ -620,7 +628,7 @@
 <body>
 <div class="app">
   <aside>
-    <div class="brand"><img id="brandLogo" src="logo_rf.png?h=88500682" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.8.8</small></div></div>
+    <div class="brand"><img id="brandLogo" src="logo_rf.png?h=88500682" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.8.9</small></div></div>
     <div class="lines">
       <button class="on" id="lineRF" data-line="RF">Retro Forever</button>
       <button id="lineOIYK" data-line="OIYK">OIYK</button>
@@ -767,25 +775,32 @@
     <div><div class="pvinfo" id="pvInfo"></div><div class="pv" id="sheetPreview"></div></div>
   </div></div></div>
 <div class="dlg" id="whyDlg"><div class="box" style="width:min(720px,100%)"><div class="hd"><h2>Why these pieces</h2><button class="x" data-close>✕</button></div><div class="why-body" id="whyBody"></div></div></div>
-<div class="dlg" id="sendDlg"><div class="box" style="width:min(820px,100%)"><div class="hd"><h2>Send capsule</h2><button class="x" data-close>✕</button></div>
+<div class="dlg" id="sendDlg"><div class="box" style="width:min(1040px,100%)"><div class="hd"><h2>Send capsule</h2><button class="x" data-close>✕</button></div>
   <div class="send">
     <div>
-      <label class="f" for="sdTo">Buyer's email (optional)</label><input type="text" id="sdTo" placeholder="buyer@store.com" autocomplete="off">
-      <label class="f" for="sdSubj">Subject</label><input type="text" id="sdSubj">
-      <label class="f" for="sdMsg">Message <span class="note">({capsule link} and {order link} are filled in when you send)</span></label><textarea id="sdMsg" rows="11"></textarea>
-      <label class="tog"><input type="checkbox" id="sdPrices"> Show wholesale prices on the capsule page</label>
-      <label class="tog" id="sdBriefRow"><input type="checkbox" id="sdBrief"> Add the market brief (In the Know) to the message</label>
-      <div class="row"><button class="btn primary" id="sdMail">Open in my email</button><button class="btn" id="sdShare">Share…</button></div>
-      <div class="row"><button class="btn" id="sdCopy">Copy message</button><button class="btn" id="sdCopyLink">Copy capsule link</button><button class="btn" id="sdOpen">Preview page ↗</button></div>
+      <label class="f" for="sdTo">Buyer's email <span class="note">(optional, for your send log)</span></label><input type="text" id="sdTo" placeholder="buyer@store.com" autocomplete="off">
+      <label class="f" for="sdSubj">Subject</label><div class="sd-subj"><input type="text" id="sdSubj"><button class="btn" id="sdCopySubj" type="button">Copy subject</button></div>
+      <label class="f" for="sdMsg">Your note <span class="note">(top of the email; the capsule follows it)</span></label><textarea id="sdMsg" rows="7"></textarea>
+      <label class="f" for="sdSign">Sign-off <span class="note">(after the capsule; your email program adds your signature)</span></label><input type="text" id="sdSign">
+      <div class="sd-opts">
+        <label class="f" for="sdLabel">Label on her piece</label>
+        <select id="sdLabel"><option value="">Your pick</option><option value="p">Built around this piece</option><option value="b">You bought this</option><option value="n">No label</option></select>
+        <label class="tog"><input type="checkbox" id="sdPrices"> Show wholesale prices (email and capsule page)</label>
+        <label class="tog" id="sdBriefRow"><input type="checkbox" id="sdBrief"> Add the market brief (In the Know) to the email and the capsule page</label>
+      </div>
+      <div class="row"><button class="btn primary" id="sdCopyEmail">Copy email</button><button class="btn" id="sdCopy">Copy as plain text</button><button class="btn hide" id="sdShare">Share…</button></div>
+      <div class="row"><button class="btn" id="sdCopyLink">Copy capsule link</button><button class="btn" id="sdOpen">Preview page ↗</button></div>
       <div class="note" id="sdNote"></div>
     </div>
     <div class="send-side">
       <div class="qrbox" id="sdQR"></div>
-      <div class="note">Scan to open the capsule on a phone: photos, why each piece was chosen, a printable line sheet and the order button.</div>
+      <div class="note">Scan to open the capsule page on a phone: photos, why each piece was chosen, a printable line sheet and the order button.</div>
       <div class="note link-out" id="sdLink"></div>
       <div class="note" id="sdRep"></div>
     </div>
-  </div></div></div>
+  </div>
+  <div class="sd-prev"><div class="sd-prev-hd"><b>Email preview</b><span class="note">This is what Copy email puts on your clipboard. Paste it into a new message in any email program: the photos, buttons and links come with it. Nothing is sent from here.</span></div>
+    <iframe id="sdPrev" title="Email preview"></iframe></div></div></div>
 <div class="dlg" id="sendToDlg"><div class="box" style="width:min(820px,100%)"><div class="hd"><h2>Send to… the tools reps and buyers already use</h2><button class="x" data-close>✕</button></div>
   <p class="note" style="margin-top:0">The capsule is built here; book it wherever the rep or buyer writes orders. Quantities are pieces at this order type. Nothing is uploaded from here — each file downloads to this device.</p>
   <div id="stBody"></div><div class="note" id="stNote"></div><div class="tm">Platform names and logos are their owners' trademarks, shown only to identify where each file goes. No partnership is implied.</div></div></div>
@@ -804,7 +819,7 @@
 <div id="guided"></div>
 <div id="sheetWrap"></div>
 
-<script src="config.js?h=f709b83e"></script>
+<script src="config.js?h=b3245d27"></script>
 <script src="data_rf.js?h=189147ab"></script>
 <script src="data_oiyk.js?h=e00012b9"></script>
 <script src="faire_rf.js?h=977f58fa"></script>
@@ -815,16 +830,17 @@
 <script src="html2canvas.min.js?h=d7530aa0" defer></script>
 <script src="guide.js?h=47973b5b"></script>
 <script src="engine.js?h=ae02babb"></script>
-<script src="ui.js?h=4c3a83cf"></script>
+<script src="email.js?h=f1d01085"></script>
+<script src="ui.js?h=ba7a3d6b"></script>
 <script src="boards.js?h=775a6d26"></script>
 <script src="context.js?h=d5eca56c"></script>
-<script src="instore.js?h=95b923b2"></script>
+<script src="instore.js?h=e1124fe6"></script>
 <script src="guided.js?h=181bf978"></script>
 <script src="storetour.js?h=246430e5"></script>
-<script src="similar.js?h=e5f1ca40"></script>
-<script src="sendtour.js?h=5eb4c853"></script>
+<script src="similar.js?h=f289e774"></script>
+<script src="sendtour.js?h=efc1cf61"></script>
 <script>/* v1.8.0: open the newest release, not a saved copy (GitHub Pages keeps pages up to 10 minutes) */
-(function(){var V="1.8.8",t0=Date.now();
+(function(){var V="1.8.9",t0=Date.now();
 function newest(cb){try{fetch("version.json?cb="+Date.now(),{cache:"no-store"}).then(function(r){return r.json()}).then(function(j){if(j&&j.version&&j.version!==V)cb(j.version)}).catch(function(){})}catch(e){}}
 function reload(v){try{if(sessionStorage.getItem("cb_fresh")===v)return false;sessionStorage.setItem("cb_fresh",v)}catch(e){}var u=new URL(location.href);u.searchParams.set("v",v);location.replace(u.toString());return true}
 function bar(v){if(document.getElementById("cbFresh"))return;var d=document.createElement("div");d.id="cbFresh";d.style.cssText="position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:99999;background:#1f1d24;color:#fff;padding:9px 14px;border-radius:10px;font:600 14px system-ui,sans-serif;box-shadow:0 4px 18px #0004";d.innerHTML="Version "+v+" is ready. <button style='margin-left:8px;border:0;border-radius:7px;padding:5px 10px;font-weight:700;cursor:pointer'>Reload</button>";d.querySelector("button").onclick=function(){try{sessionStorage.removeItem("cb_fresh")}catch(e){}reload(v)};document.body.appendChild(d)}

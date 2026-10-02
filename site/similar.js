@@ -295,7 +295,7 @@
         ${[["sku", "SKU"], ["name", "Product name"], ["wholesale", "Wholesale price"], ...(A.cfg().terms && A.cfg().terms.tiered ? [["tiers", "Price breaks (3 / 6 / 12)"]] : []), ["msrp", "MSRP"], ["units", "Minimum per style"]].map(([k, t]) => `<label class="tog"><input type="checkbox" data-fld="${k}" ${state.sheet.fields[k] ? "checked" : ""}> ${t}</label>`).join("")}
         <label class="tog"><input type="checkbox" id="simMarkBought" ${state.sheet.markPick ? "checked" : ""}> Mark what she bought before</label>
       </div>
-      <div class="row sim-acts"><button class="btn primary" id="simMail" ${n ? "" : "disabled"}>Email as PDF</button><button class="btn" id="simShare" ${n ? "" : "disabled"} title="On a phone or tablet: WhatsApp, Messages, Mail">Share…</button><button class="btn" id="simPdf" ${n ? "" : "disabled"}>Download PDF</button><button class="btn" id="simCopy" ${n ? "" : "disabled"}>Copy as text</button><button class="btn" id="simPrev" ${n ? "" : "disabled"}>Preview</button>${n ? `<button class="btn" id="simClearSel">Clear picks</button>` : ""}</div>
+      <div class="row sim-acts"><button class="btn primary" id="simMail" ${n ? "" : "disabled"}>Email as PDF</button><button class="btn${window.CB_MAIL && window.CB_MAIL.touchDevice() ? "" : " hide"}" id="simShare" ${n ? "" : "disabled"} title="On a phone or tablet: WhatsApp, Messages, Mail">Share…</button><button class="btn" id="simPdf" ${n ? "" : "disabled"}>Download PDF</button><button class="btn" id="simCopy" ${n ? "" : "disabled"}>Copy as text</button><button class="btn" id="simPrev" ${n ? "" : "disabled"}>Preview</button>${n ? `<button class="btn" id="simClearSel">Clear picks</button>` : ""}</div>
       <div class="note" id="simSendNote"></div>
       <div class="sim-prev hide" id="simPrevBox"></div>`;
   }
@@ -635,18 +635,18 @@
     finally { btn.disabled = false; btn.textContent = old; }
   }
   const subject = () => `${A.cfg().name}: styles in the stones you asked about`;
+  // v1.8.9: on a computer, save the PDF and copy the email text (nothing opens another app); phones and tablets keep the share sheet
   async function emailPDF() {
+    const touch = !!(window.CB_MAIL && window.CB_MAIL.touchDevice()), mailText = () => `Subject: ${subject()}\n\n${followText()}`;
+    if (!touch) A.copyText(mailText(), "simSendNote", "Email text");   // at the click, while the browser allows it
     const file = await makePDF($("simMail")); const body = followText();
-    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+    if (touch && file && navigator.canShare && navigator.canShare({ files: [file] })) {
       try { await navigator.share({ files: [file], title: subject(), text: body }); A.flash("simSendNote", "Shared. Check the email in your mail app and press Send there."); return; }
       catch (e) { if (e && e.name === "AbortError") return; }
     }
+    if (touch) A.copyText(mailText(), "simSendNote", "Email text");
     if (file) A.download(file.name, file, "application/pdf");
-    const to = (S.email || "").replace(/[\s,;]+/g, ",");
-    const a = document.createElement("a");
-    a.href = `mailto:${encodeURIComponent(to).replace(/%2C/g, ",").replace(/%40/g, "@")}?subject=${encodeURIComponent(subject())}&body=${encodeURIComponent(body)}`;
-    a.target = "_top"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove();
-    A.flash("simSendNote", file ? `Saved <b>${esc(file.name)}</b> to your downloads and opened an email draft. Attach the PDF and press Send. Nothing is sent from here.` : "Opened an email draft with the text. Nothing is sent from here.");
+    A.flash("simSendNote", file ? `Saved <b>${esc(file.name)}</b> to your downloads and copied the email text. Paste it into a new message in any email program and attach the PDF. Nothing is sent from here.` : "Copied the email text. Nothing is sent from here.");
   }
   async function sharePDF() {
     const file = await makePDF($("simShare")), body = followText();

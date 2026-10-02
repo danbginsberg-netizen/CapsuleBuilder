@@ -38,24 +38,33 @@
   .whybox ul { margin: 4px 0; padding-left: 18px; } .whybox li { margin: 3px 0; }
   dl { display: grid; grid-template-columns: 120px 1fr; gap: 6px 14px; margin: 0; } dt { font-weight: 700; } dd { margin: 0; }
   @media (max-width: 520px) { dl { grid-template-columns: 1fr; } dd { margin-bottom: 6px; } .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } }
+  /* v1.8.9: the In the Know market brief (&mb=1) */
+  .brief { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 16px 20px 12px; margin-top: 22px; }
+  .brief .eb { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+  .brief h2 { font: 500 24px/1.2 Georgia, serif; margin: 8px 0 4px; } .brief .lede { color: var(--muted); margin: 0 0 6px; }
+  .brief h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); margin: 14px 0 4px; }
+  .brief ul { margin: 4px 0; padding-left: 18px; } .brief li { margin: 3px 0; } .brief .hit { color: var(--accent); }
+  .brief .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 26px; } .brief .about { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 12px; }
+  @media (max-width: 700px) { .brief .cols { grid-template-columns: 1fr; } }
   footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 26px; }
   .empty { text-align: center; padding: 60px 10px; color: var(--muted); } .empty b { display: block; color: var(--ink); font-size: 18px; margin-bottom: 6px; }
   @media print {
     html, body { background: #fff; } #app { padding: 0; max-width: none; }
     .acts, .hd .small, .tot small { display: none !important; }
     .grid { grid-template-columns: repeat(4, 1fr); gap: 8px; } .card { break-inside: avoid; } .why { font-size: 11px; }
-    .whybox, .terms { break-inside: avoid; }
+    .whybox, .terms { break-inside: avoid; } .brief { break-inside: avoid; }
   }
 </style>
 </head>
 <body>
 <div id="app"><div class="empty">Loading your capsule…</div></div>
-<script src="config.js?h=f709b83e"></script>
+<script src="config.js?h=b3245d27"></script>
 <script src="data_rf.js?h=189147ab"></script>
 <script src="data_oiyk.js?h=e00012b9"></script>
 <script src="orderpage_rf.js?h=da45501f"></script>
 <script src="orderpage_oiyk.js?h=b9386002"></script>
 <script src="engine.js?h=ae02babb"></script>
-<script src="view.js?h=0666c1ca"></script>
+<script src="email.js?h=f1d01085"></script>
+<script src="view.js?h=c66e1bd1"></script>
 </body>
 </html>

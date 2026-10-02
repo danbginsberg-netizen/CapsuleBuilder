@@ -157,6 +157,7 @@ window.CAPSULE_CONFIG = {
   // passes the link through. The capsule travels inside the link (line, SKUs, pieces, store, rep code, capsule ID);
   // nothing is stored anywhere. Visits show in Shopify analytics with the full link, so opens can be counted by capsule ID.
   capsulePage: { url: "https://onlyifyouknow.com/pages/capsule" },
+  webCopy: { url: "https://danbginsberg-netizen.github.io/CapsuleBuilder/" },   // v1.8.9: photos and logo in a copied email point here when the builder runs from a folder
   builderPage: { url: "https://onlyifyouknow.com/pages/capsule-builder" },   // v1.7.0: guided-mode links
   programPage: { url: "https://onlyifyouknow.com/pages/wholesale" },        // v1.7.0: "Rep this line" in the recruiting demo
   // Rep codes (letters, numbers, dashes; up to 20). Any code a rep types is carried on the order link, QR code, capsule

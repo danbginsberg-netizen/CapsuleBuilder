@@ -3,6 +3,7 @@
      ?l=RF|OIYK  &i=SKU:pieces,SKU:pieces,...  &a=<number of buyer's picks at the front of i>
      &u=r (reorder)  &st=<store>  &n=<capsule name>  &p=1 (show wholesale prices)  &rep=<rep code>  &cap=<capsule ID>
      &lb=b|p|n (v1.8.4: label on her own piece: b "You bought this", p "Built around this piece", n none; default "Your pick")
+     &mb=1 (v1.8.9: the In the Know market brief for this line, while it is current; same rules as the builder: line-locked, 60 days, no brand names)
    Shown on onlyifyouknow.com/pages/capsule (unlisted, noindex), which passes the link through to this page. */
 (function () {
   "use strict";
@@ -51,12 +52,9 @@
   engine.halfSet = halves;
   const restored = engine.restore(anchors.map((a) => a.sku), lines.slice(nA).map((x) => x.it.sku), { minQty: cfg.minQty });
   // v1.8.4: lb= sets how her own piece is labeled. Default "Your pick" (booth and kiosk links); b = pieces she bought; p = the piece the capsule is built around; n = no label
-  const LB = { b: { tag: "You bought this", one: "You bought this. Everything else was chosen to go with it.", many: "One of the pieces you bought.", ref1: "the piece you bought", ref2: "the two pieces you bought", refP: "the pieces you bought" },
-    p: { tag: "Built around this piece", one: "The capsule is built around this piece. Everything else was chosen to go with it.", many: "One of the pieces this capsule is built around.", ref1: "this piece", ref2: "these two pieces", refP: "these pieces" },
-    n: { tag: "", one: "", many: "", ref1: "the lead piece", ref2: "the two lead pieces", refP: "the lead pieces" } }[P.get("lb")]
-    || { tag: "Your pick", one: "Your pick. Everything else was chosen to go with it.", many: "One of your picks.", ref1: "your pick", ref2: "your two picks", refP: "your picks" };
-  // the engine's reasons say "the anchor"; buyers read "your pick" (or the lb= wording)
-  const buyerWords = (r) => String(r || "").replace(/\bthe anchor (necklace|bracelet|earrings|earring)\b/g, "your $1").replace(/\bthe anchor's\b/g, LB.ref1 + "'s").replace(/\bthe anchor\b/g, LB.ref1).replace(/the buyer's two picks/g, LB.ref2).replace(/the buyer's pick/g, LB.ref1);
+  // v1.8.4: lb= sets how her own piece is labeled; v1.8.9: the wording lives in app/email.js, shared with the email
+  const LB = window.CB_MAIL.labels(P.get("lb"));
+  const buyerWords = (r) => window.CB_MAIL.buyerWords(r, LB);
   const reasonOf = new Map(restored.picks.map((p) => [p.item.sku, buyerWords(p.reason)]));
   const qtyWord = (n) => (H ? (n === 6 ? "½ dozen" : n % 12 === 0 ? `${n / 12} dozen` : `${n} pcs`) : n % 12 === 0 ? `${n / 12} dozen (${n} pcs)` : `${n} pcs`);
 
@@ -74,14 +72,8 @@
     return url;
   }
 
-  // terms, as on the line sheet
-  const t = cfg.terms || {};
-  const terms = [
-    ["Minimum", t.orderMinimum ? `${money0(t.orderMinimum)} on a first order` : ""],
-    ["Quantities", reorder ? `Reorder: ${engine.reorderUnits()} pieces per style.` : t.unitsNote],
-    ["Pricing", showPrices && t.tiered ? t.tierNote : ""],
-    ["Payment", t.paymentTerms], ["Shipping", t.shipping], ["Returns", t.returns], ["Retail", t.retailNote],
-  ].filter((r) => r[1]);
+  // terms, as on the line sheet (shared with the email)
+  const terms = window.CB_MAIL.terms(cfg, engine, reorder, showPrices);
 
   // totals
   let tot = 0, retail = 0, pcs = 0;
@@ -97,7 +89,7 @@
   let h = `<header class="hd"><img src="${esc(cfg.logo)}" alt="${esc(cfg.name)}"><div class="tag">${esc(cfg.sheetTagline || cfg.name)}</div>
     <h1>${esc(title)}</h1>
     <div class="meta">${lines.length} styles · ${CATS.filter((c) => cnt[c]).map((c) => `${cnt[c]} ${cnt[c] === 1 ? c : CAT_LABEL[c].toLowerCase()}`).join(" · ")}${reorder ? " · reorder" : ""}${store ? ` · prepared for ${esc(store)}` : ""}</div>
-    <div class="acts">${ol ? `<a class="btn primary" href="${esc(ol)}" target="_top" rel="noopener">Order this capsule</a>` : ""}<a class="btn" href="#why">&#9432; Why these pieces</a><button class="btn" id="printBtn">Print / save as PDF</button></div>
+    <div class="acts">${ol ? `<a class="btn primary" href="${esc(ol)}" target="_top" rel="noopener">Order this capsule</a>` : ""}<a class="btn" href="#why">&#9432; Why these pieces</a>${P.get("mb") === "1" ? `<a class="btn" href="#brief">Market brief</a>` : ""}<button class="btn" id="printBtn">Print / save as PDF</button></div>
     ${ol ? `<p class="small">Opens our wholesale order page with these ${lines.length} styles filled in. Adjust quantities there, add your details and submit.</p>` : ""}</header>`;
   if (showPrices) h += `<div class="tot"><div><span>${reorder ? "Reorder" : "Wholesale total"}</span><b>${money(tot)}</b><small>${pcs} pieces</small></div><div><span>Retail value</span><b>${money0(retail)}</b><small>${tot ? (retail / tot).toFixed(1) + "× your cost" : ""}</small></div></div>`;
   for (const c of CATS) {
@@ -113,6 +105,13 @@
     }).join("") + `</div></section>`;
   }
   if (gone.length) h += `<p class="small warn">No longer in our catalog, so left out: ${esc(gone.join(", "))}.</p>`;
+  // v1.8.9: the market brief, when the rep ticked it (Send capsule), and only while it is current
+  const brief = P.get("mb") === "1" ? window.CB_MAIL.brief((window.TREND_SIGNALS || {})[L], L, new Date().toISOString().slice(0, 10), lines.map((x) => x.it), engine) : null;
+  if (brief) h += `<section class="brief" id="brief"><div class="eb">Market brief · In the Know · ${esc(brief.editionText)}</div><h2>${esc(brief.title)}</h2><p class="lede">${esc(brief.lede)}</p>
+    <div class="cols"><div><h3>What the market is doing</h3>${ul(brief.points)}</div><div><h3>Display ideas a store can copy</h3>${ul(brief.display)}${brief.timing.length ? `<h3>Timing</h3>${ul(brief.timing)}` : ""}</div></div>
+    ${brief.signals.length ? `<h3>Trend notes</h3><ul>${brief.signals.map((x) => `<li>${esc(x.text)}${x.hit ? ` <b class="hit">· in this capsule</b>` : ""}</li>`).join("")}</ul>` : ""}
+    ${brief.about ? `<p class="small about"><b>About this research.</b> ${esc(brief.about.who)}${brief.about.stats ? ` ${esc(brief.about.stats)}.` : ""} ${esc(brief.about.cadence || "")}</p>` : ""}
+    <p class="small">Market brief from In the Know, ${esc(brief.editionText)}. No brand names.</p></section>`;
   h += `<section class="whybox" id="why"><h2>Why these pieces</h2>
     <h3>The family</h3>${ul(why.family)}
     ${why.colorways.length ? `<h3>Colorways</h3><p class="small">A colorway is the same design in a different color. Showing a style in two or three colorways lets each customer find her color without a new design; switching a colorway changes the color, not the fit or the price.</p>${ul(why.colorways)}` : ""}
@@ -122,5 +121,5 @@
   h += `<footer>${esc(cfg.lineSheet.contactLine)}${rep ? ` · Your rep code: ${esc(rep)}` : ""}${cap ? ` · Capsule ${esc(cap)}` : ""}</footer>`;
   $("app").innerHTML = h;
   $("printBtn").onclick = () => window.print();
-  window.__view = { lines: priced, orderLink: ol, why, terms, total: tot };
+  window.__view = { lines: priced, orderLink: ol, why, terms, total: tot, brief };
 })();

@@ -36,17 +36,17 @@
           why: "The capsule page and the order link carry exactly what is on this board, so fix it here first.",
           done: null },
         { pane: "capsule", target: "#sendBtn", title: "Open Send capsule…",
-          do: "Click Send capsule…. It opens a message with two links filled in: her capsule page and the pre-filled order page.",
+          do: "Click Send capsule…. It shows the email she will get: your note, her pieces with photos and why each was chosen, and an Order this capsule button that opens the pre-filled order page.",
           say: "“I'll send you a page with your pieces and an order button.”",
           why: "The capsule page shows photos by category, a reason under every piece, the terms, a Print / save as PDF button and an Order this capsule button. The capsule travels inside the link, so nothing is stored anywhere.",
           done: () => dlgOpen() },
         { pane: "capsule", dlg: true, target: "#sdOpen", title: "Preview what she will see",
-          do: "Click Preview page ↗. Check the pieces and their reasons, and that the Order this capsule button opens the pre-filled order page. Wholesale prices show only if you tick “Show wholesale prices on the capsule page”.",
+          do: "Read the Email preview, then click Preview page ↗ to open the capsule page the See it online button leads to. Check the pieces and their reasons, and that Order this capsule opens the pre-filled order page. Wholesale prices show only if you tick “Show wholesale prices”; the market brief only if you tick it.",
           say: "(To yourself) Open every link before it goes out.",
           why: "It is the same page she opens. A wrong piece is easier to fix now than after she has seen it.",
           done: () => T.previewed },
-        { pane: "capsule", dlg: true, target: "#sdMail", title: "Get it to her",
-          do: "Type her email if you have it, then click Open in my email: your own mail app opens with the message filled in. Read it and press Send there. Or click Copy capsule link and paste it into an email you've already written. On a phone, Share… works too.",
+        { pane: "capsule", dlg: true, target: "#sdCopyEmail", title: "Get it to her",
+          do: "Click Copy email, open a new message in whatever email program you use (Gmail, Outlook, Apple Mail), paste, add the subject (Copy subject) and send it from there. The photos and the order button come with it. Or click Copy capsule link and paste it into an email you've already written. On a phone, Share… works too.",
           say: "“It's on its way. The order button on the page already has these styles in it.”",
           why: "Nothing is sent from the builder. Your rep code and the capsule ID ride on both links.",
           done: () => T.sent },
@@ -154,9 +154,9 @@
     if (!T.on || !e.target.closest) return;
     const c = (sel) => e.target.closest(sel);
     if (c("#sdOpen")) T.previewed = true;
-    if (c("#sdMail, #sdCopyLink, #sdCopy, #sdShare")) {
+    if (c("#sdCopyEmail, #sdCopyLink, #sdCopy, #sdShare")) {
       T.sent = true;
-      if (T.track === "send" && state.rep && c("#sdMail")) { const tr = Object.assign({}, A.store.get(TRAIN_KEY, {})); tr.sent = true; A.store.set(TRAIN_KEY, tr); }   // the Training certification: a real send with a rep code
+      if (T.track === "send" && state.rep && c("#sdCopyEmail")) { const tr = Object.assign({}, A.store.get(TRAIN_KEY, {})); tr.sent = true; A.store.set(TRAIN_KEY, tr); }   // the Training certification: a real send with a rep code
     }
     if (c("#simFollowPdf")) T.pdf = true;
     if (c("#paneStore, .mtabs, #sendDlg, #board, #sendBtn, #buildBtn, #saveBtn")) redraw();
