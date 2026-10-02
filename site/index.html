@@ -804,7 +804,7 @@
 <div id="guided"></div>
 <div id="sheetWrap"></div>
 
-<script src="config.js?h=e8368d99"></script>
+<script src="config.js?h=f709b83e"></script>
 <script src="data_rf.js?h=189147ab"></script>
 <script src="data_oiyk.js?h=e00012b9"></script>
 <script src="faire_rf.js?h=977f58fa"></script>
@@ -821,10 +821,10 @@
 <script src="instore.js?h=95b923b2"></script>
 <script src="guided.js?h=181bf978"></script>
 <script src="storetour.js?h=246430e5"></script>
-<script src="similar.js?h=a9ce80c8"></script>
+<script src="similar.js?h=e5f1ca40"></script>
 <script src="sendtour.js?h=5eb4c853"></script>
 <script>/* v1.8.0: open the newest release, not a saved copy (GitHub Pages keeps pages up to 10 minutes) */
-(function(){var V="1.8.7",t0=Date.now();
+(function(){var V="1.8.8",t0=Date.now();
 function newest(cb){try{fetch("version.json?cb="+Date.now(),{cache:"no-store"}).then(function(r){return r.json()}).then(function(j){if(j&&j.version&&j.version!==V)cb(j.version)}).catch(function(){})}catch(e){}}
 function reload(v){try{if(sessionStorage.getItem("cb_fresh")===v)return false;sessionStorage.setItem("cb_fresh",v)}catch(e){}var u=new URL(location.href);u.searchParams.set("v",v);location.replace(u.toString());return true}
 function bar(v){if(document.getElementById("cbFresh"))return;var d=document.createElement("div");d.id="cbFresh";d.style.cssText="position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:99999;background:#1f1d24;color:#fff;padding:9px 14px;border-radius:10px;font:600 14px system-ui,sans-serif;box-shadow:0 4px 18px #0004";d.innerHTML="Version "+v+" is ready. <button style='margin-left:8px;border:0;border-radius:7px;padding:5px 10px;font-weight:700;cursor:pointer'>Reload</button>";d.querySelector("button").onclick=function(){try{sessionStorage.removeItem("cb_fresh")}catch(e){}reload(v)};document.body.appendChild(d)}

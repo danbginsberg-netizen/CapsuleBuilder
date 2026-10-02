@@ -481,7 +481,7 @@
       out.push("In stock at our U.S. warehouse.");
     } else {
       out.push(re ? `Reorders: a dozen per style.` : `${money(t.orderMinimum || 0, 0)} minimum on a first order. A dozen per style.`);
-      out.push(re ? "Reorders ship from our U.S. warehouse in about 10 business days." : "Made to order: 45- to 60-day lead times on most styles, depending on the season.");
+      out.push(re ? "Reorders of in-stock styles ship from our U.S. warehouse in about 10 business days; other styles are made to order with 45- to 60-day lead times." : "Made to order: 45- to 60-day lead times on most styles, depending on the season.");
     }
     return out.join(" ");
   }

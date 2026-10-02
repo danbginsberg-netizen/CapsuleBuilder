@@ -264,7 +264,7 @@ window.CAPSULE_CONFIG = {
         // The page's dated "Shipping end of September 2026" line is left out so sheets don't go stale.
         // OIYK is made to order; reorders ship from U.S. warehouse stock (Dan, 25 Sep 2026).
         paymentTerms: "Net 30 from date of shipping. Early pay: 3% in 10 days, 2% in 15, 1% in 20. Credit card, ACH, check or wire transfer (credit cards add 3%; wires add $20).",
-        shipping: "Made to order: 45- to 60-day lead times on most styles, depending on the season. Reorders ship from our U.S. warehouse in about 10 business days. Ships via UPS / FedEx, prepaid & add or on your carrier account. First orders prepay shipping or use your carrier account.",
+        shipping: "Made to order: 45- to 60-day lead times on most styles, depending on the season. Reorders of in-stock styles ship from our U.S. warehouse in about 10 business days; styles not in stock are made to order on the same 45- to 60-day lead time. Ships via UPS / FedEx, prepaid & add or on your carrier account. First orders prepay shipping or use your carrier account.",
         returns: "RA required within 14 days. Damage claims: notify us within 7 days of receipt.",
         retailNote: "",
         unitsNote: "A dozen per style. First orders: 3 on baroque pearl and scarf-wrapped necklaces, 6 on baroque pearl drop earrings. Reorders: a dozen per style.",
