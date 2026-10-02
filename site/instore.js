@@ -1,5 +1,5 @@
 /* Capsule Builder v1.7.0 "In the store" (v1.7.5: In the Know social side in "About this research"): tabs, Market brief (In the Know), store size, extra line-sheet pages
-   (market brief, shown with her store, buyer packet), Boards and the rep kit. Builds on window.__cb (app/ui.js). */
+   (market brief, shown with the store, buyer packet), Boards and the rep kit. Builds on window.__cb (app/ui.js). */
 (function () {
   "use strict";
   const A = window.__cb;
@@ -139,7 +139,7 @@
   function storeNote(msg) { $("storeNote").innerHTML = msg || ""; }
   function drawStoreSize() {
     const S = A.cfg().storeSizes || { sizes: [] };
-    $("storeSize").innerHTML = `<option value="">Not set</option>` + S.sizes.map((z) => `<option value="${z.id}" ${state.storeSize === z.id ? "selected" : ""}>${esc(z.label)}: ${esc(z.sales)}</option>`).join("") + `<option value="custom" ${String(state.storeSize).startsWith("$") ? "selected" : ""}>I know her monthly jewelry sales…</option>`;
+    $("storeSize").innerHTML = `<option value="">Not set</option>` + S.sizes.map((z) => `<option value="${z.id}" ${state.storeSize === z.id ? "selected" : ""}>${esc(z.label)}: ${esc(z.sales)}</option>`).join("") + `<option value="custom" ${String(state.storeSize).startsWith("$") ? "selected" : ""}>I know the store's monthly jewelry sales…</option>`;
     $("storeSales").classList.toggle("hide", !String(state.storeSize).startsWith("$") && $("storeSize").value !== "custom");
     if (String(state.storeSize).startsWith("$")) $("storeSales").value = state.storeSize.slice(1);
   }
@@ -166,7 +166,7 @@
     // market brief (buyer-safe; only while fresh)
     const f = briefFile();
     if (S.brief && f && briefLive(f)) fitBrief(P.add(P.newPage(P.miniHead("Market brief") + briefPageHTML(f, matchedIds()))));
-    // shown with her store (context only)
+    // shown with the store (context only)
     const cx = state.context.items;
     if (S.ctxPage && cx.length) {
       const ours = P.items.slice(0, 16);

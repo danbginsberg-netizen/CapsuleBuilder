@@ -1,9 +1,9 @@
-/* Capsule Builder v1.7.4 — Find similar (v1.7.6: pick many styles and colorways into a capsule; every result shows which source it matched) · What she bought · Follow-up sheet (in the Her store tab).
+/* Capsule Builder v1.7.4 — Find similar (v1.7.6: pick many styles and colorways into a capsule; every result shows which source it matched) · What the buyer bought · Follow-up sheet (in the Store tab).
    A buyer sends a photo or describes a look ("small faceted stone strands, in different stones"). The rep finds what we
-   have that looks like it (same stones, same kind of strand, same size and colors), next to what she already bought, and
-   sends her a one-page follow-up: "here's what you bought, and here's what we have in the stones you asked about."
+   have that looks like it (same stones, same kind of strand, same size and colors), next to what the buyer already bought, and
+   sends the buyer a one-page follow-up: "here's what you bought, and here's what we have in the stones you asked about."
    Lines never mix: results are shown per line and each line's follow-up is its own sheet. Nothing is looked up online;
-   her photo stays on this device. No prices unless the rep turns them on. */
+   the buyer's photo stays on this device. No prices unless the rep turns them on. */
 (function () {
   "use strict";
   const A = window.__cb, CE = window.CapsuleEngine;
@@ -18,7 +18,7 @@
     ask: "", note: "", showPhoto: true, prices: false, link: true, missing: true, reorder: null, email: "", n: 12, ref: "",
     // v1.7.6: the sources that shape the results, each one you can see and switch off
     refs: [], usePhoto: true, useOrder: true, photoOff: [], built: null,
-    // v1.7.7: her reorder: the colorways on her order go into the capsule and the order link with the new picks (on by default)
+    // v1.7.7: the buyer's reorder: the colorways on the buyer's order go into the capsule and the order link with the new picks (on by default)
     reo: { RF: [], OIYK: [] }, reoTouched: { RF: false, OIYK: false } };
   let S = Object.assign(JSON.parse(JSON.stringify(DEF)), A.store.get(KEY, {}));
   S.sel = Object.assign({ RF: [], OIYK: [] }, S.sel); S.touched = Object.assign({ RF: false, OIYK: false }, S.touched);
@@ -44,7 +44,7 @@
   const other = () => (A.line() === "RF" ? "OIYK" : "RF");
 
   /* ---------------- the look ---------------- */
-  // v1.7.6: the look = her words (or the chips you set) + her photo's colors, kept apart so every result can say which one it matched
+  // v1.7.6: the look = the buyer's words (or the chips you set) + the buyer's photo's colors, kept apart so every result can say which one it matched
   const baseLook = () => JSON.parse(JSON.stringify(S.q || CE.parseLook(S.words)));
   function photoColors(all) {
     const out = [];
@@ -86,12 +86,12 @@
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
   const hasLook = (Q) => CE.hasLook(Q);
-  // what the results are built from, per line: the look, style references (any line), and her order (this line only)
+  // what the results are built from, per line: the look, style references (any line), and the buyer's order (this line only)
   const refItems = () => S.refs.map(findAny).filter(Boolean);
   const boughtItems = (L, B) => (S.useOrder ? B.per[L].rows.filter((r) => r.kind !== "off").map((r) => r.items[0]) : []);
   const anySource = (L, B) => hasLook(query()) || refItems().length || boughtItems(L, B).length;
 
-  /* ---------------- what she bought ---------------- */
+  /* ---------------- what the buyer bought ---------------- */
   function bought() {
     const P = CE.parseOrder(S.orderText);
     const out = { P, per: {} };
@@ -102,8 +102,8 @@
     return out;
   }
 
-  /* ---------------- v1.7.7: her reorder ---------------- */
-  // what she bought that we can ship again: in stock (at this line's stock rule) and on the order page
+  /* ---------------- v1.7.7: the buyer's reorder ---------------- */
+  // what the buyer bought that we can ship again: in stock (at this line's stock rule) and on the order page
   const canReorder = (L, it) => eng(L).inStock(it, minQtyOf(L)) && eng(L).orderable(it);
   function reorderInfo(L, Bx) {
     const ok = [], out = [];
@@ -112,7 +112,7 @@
   }
   const resetReo = () => { S.reoTouched = { RF: false, OIYK: false }; };
   const reoSet = (L) => new Set(S.reo[L]);
-  // everything that goes into the capsule and the order link: her reorder first, then the new picks
+  // everything that goes into the capsule and the order link: the buyer's reorder first, then the new picks
   const allPicks = (L) => S.reo[L].concat(S.sel[L].filter((k) => !S.reo[L].includes(k)));
   function toggleReo(L, sku) { const a = S.reo[L], i = a.indexOf(sku); if (i >= 0) a.splice(i, 1); else a.push(sku); S.reoTouched[L] = true; save(); draw(); }
 
@@ -145,14 +145,14 @@
   }
   async function addPhoto(file) {
     if (!/^image\//.test(file.type)) return;
-    if (S.photos.length >= 4) { A.toast("Up to 4 of her photos. Remove one to add another."); return; }
+    if (S.photos.length >= 4) { A.toast("Up to 4 of the buyer's photos. Remove one to add another."); return; }
     const url = URL.createObjectURL(file);
     try {
       const im = await loadImg(url);
       const p = window.CB_CONTEXT ? window.CB_CONTEXT.paletteOf(im, "jewelry") : { families: [], swatches: [] };
       S.photos.push({ thumb: thumbOf(im, 360), colors: p.families, swatches: p.swatches });
       S.usePhoto = true; resetSel(); save(); draw();
-      A.flash("simNote", `Read ${p.families.filter((c) => c !== "gold" && c !== "silver").map(cword).join(", ") || "no clear colors"} in her photo. Those colors now shape the results (marked “photo”). Tap a color to turn it off, and name the stones in her words if you know them.`);
+      A.flash("simNote", `Read ${p.families.filter((c) => c !== "gold" && c !== "silver").map(cword).join(", ") || "no clear colors"} in the buyer's photo. Those colors now shape the results (marked “photo”). Tap a color to turn it off, and name the stones in the buyer's words if you know them.`);
     } catch (e) { A.toast("That picture couldn't be read."); } finally { URL.revokeObjectURL(url); }
   }
 
@@ -171,11 +171,11 @@
   function askHTML(Q) {
     const SW = (window.CB_CONTEXT || {}).SW || {};
     const subs = Q.cat ? SUBS[Q.cat] : SUBS.necklace.concat(SUBS.bracelet.slice(0, 1), SUBS.earring.slice(0, 2));
-    return `<h3><span class="n">1</span> What she's asking for</h3>
-      <div class="drop sim-drop" id="simDrop"><b>Her photo</b><span>Drop it here, paste a screenshot (Ctrl+V / ⌘V), or</span>
+    return `<h3><span class="n">1</span> What the buyer is asking for</h3>
+      <div class="drop sim-drop" id="simDrop"><b>The buyer's photo</b><span>Drop it here, paste a screenshot (Ctrl+V / ⌘V), or</span>
         <div class="row"><button class="btn primary" id="simPick">Choose photo…</button></div><input type="file" id="simFile" accept="image/*" multiple hidden>
         ${S.photos.length ? `<div class="sim-ph">${S.photos.map((p, i) => `<div><img src="${esc(p.thumb)}" alt=""><div class="cx-sw">${(p.swatches || []).map((c) => `<i style="background:${c}"></i>`).join("")}</div><button class="x" data-rmph="${i}" title="Remove">✕</button></div>`).join("")}</div>` : ""}</div>
-      <label class="lbl" for="simWords">Describe it in her words</label>
+      <label class="lbl" for="simWords">Describe it in the buyer's words</label>
       <textarea id="simWords" rows="2" placeholder="e.g. small faceted stone strands in tourmaline, hematite and tiger's eye, gold spacers">${esc(S.words)}</textarea>
       <div class="row sim-ref"><input type="text" id="simRef" list="simRefList" placeholder="…or start from one of our styles (SKU)" value="${esc(S.ref)}"><datalist id="simRefList">${A.catalog().items.slice(0, 600).map((it) => `<option value="${esc(it.sku)}">${esc(it.name)}</option>`).join("")}</datalist><button class="btn" id="simRefGo" title="Adds this style as a reference; your photo and words still count">+ Add as a style reference</button></div>
       <div class="note" id="simNote"></div>
@@ -188,10 +188,10 @@
         <div><small>Size</small><div class="chips">${[["", "Any"], ["delicate", "Delicate"], ["medium", "Medium"], ["statement", "Statement"]].map(([k, t]) => chip((Q.scale || "") === k, `data-scale="${k}"`, t)).join("")}</div></div>
         <div><small>Details</small><div class="chips">${WORDS.map(([k, t]) => chip((Q.words || []).includes(k), `data-word="${esc(k)}"`, t)).join("")}${chip(Q.multi, `data-multi="1"`, "Mixed stones / multicolor")}</div></div>
         <div><small>Metal</small><div class="chips">${[["", "Any"], ["gold", "Gold"], ["silver", "Silver"]].map(([k, t]) => chip((Q.metal || "") === k, `data-metal="${k}"`, t)).join("")}</div></div>
-        <div><small>Colors</small><div class="cx-cols sim-cols">${Object.keys(SW).filter((f) => f !== "gold" && f !== "silver").map((f) => { const ph = (Q.photoColors || []).includes(f); return `<button data-col="${esc(f)}" class="${(Q.colors || []).includes(f) ? "on" : ""} ${ph ? "on ph" : ""}" style="--c:${SW[f]}" title="${esc(cword(f))}${ph ? " (from her photo: tap to turn off)" : ""}"></button>`; }).join("")}</div>
-          <div class="note">${[(Q.colors || []).length ? esc((Q.colors || []).map(cword).join(" · ")) : "", (Q.photoColors || []).length ? `<span class="src-ph">from her photo: ${esc(Q.photoColors.map(cword).join(" · "))}</span>` : ""].filter(Boolean).join(" · ") || ((Q.stones || []).length ? "From the stones she named." : "No colors yet.")}</div></div>
+        <div><small>Colors</small><div class="cx-cols sim-cols">${Object.keys(SW).filter((f) => f !== "gold" && f !== "silver").map((f) => { const ph = (Q.photoColors || []).includes(f); return `<button data-col="${esc(f)}" class="${(Q.colors || []).includes(f) ? "on" : ""} ${ph ? "on ph" : ""}" style="--c:${SW[f]}" title="${esc(cword(f))}${ph ? " (from the buyer's photo: tap to turn off)" : ""}"></button>`; }).join("")}</div>
+          <div class="note">${[(Q.colors || []).length ? esc((Q.colors || []).map(cword).join(" · ")) : "", (Q.photoColors || []).length ? `<span class="src-ph">from the buyer's photo: ${esc(Q.photoColors.map(cword).join(" · "))}</span>` : ""].filter(Boolean).join(" · ") || ((Q.stones || []).length ? "From the stones the buyer named." : "No colors yet.")}</div></div>
       </div>
-      <p class="note">${S.q ? "Adjusted by hand. Editing the description reads it again." : "Read from her words. Her photo adds its colors (dotted ring). Tap to adjust."}</p>`;
+      <p class="note">${S.q ? "Adjusted by hand. Editing the description reads it again." : "Read from the buyer's words. The buyer's photo adds its colors (dotted ring). Tap to adjust."}</p>`;
   }
   function boughtHTML(B) {
     const L = A.line(), P = B.P;
@@ -201,35 +201,35 @@
         const e = r.entry, q = e.qty != null ? ` × ${e.qty}` : "";
         if (r.kind === "off") return `<div class="sb off"><div class="im">?</div><div><b>${esc(e.style)}</b>${q}<small>${esc(e.raw.slice(0, 60))}</small><small class="warn">Not in the builder catalog (a sample or an older style)</small></div></div>`;
         const it = r.items[0], here = L2 === L, rs = reoSet(L2);
-        // v1.7.7: tick what she's reordering; for an unclear colorway, tick the one(s) she means
+        // v1.7.7: tick what the buyer is reordering; for an unclear colorway, tick the one(s) the buyer means
         const opts = (r.kind === "colorway" ? r.items : r.items).map((c) => { const ok = canReorder(L2, c); return `<button class="rk ${rs.has(c.sku) ? "on" : ""}" data-reo="${esc(c.sku)}" ${here && ok ? "" : "disabled"} title="${esc(c.sku)}${ok ? "" : " · not enough stock to reorder"}"><i class="bx"></i>${esc(c.cname || A.label(c.dom))}${ok ? "" : " · out"}</button>`; }).join("");
         return `<div class="sb"><img src="${esc(it.img)}" alt=""><div><b>${esc(r.kind === "colorway" ? r.items.map((i) => i.sku).join(", ") : e.style)}</b>${q}<small>${esc(it.name)}${r.kind === "colorway" ? " · " + esc(r.items.map((i) => i.cname || A.label(i.dom)).join(", ")) : ""}</small>
-          ${r.kind === "style" ? `<small class="warn">Colorway not clear from the order (${esc(e.suffixes.join(" ") || "no code")}); tick the one she's reordering.</small>` : ""}
+          ${r.kind === "style" ? `<small class="warn">Colorway not clear from the order (${esc(e.suffixes.join(" ") || "no code")}); tick the one the buyer is reordering.</small>` : ""}
           <div class="sb-reo"><span>Reorder:</span>${opts}</div>${here ? "" : `<small class="note">Switch to ${esc(NAME[L2])} to put this in its capsule.</small>`}
           <button class="lnk" data-more="${esc(it.sku)}">More like this</button></div></div>`;
       }).join("")}</div>`;
     };
     const n = B.P.entries.length;
-    return `<h3><span class="n">2</span> What she bought</h3>
-      <textarea id="simOrder" rows="4" placeholder="Paste her order: select the items on the Shopify order page (or the order email / invoice) and paste. Style numbers are enough, e.g.&#10;FN2933GDAMZ × 3&#10;FN1358GDPP × 2">${esc(S.orderText)}</textarea>
+    return `<h3><span class="n">2</span> What the buyer bought</h3>
+      <textarea id="simOrder" rows="4" placeholder="Paste the buyer's order: select the items on the Shopify order page (or the order email / invoice) and paste. Style numbers are enough, e.g.&#10;FN2933GDAMZ × 3&#10;FN1358GDPP × 2">${esc(S.orderText)}</textarea>
       <div class="row"><button class="btn" id="simOrderGo">Read the order</button><button class="btn" id="simOrderCsv" title="Shopify admin: Orders > Export (CSV)">Import order CSV…</button><input type="file" id="simOrderFile" accept=".csv,text/csv" hidden>${S.orderText ? `<button class="btn" id="simOrderClr">Clear</button>` : ""}</div>
       <div class="row sim-ref"><input type="text" id="simOrderRef" placeholder="Order # (optional)" value="${esc(S.orderRef || P.order)}"><input type="text" id="simOrderDate" placeholder="Date (optional)" value="${esc(S.orderDate || P.date)}"></div>
-      ${n ? `<div class="note">${n} line${n === 1 ? "" : "s"} read. Nothing is looked up online. <b>Ticked colorways go into the capsule and the order link as her reorder.</b></div>${line(L)}${line(other())}` : `<p class="note">Optional. With her order in, what she bought goes into the capsule as her reorder (ticked below), the suggestions lean toward it, and the sheet opens with “here's what you bought.”</p>`}`;
+      ${n ? `<div class="note">${n} line${n === 1 ? "" : "s"} read. Nothing is looked up online. <b>Ticked colorways go into the capsule and the order link as the buyer's reorder.</b></div>${line(L)}${line(other())}` : `<p class="note">Optional. With the buyer's order in, what the buyer bought goes into the capsule as the buyer's reorder (ticked below), the suggestions lean toward it, and the sheet opens with “here's what you bought.”</p>`}`;
   }
-  // v1.7.6: each reason says where it came from: her photo, her words / your chips, a style you pointed to, or her order
+  // v1.7.6: each reason says where it came from: the buyer's photo, the buyer's words / your chips, a style you pointed to, or the buyer's order
   const SRC = { photo: "photo", look: "look", style: "style", order: "order" };
   const pct = (v) => (v == null ? "" : Math.round(v * 100) + "%");
   function cardHTML(L, g, selectable) {
     const b = g.best, it = b.item;
     const sel = new Set(S.sel[L]);
     const cws = g.colorways.slice(0, 10), fresh = cws.filter((c) => !c.owned), nOn = fresh.filter((c) => sel.has(c.item.sku)).length;
-    const brk = [b.src.look != null ? `look ${pct(b.src.look)}` : "", b.src.style != null ? `style reference ${pct(b.src.style)}` : "", b.src.order != null ? `her order ${pct(b.src.order)}` : ""].filter(Boolean).join(" · ");
+    const brk = [b.src.look != null ? `look ${pct(b.src.look)}` : "", b.src.style != null ? `style reference ${pct(b.src.style)}` : "", b.src.order != null ? `the buyer's order ${pct(b.src.order)}` : ""].filter(Boolean).join(" · ");
     return `<div class="sm ${nOn ? "on" : ""}" data-style="${esc(g.style)}">
-      <div class="sm-im"><img src="${esc(it.img)}" alt="" loading="lazy">${g.boughtStyle ? `<span class="sm-tag">Her style · new stone</span>` : ""}<span class="sm-pc" title="Match: ${esc(brk)}">${Math.round(b.s * 100)}%</span></div>
+      <div class="sm-im"><img src="${esc(it.img)}" alt="" loading="lazy">${g.boughtStyle ? `<span class="sm-tag">The buyer's style · new stone</span>` : ""}<span class="sm-pc" title="Match: ${esc(brk)}">${Math.round(b.s * 100)}%</span></div>
       <div class="sm-b"><b>${esc(it.name)}</b><small>${esc(it.sku)} · ${esc(it.cname || A.label(it.dom))}</small>
-        <div class="sm-why">${(b.tags || []).slice(0, 7).map((w) => `<span class="s-${SRC[w.src] || "look"}" title="${esc({ photo: "From her photo", look: "From her words / your chips", style: "From a style you pointed to", order: "From what she bought" }[w.src] || "")}">${esc(w.t)}</span>`).join("")}</div>
-        <div class="sm-cw">${cws.map((c) => `<button class="cw ${(c.owned ? reoSet(L).has(c.item.sku) : sel.has(c.item.sku)) ? "on" : ""} ${c.owned ? "own" : ""}" ${c.owned ? `data-reo="${esc(c.item.sku)}"` : `data-sku="${esc(c.item.sku)}"`} ${!selectable ? "disabled" : ""} title="${esc(c.item.sku)} · ${esc(c.item.cname || "")}${c.owned ? " · she bought this: tick to reorder" : ""}${c.item.mto ? " · made to order" : ` · ${c.item.qty} in stock`}"><i class="bx"></i><img src="${esc(c.item.img)}" alt="" loading="lazy"><span>${esc(c.item.cname || A.label(c.item.dom))}${c.owned ? " · her reorder" : ""}</span></button>`).join("")}</div>
-        ${selectable ? `<div class="row">${fresh.length > 1 ? `<button class="btn" data-all="${esc(g.style)}">${nOn === fresh.length ? "Unpick all colorways" : `Pick all ${fresh.length} colorways`}</button>` : ""}<button class="btn" data-more="${esc(it.sku)}" title="Adds it as a style reference; your photo, words and her order still count">More like this</button></div>` : ""}</div></div>`;
+        <div class="sm-why">${(b.tags || []).slice(0, 7).map((w) => `<span class="s-${SRC[w.src] || "look"}" title="${esc({ photo: "From the buyer's photo", look: "From the buyer's words / your chips", style: "From a style you pointed to", order: "From what the buyer bought" }[w.src] || "")}">${esc(w.t)}</span>`).join("")}</div>
+        <div class="sm-cw">${cws.map((c) => `<button class="cw ${(c.owned ? reoSet(L).has(c.item.sku) : sel.has(c.item.sku)) ? "on" : ""} ${c.owned ? "own" : ""}" ${c.owned ? `data-reo="${esc(c.item.sku)}"` : `data-sku="${esc(c.item.sku)}"`} ${!selectable ? "disabled" : ""} title="${esc(c.item.sku)} · ${esc(c.item.cname || "")}${c.owned ? " · the buyer bought this: tick to reorder" : ""}${c.item.mto ? " · made to order" : ` · ${c.item.qty} in stock`}"><i class="bx"></i><img src="${esc(c.item.img)}" alt="" loading="lazy"><span>${esc(c.item.cname || A.label(c.item.dom))}${c.owned ? " · the buyer's reorder" : ""}</span></button>`).join("")}</div>
+        ${selectable ? `<div class="row">${fresh.length > 1 ? `<button class="btn" data-all="${esc(g.style)}">${nOn === fresh.length ? "Unpick all colorways" : `Pick all ${fresh.length} colorways`}</button>` : ""}<button class="btn" data-more="${esc(it.sku)}" title="Adds it as a style reference; your photo, words and the buyer's order still count">More like this</button></div>` : ""}</div></div>`;
   }
   // the sources panel: what is shaping the results, each with an on/off switch
   function sourcesHTML(L, B) {
@@ -237,10 +237,10 @@
     const lookOn = hasLook(Object.assign({}, base, { photoColors: [] }));
     const phAll = photoColors(true), phOn = photoColors();
     return `<div class="sim-src"><div class="sim-src-h"><b>What's shaping these results</b><span class="note">Every card's reasons are colored by the source they came from. Switch a source off to see what the others find.</span></div>
-      <div class="src-row s-photo"><span class="dot"></span><b>Her photo</b>${S.photos.length ? `<label class="tog"><input type="checkbox" id="srcPhoto" ${S.usePhoto ? "checked" : ""}> use it</label><span>colors read: ${phAll.map((c) => `<em class="${phOn.includes(c) ? "" : "off"}">${esc(cword(c))}</em>`).join(" ") || "none clear"}${photoMetal() ? ` · ${esc(photoMetal())} metal` : ""}. A photo gives colors only; name the stones and the kind of piece in her words.</span>` : `<span class="note">No photo yet (step 1).</span>`}</div>
-      <div class="src-row s-look"><span class="dot"></span><b>Her words / your chips</b>${lookOn ? `<span>“${esc(describe(base))}”</span>` : `<span class="note">Nothing yet (step 1).</span>`}</div>
+      <div class="src-row s-photo"><span class="dot"></span><b>The buyer's photo</b>${S.photos.length ? `<label class="tog"><input type="checkbox" id="srcPhoto" ${S.usePhoto ? "checked" : ""}> use it</label><span>colors read: ${phAll.map((c) => `<em class="${phOn.includes(c) ? "" : "off"}">${esc(cword(c))}</em>`).join(" ") || "none clear"}${photoMetal() ? ` · ${esc(photoMetal())} metal` : ""}. A photo gives colors only; name the stones and the kind of piece in the buyer's words.</span>` : `<span class="note">No photo yet (step 1).</span>`}</div>
+      <div class="src-row s-look"><span class="dot"></span><b>The buyer's words / your chips</b>${lookOn ? `<span>“${esc(describe(base))}”</span>` : `<span class="note">Nothing yet (step 1).</span>`}</div>
       <div class="src-row s-style"><span class="dot"></span><b>Styles you pointed to</b>${S.refs.length ? S.refs.map((k) => { const it = findAny(k); return `<button class="refchip" data-unref="${esc(k)}" title="Remove">${it ? `<img src="${esc(it.img)}" alt="">` : ""}${esc(k)} ✕</button>`; }).join("") : `<span class="note">None. “More like this” on any card or order line adds one.</span>`}</div>
-      <div class="src-row s-order"><span class="dot"></span><b>What she bought</b>${bi.length ? `<label class="tog"><input type="checkbox" id="srcOrder" ${S.useOrder ? "checked" : ""}> lean toward it</label><span>${bi.length} of our ${esc(NAME[L])} style${bi.length === 1 ? "" : "s"} on her order (${esc(bi.map((r) => r.entry.style).join(", "))}): ${S.useOrder ? "pieces like them rank higher, " : ""}her styles in a new colorway move up${owned.length ? `, and ${owned.length} colorway${owned.length === 1 ? "" : "s"} she already has ${owned.length === 1 ? "is" : "are"} never suggested` : ""}.</span>` : `<span class="note">${B.P.entries.length ? `Nothing on her order is in ${esc(NAME[L])}'s catalog.` : "No order yet (step 2)."}</span>`}</div></div>`;
+      <div class="src-row s-order"><span class="dot"></span><b>What the buyer bought</b>${bi.length ? `<label class="tog"><input type="checkbox" id="srcOrder" ${S.useOrder ? "checked" : ""}> lean toward it</label><span>${bi.length} of our ${esc(NAME[L])} style${bi.length === 1 ? "" : "s"} on the buyer's order (${esc(bi.map((r) => r.entry.style).join(", "))}): ${S.useOrder ? "pieces like them rank higher, " : ""}the buyer's styles in a new colorway move up${owned.length ? `, and ${owned.length} colorway${owned.length === 1 ? "" : "s"} the buyer already has ${owned.length === 1 ? "is" : "are"} never suggested` : ""}.</span>` : `<span class="note">${B.P.entries.length ? `Nothing on the buyer's order is in ${esc(NAME[L])}'s catalog.` : "No order yet (step 2)."}</span>`}</div></div>`;
   }
   // v1.7.6: your picks, across every card and colorway, kept while you go back and forth; they build a capsule and fill the follow-up
   function trayHTML(L) {
@@ -248,10 +248,10 @@
     const nReo = all.filter((it) => rs.has(it.sku)).length, nNew = all.length - nReo, sel = all;
     const styles = new Set(sel.map((it) => (it.sku.match(/^[A-Z]+\d+/) || [it.sku])[0])).size;
     const onBoard = state.capsule && A.line() === L;
-    return `<div class="sim-tray ${sel.length ? "" : "empty"}" id="simTray"><div class="tr-l"><b>In the capsule: ${nReo ? `her reorder ${nReo} · ` : ""}new picks ${nNew}${sel.length ? ` · ${styles} style${styles === 1 ? "" : "s"}` : ""}</b>
-        <div class="tr-im">${sel.slice(0, 16).map((it) => `<img src="${esc(it.img)}" alt="" class="${rs.has(it.sku) ? "reo" : ""}" title="${esc(it.sku)} · ${esc(it.cname || "")}${rs.has(it.sku) ? " · her reorder" : ""}">`).join("")}${sel.length > 16 ? `<span>+${sel.length - 16}</span>` : ""}</div>
-        ${nNew ? "" : `<span class="note">Tap colorways on the cards to add new picks. Her reorder (ticked in step 2) is already in.</span>`}</div>
-      <div class="tr-a"><button class="btn primary" id="simBuild" ${sel.length ? "" : "disabled"} title="A capsule of her reorder plus your new picks, with its line sheet, Excel and order link">Build the capsule: reorder + picks</button>
+    return `<div class="sim-tray ${sel.length ? "" : "empty"}" id="simTray"><div class="tr-l"><b>In the capsule: ${nReo ? `the buyer's reorder ${nReo} · ` : ""}new picks ${nNew}${sel.length ? ` · ${styles} style${styles === 1 ? "" : "s"}` : ""}</b>
+        <div class="tr-im">${sel.slice(0, 16).map((it) => `<img src="${esc(it.img)}" alt="" class="${rs.has(it.sku) ? "reo" : ""}" title="${esc(it.sku)} · ${esc(it.cname || "")}${rs.has(it.sku) ? " · the buyer's reorder" : ""}">`).join("")}${sel.length > 16 ? `<span>+${sel.length - 16}</span>` : ""}</div>
+        ${nNew ? "" : `<span class="note">Tap colorways on the cards to add new picks. The buyer's reorder (ticked in step 2) is already in.</span>`}</div>
+      <div class="tr-a"><button class="btn primary" id="simBuild" ${sel.length ? "" : "disabled"} title="A capsule of the buyer's reorder plus your new picks, with its line sheet, Excel and order link">Build the capsule: reorder + picks</button>
         <button class="btn" id="simAdd" ${sel.length && onBoard ? "" : "disabled"} title="Keeps the capsule on the board and adds these">Add to the capsule on the board</button>
         <button class="btn" id="simTop">Pick the top matches for me</button>${sel.length ? `<button class="btn" id="simClearSel2">Clear picks</button>` : ""}</div></div>`;
   }
@@ -262,7 +262,7 @@
   }
   function resHTML(B) {
     const L = A.line(), O = other(), Q = query();
-    if (!anySource(L, B)) return `<h3><span class="n">3</span> What we have that looks like it</h3>${sourcesHTML(L, B)}<p class="note">Add her photo, describe the look, point to one of our styles, or paste her order. Results show here, ${esc(NAME[L])} first.</p>`;
+    if (!anySource(L, B)) return `<h3><span class="n">3</span> What we have that looks like it</h3>${sourcesHTML(L, B)}<p class="note">Add the buyer's photo, describe the look, point to one of our styles, or paste the buyer's order. Results show here, ${esc(NAME[L])} first.</p>`;
     const R = results(L, B), RO = results(O, B, 4);
     const nSel = S.sel[L].length;
     return `<h3><span class="n">3</span> What we have that looks like it</h3>
@@ -277,23 +277,23 @@
   function sendHTML(B) {
     const L = A.line(), n = S.sel[L].length + S.reo[L].length, has = B.per[L].rows.length > 0;
     const reorder = S.reorder == null ? has : S.reorder;
-    return `<h3><span class="n">4</span> Send her the follow-up</h3>
-      <p class="note">From ${esc(NAME[L])}: what she bought, her photo and request, every new pick from step 3${S.built && S.built.line === L && state.capsule ? " and the rest of the capsule you built from them" : ""}, then how to order, with a QR code and a link that fill in her reorder and every style shown. As many pages as it needs.</p>
+    return `<h3><span class="n">4</span> Send the buyer the follow-up</h3>
+      <p class="note">From ${esc(NAME[L])}: what the buyer bought, the buyer's photo and request, every new pick from step 3${S.built && S.built.line === L && state.capsule ? " and the rest of the capsule you built from them" : ""}, then how to order, with a QR code and a link that fill in the buyer's reorder and every style shown. As many pages as it needs.</p>
       <div class="sim-f">
-        <label>For<input type="text" id="simFor" value="${esc(state.buyer)}" placeholder="Her name or store"></label>
-        <label>Her email<input type="email" id="simEmail" value="${esc(S.email)}" placeholder="optional, for Email as PDF"></label>
-        <label class="w">Her request, as it reads on the sheet<input type="text" id="simAsk" value="${esc(S.ask)}" placeholder="${esc(describe(query()))}"></label>
+        <label>For<input type="text" id="simFor" value="${esc(state.buyer)}" placeholder="The buyer's name or store"></label>
+        <label>The buyer's email<input type="email" id="simEmail" value="${esc(S.email)}" placeholder="optional, for Email as PDF"></label>
+        <label class="w">The buyer's request, as it reads on the sheet<input type="text" id="simAsk" value="${esc(S.ask)}" placeholder="${esc(describe(query()))}"></label>
         <label class="w">A line from you (optional)<input type="text" id="simMsg" value="${esc(S.note)}" placeholder="e.g. Great to meet you at Coterie."></label>
       </div>
       <div class="sim-togs">
-        <label class="tog"><input type="checkbox" id="simReorder" ${reorder ? "checked" : ""}> She has ordered before (reorder quantities)</label>
-        <label class="tog"><input type="checkbox" id="simShowPh" ${S.showPhoto ? "checked" : ""} ${S.photos.length ? "" : "disabled"}> Show her photo</label>
+        <label class="tog"><input type="checkbox" id="simReorder" ${reorder ? "checked" : ""}> The buyer has ordered before (reorder quantities)</label>
+        <label class="tog"><input type="checkbox" id="simShowPh" ${S.showPhoto ? "checked" : ""} ${S.photos.length ? "" : "disabled"}> Show the buyer's photo</label>
         <label class="tog"><input type="checkbox" id="simMiss" ${S.missing ? "checked" : ""}> Say which stones we don't carry</label>
         <label class="tog"><input type="checkbox" id="simLink" ${S.link ? "checked" : ""}> Order link + QR code (these styles filled in)</label>
       </div>
       <div class="sim-fields"><b>On each style</b> <span class="note">(the same settings as the line sheet)</span>
         ${[["sku", "SKU"], ["name", "Product name"], ["wholesale", "Wholesale price"], ...(A.cfg().terms && A.cfg().terms.tiered ? [["tiers", "Price breaks (3 / 6 / 12)"]] : []), ["msrp", "MSRP"], ["units", "Minimum per style"]].map(([k, t]) => `<label class="tog"><input type="checkbox" data-fld="${k}" ${state.sheet.fields[k] ? "checked" : ""}> ${t}</label>`).join("")}
-        <label class="tog"><input type="checkbox" id="simMarkBought" ${state.sheet.markPick ? "checked" : ""}> Mark what she bought before</label>
+        <label class="tog"><input type="checkbox" id="simMarkBought" ${state.sheet.markPick ? "checked" : ""}> Mark what the buyer bought before</label>
       </div>
       <div class="row sim-acts"><button class="btn primary" id="simMail" ${n ? "" : "disabled"}>Email as PDF</button><button class="btn${window.CB_MAIL && window.CB_MAIL.touchDevice() ? "" : " hide"}" id="simShare" ${n ? "" : "disabled"} title="On a phone or tablet: WhatsApp, Messages, Mail">Share…</button><button class="btn" id="simPdf" ${n ? "" : "disabled"}>Download PDF</button><button class="btn" id="simCopy" ${n ? "" : "disabled"}>Copy as text</button><button class="btn" id="simPrev" ${n ? "" : "disabled"}>Preview</button>${n ? `<button class="btn" id="simClearSel">Clear picks</button>` : ""}</div>
       <div class="note" id="simSendNote"></div>
@@ -304,7 +304,7 @@
   function buildPicks(add) {
     const L = A.line(), skus = allPicks(L).filter((k) => A.engine().bySku.has(k));
     if (!skus.length) return;
-    const name = add ? state.capName : `Picks for ${state.buyer.trim() || "her store"}`;
+    const name = add ? state.capName : `Picks for ${state.buyer.trim() || "the store"}`;
     // v1.7.7: a buyer who has ordered before gets reorder quantities (a dozen per style) on the capsule, like the follow-up
     if (isReorder() && $("units") && $("units").value !== "reorder" && [...$("units").options].some((o) => o.value === "reorder")) { $("units").value = "reorder"; state.units = "reorder"; A.persist(); }
     S.built = { line: L, at: new Date().toISOString(), skus };   // set first: the board draws (and shows the way back) while it builds
@@ -312,14 +312,14 @@
     S.built.skus = A.orderedItems().map((o) => o.it.sku); save(); A.renderBoard();
     window.CB_PANE && window.CB_PANE("capsule");
     const nr = skus.filter((k) => reoSet(L).has(k)).length;
-    A.toast(add ? `Added: the capsule now has ${A.orderedItems().length} pieces.` : `Built the capsule: ${nr ? `her reorder (${nr}) + ` : ""}${skus.length - nr} new pick${skus.length - nr === 1 ? "" : "s"}. Your picks stay in Find similar to add more.`);
+    A.toast(add ? `Added: the capsule now has ${A.orderedItems().length} pieces.` : `Built the capsule: ${nr ? `the buyer's reorder (${nr}) + ` : ""}${skus.length - nr} new pick${skus.length - nr === 1 ? "" : "s"}. Your picks stay in Find similar to add more.`);
   }
   function draw() {
     const sp = $("simPane"); if (!sp || mode !== "similar") return;
     B = bought();
-    LINES.forEach((L) => { if (!S.reoTouched[L]) S.reo[L] = reorderInfo(L, B).ok; });   // her reorder is in by default
+    LINES.forEach((L) => { if (!S.reoTouched[L]) S.reo[L] = reorderInfo(L, B).ok; });   // the buyer's reorder is in by default
     const scroll = window.scrollY;
-    sp.innerHTML = `<div class="sp-head"><div><h1>Find similar</h1><p class="note">A buyer sends a photo or describes a look. Find what we have that looks like it, next to what she already bought, and send her one page: <b>here's what you bought, and here's what we have in the stones you asked about.</b> Her photo stays on this device. Lines never mix.</p></div><div class="sp-hd-r"><button class="btn" id="simReset">Start over</button></div></div>
+    sp.innerHTML = `<div class="sp-head"><div><h1>Find similar</h1><p class="note">A buyer sends a photo or describes a look. Find what we have that looks like it, next to what the buyer already bought, and send the buyer one page: <b>here's what you bought, and here's what we have in the stones you asked about.</b> The buyer's photo stays on this device. Lines never mix.</p></div><div class="sp-hd-r"><button class="btn" id="simReset">Start over</button></div></div>
       <div class="sim-top"><section class="panel sim-ask">${askHTML(query())}</section><section class="panel sim-bought">${boughtHTML(B)}</section></div>
       <section class="sim-res">${resHTML(B)}</section>
       ${trayHTML(A.line())}
@@ -387,7 +387,7 @@
     if ($("srcOrder")) $("srcOrder").onchange = () => { S.useOrder = $("srcOrder").checked; save(); draw(); };
     $("simBuild").onclick = () => buildPicks(false);
     $("simAdd").onclick = () => buildPicks(true);
-    $("simTop").onclick = () => { const L = A.line(), R = results(L, B); if (!R) { A.toast("Add her photo, words, a style or her order first."); return; } const d = defaultSel(R); S.sel[L] = S.sel[L].concat(d.filter((k) => !S.sel[L].includes(k))); S.touched[L] = true; save(); draw(); };
+    $("simTop").onclick = () => { const L = A.line(), R = results(L, B); if (!R) { A.toast("Add the buyer's photo, words, a style or the buyer's order first."); return; } const d = defaultSel(R); S.sel[L] = S.sel[L].concat(d.filter((k) => !S.sel[L].includes(k))); S.touched[L] = true; save(); draw(); };
     if ($("simClearSel2")) $("simClearSel2").onclick = () => { S.sel[A.line()] = []; S.touched[A.line()] = true; save(); draw(); };
     if ($("simMore")) $("simMore").onclick = () => { S.n += 12; save(); draw(); };
     if ($("simSwitch")) $("simSwitch").onclick = () => { const O = other(); document.querySelector(`.lines button[data-line="${O}"]`).click(); };
@@ -413,11 +413,11 @@
     sku = String(sku || "").trim().toUpperCase(); if (!sku) return;
     let it = null; for (const L of LINES) { it = eng(L).bySku.get(sku); if (it) break; }
     if (!it) { A.flash("simNote", `<span class="warn">${esc(sku)} isn't in either catalog.</span>`); return; }
-    // v1.7.6: a style reference adds to her photo, words and order; it no longer replaces them
+    // v1.7.6: a style reference adds to the buyer photo, words and order; it no longer replaces them
     if (!S.refs.includes(it.sku)) S.refs.push(it.sku);
     if (S.refs.length > 4) S.refs.shift();
     S.ref = ""; resetSel(); save(); draw();
-    A.flash("simNote", `Added ${esc(it.sku)} ${esc(it.name)} (${esc(it.cname || "")}) as a style reference. Her photo, words and order still count; see “What's shaping these results.”`);
+    A.flash("simNote", `Added ${esc(it.sku)} ${esc(it.name)} (${esc(it.cname || "")}) as a style reference. The buyer's photo, words and order still count; see “What's shaping these results.”`);
   }
   // a Shopify order export (Orders > Export): Name, Lineitem quantity, Lineitem name, Lineitem sku
   function importOrderCSV(text, name) {
@@ -451,7 +451,7 @@
     if (!(S.built.skus || []).some((k) => on.some((it) => it.sku === k))) return [];   // a different capsule is on the board
     return on.filter((it) => !have.has(it.sku));
   }
-  const linkItems = () => reoItems().concat(selItems(), extraItems());   // the order link fills in her reorder, the new styles and the rest of the capsule
+  const linkItems = () => reoItems().concat(selItems(), extraItems());   // the order link fills in the buyer's reorder, the new styles and the rest of the capsule
   const isReorder = () => (S.reorder == null ? (B || bought()).per[A.line()].rows.length > 0 : S.reorder);
   const firstName = () => { const n = state.buyer.trim(); return n && !/\b(inc|llc|shop|store|boutique|co)\b/i.test(n) ? n.split(/\s+/)[0] : ""; };
   function orderRef() { const P = (B || bought()).P; return [S.orderRef || P.order, S.orderDate || P.date].filter(Boolean); }
@@ -497,7 +497,7 @@
     if (per.styles.includes(style)) return "The style you bought, in a new stone";
     return "";
   }
-  // the colorway name, plus the stone she asked about when the name doesn't say it (e.g. "Multicolor · hematite")
+  // the colorway name, plus the stone the buyer asked about when the name doesn't say it (e.g. "Multicolor · hematite")
   function colorName(it) {
     const c = it.cname || A.label(it.dom);
     const st = (A.engine().similarScore(query(), it).stones || []).filter((h) => h.where === "stone" && !c.toLowerCase().includes(h.stone)).map((h) => h.stone);
@@ -518,13 +518,13 @@
     lines.push("", "Best,");
     return lines.join("\n");
   }
-  /* v1.8.1 (Dan, 28 Sep 2026): the follow-up is the template for every "what she bought + what we have like it" send.
-     Page 1 opens with what she bought and what she asked about; then every pick (in those stones), then the rest of the
+  /* v1.8.1 (Dan, 28 Sep 2026): the follow-up is the template for every "what the buyer bought + what we have like it" send.
+     Page 1 opens with what the buyer bought and what the buyer asked about; then every pick (in those stones), then the rest of the
      capsule built from them, as many pages as needed (about 15-20 styles a page), ending with How to order: a QR code and
      a link that fill in everything shown. Pages are filled by measuring, so nothing is cut off. */
   const unitsText = (it) => { const u = A.engine().unitsFor(it, isReorder() ? "reorder" : "first"); return A.HT() ? A.qtyWord(u) : `${u} pcs`; };
   // v1.8.2 (Dan): the same per-style choices as the line sheet (SKU, name, wholesale, price breaks, MSRP, minimum per style),
-  // and what she bought before is marked above its photo
+  // and what the buyer bought before is marked above its photo
   function tileHTML(it, badge, mark) {
     const f = state.sheet.fields, u = A.engine().unitsFor(it, isReorder() ? "reorder" : "first");
     return `<div class="t">${mark ? `<div class="yt"><span class="yp">${esc(mark)}</span></div>` : ""}<img src="${esc(it.img)}" alt="">`
@@ -532,7 +532,7 @@
       + `${f.wholesale && it.ws != null ? `<span class="p">Wholesale ${esc(A.wsText(it))}</span>` : ""}${f.msrp && it.msrp ? `<span class="p m">MSRP ${money(it.msrp)}</span>` : ""}`
       + `${f.units ? `<span class="q">${A.HT() ? `Qty ${esc(A.qtyWord(u))}` : `Minimum ${u} per style`}</span>` : ""}</div>`;
   }
-  // everything she bought before that is in this line's catalog (reordered or not), for the marks
+  // everything the buyer bought before that is in this line's catalog (reordered or not), for the marks
   function boughtSet() { const Bx = B || bought(); return new Set(Bx.per[A.line()].owned); }
   function pageParts() {
     const cfg = A.cfg(), L = A.line(), ref = orderRef(), per = (B || bought()).per[L], link = S.link ? followLink(linkItems()) : null, miss = missingStones(), rs = reoSet(L);
@@ -661,7 +661,7 @@
     const body = document.createElement("div"); body.id = "ctxBody";
     while (pane.firstChild) body.appendChild(pane.firstChild);
     const bar = document.createElement("div"); bar.className = "st-mode";
-    bar.innerHTML = `<div class="seg" id="storeMode"><button data-m="match">Goes with her store</button><button data-m="similar">Find similar · follow up</button></div>`;
+    bar.innerHTML = `<div class="seg" id="storeMode"><button data-m="match">Goes with the store</button><button data-m="similar">Find similar · follow up</button></div>`;
     const sp = document.createElement("div"); sp.id = "simPane"; sp.className = "hide";
     pane.append(bar, body, sp);
     bar.querySelectorAll("button").forEach((b) => (b.onclick = () => setMode(b.dataset.m)));
@@ -680,14 +680,14 @@
   A.hooks.board.push(() => {
     const bd = $("board"); if (!bd || !S.built || S.built.line !== A.line() || !state.capsule || bd.querySelector(".simstrip")) return;
     const on = new Set(A.orderedItems().map((o) => o.it.sku));
-    reoSet(A.line()).forEach((k) => { const c = bd.querySelector(`.card[data-sku="${k}"]`); if (c && !c.querySelector(".reo-tag")) { const t = document.createElement("span"); t.className = "reo-tag"; t.textContent = "Her reorder"; (c.firstElementChild || c).appendChild(t); } });
+    reoSet(A.line()).forEach((k) => { const c = bd.querySelector(`.card[data-sku="${k}"]`); if (c && !c.querySelector(".reo-tag")) { const t = document.createElement("span"); t.className = "reo-tag"; t.textContent = "The buyer's reorder"; (c.firstElementChild || c).appendChild(t); } });
     if (!(S.built.skus || []).every((k) => on.has(k))) return;   // only on the capsule built from your picks
     const d = document.createElement("div"); d.className = "simstrip";
-    d.innerHTML = `Built from Find similar: ${S.reo[A.line()].length ? `her reorder (${S.reo[A.line()].length}) + ` : ""}${S.sel[A.line()].filter((k) => !S.reo[A.line()].includes(k)).length} new picks. <a class="link" id="simBack">← Back to Find similar</a> to pick more colorways or styles, then build again or add them to this capsule. (“Show another version” and “Back to best match” rebuild from scratch; your picks stay in Find similar.)`;
+    d.innerHTML = `Built from Find similar: ${S.reo[A.line()].length ? `the buyer's reorder (${S.reo[A.line()].length}) + ` : ""}${S.sel[A.line()].filter((k) => !S.reo[A.line()].includes(k)).length} new picks. <a class="link" id="simBack">← Back to Find similar</a> to pick more colorways or styles, then build again or add them to this capsule. (“Show another version” and “Back to best match” rebuild from scratch; your picks stay in Find similar.)`;
     bd.prepend(d);
     d.querySelector("#simBack").onclick = () => { window.CB_PANE && window.CB_PANE("store"); setMode("similar"); };
-    // v1.8.1: the follow-up is the send for a capsule built this way: what she bought, what she asked about, this whole capsule
-    const fb = document.createElement("button"); fb.className = "btn primary"; fb.id = "simFollowPdf"; fb.textContent = "Follow-up PDF (what she bought + this capsule)";
+    // v1.8.1: the follow-up is the send for a capsule built this way: what the buyer bought, what the buyer asked about, this whole capsule
+    const fb = document.createElement("button"); fb.className = "btn primary"; fb.id = "simFollowPdf"; fb.textContent = "Follow-up PDF (what the buyer bought + this capsule)";
     fb.onclick = async () => { const f = await makePDF(fb); if (f) { A.download(f.name, f, "application/pdf"); A.toast(`Saved ${esc(f.name)} to your downloads.`); } };
     d.appendChild(fb);
   });

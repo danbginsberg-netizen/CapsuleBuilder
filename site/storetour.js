@@ -1,5 +1,5 @@
-/* Capsule Builder v1.7.2 — "Her store" training: a guided walk-through on the real screen.
-   Opens from the Her store tab (▶ Her store training), from Guided mode, or with the link ?mode=store&line=RF.
+/* Capsule Builder v1.7.2 — "The store" training: a guided walk-through on the real screen.
+   Opens from the Store tab (▶ Store training), from Guided mode, or with the link ?mode=store&line=RF.
    Each step points at the part of the screen it's about, says what to do and what to tell the buyer,
    and ticks itself off when the rep has done it. Nothing here changes the catalog, prices or orders. */
 (function () {
@@ -10,45 +10,45 @@
   const T = { on: false, i: 0, start: null };
   const items = () => state.context.items;
   const STEPS = [
-    { pane: "store", target: ".standins", title: "Add what she wears most",
-      do: "Tap a quick add that looks like her best-selling clothing, for example the navy knit dress.",
+    { pane: "store", target: ".standins", title: "Add what the store sells most",
+      do: "Tap a quick add that looks like the store's best-selling clothing, for example the navy knit dress.",
       say: "“What's selling best on your floor right now? Let's put it next to our line.”",
-      why: "The builder matches our jewelry to what she already sells. One or two of her key pieces is enough to start.",
+      why: "The builder matches our jewelry to what the store already sells. One or two of the store's key pieces is enough to start.",
       done: () => items().length > T.start.items },
-    { pane: "store", target: "#ctxItems .cx", title: "Make it hers",
-      do: "On the card, change what it is (for example dress to jumpsuit) and tap her real colors. The name and picture follow.",
+    { pane: "store", target: "#ctxItems .cx", title: "Make it match the store",
+      do: "On the card, change what it is (for example dress to jumpsuit) and tap the store's real colors. The name and picture follow.",
       say: "“Is it more of a jumpsuit? Navy or black?”",
       why: "The type sets which necklace shapes suit it (the neckline matters most), and the colors drive the matches.",
       done: () => T.edited },
-    { pane: "store", target: "#ctxDrop", title: "Add a photo, her palette or her list",
-      do: "Snap or drop a photo of her floor or a garment, tap a store palette, or import her vendor list. Photos read their own colors; fix them with one tap.",
+    { pane: "store", target: "#ctxDrop", title: "Add a photo, the store's palette or the store's list",
+      do: "Snap or drop a photo of the store's floor or a garment, tap a store palette, or import the store's vendor list. Photos read their own colors; fix them with one tap.",
       say: "“Can I take a quick photo of this rack?”",
       why: "Photos and palettes stay on this device and never go on the order. More context gives better matches.",
       done: () => items().some((x) => ["photo", "camera", "paste", "link", "palette", "file"].includes(x.source)) },
-    { pane: "store", target: "#ctxSummary", title: "Read her store at a glance",
-      do: "Look at her palette bar, metal and look. The note under it says whether her clothing is mostly prints or solids.",
+    { pane: "store", target: "#ctxSummary", title: "Read the store at a glance",
+      do: "Look at the store's palette bar, metal and look. The note under it says whether the store's clothing is mostly prints or solids.",
       say: "“Your floor leans navy and tan, so gold and warm stones will pop.”",
       why: "Prints call for quieter jewelry; solids can carry a statement piece. The builder uses this automatically.",
       done: null },
     { pane: "store", target: "#ctxComp", title: "Build from the best match",
-      do: "Tap “Build from this” on a piece in Best from our line for her store (or keep the buyer's own pick if she has one).",
+      do: "Tap “Build from this” on a piece in Best from our line for the store (or keep the buyer's own pick if the buyer has one).",
       say: "“This one goes with your navy dress. Let's build around it.”",
-      why: "This list is ranked on her store alone: our in-stock pieces that suit it best, one colorway each.",
+      why: "This list is ranked on the store alone: our in-stock pieces that suit it best, one colorway each.",
       done: () => !!state.capsule },
-    { pane: "store", target: "#ctxStrength", title: "Set how much her store counts",
-      do: "Try Strong, then Light, and read the line under the buttons: it says how many pieces her store changed.",
-      say: "(To yourself) Light keeps the buyer's favorite leading; Strong reshapes the capsule around her floor.",
-      why: "Light: her store only breaks ties. Medium: it shares the say. Strong: it leads. The buyer's pick, stock and minimums always hold.",
+    { pane: "store", target: "#ctxStrength", title: "Set how much the store counts",
+      do: "Try Strong, then Light, and read the line under the buttons: it says how many pieces the store changed.",
+      say: "(To yourself) Light keeps the buyer's favorite leading; Strong reshapes the capsule around the store's floor.",
+      why: "Light: the store only breaks ties. Medium: it shares the say. Strong: it leads. The buyer's pick, stock and minimums always hold.",
       done: () => T.strengths.size >= 2 },
-    { pane: "capsule", target: "#board .ctxstrip", title: "Show her the capsule beside her store",
-      do: "On the Capsule tab, her store sits above the capsule, and pieces it brought in are marked “Chosen for her store.”",
+    { pane: "capsule", target: "#board .ctxstrip", title: "Show the buyer the capsule beside the store",
+      do: "On the Capsule tab, the store sits above the capsule, and pieces it brought in are marked “Chosen for the store.”",
       say: "“Here's how our pieces sit next to what you carry. Each one says what it goes with.”",
-      why: "Her items are context only: never on the order page, the QR code, the Excel or any total.",
+      why: "The store's items are context only: never on the order page, the QR code, the Excel or any total.",
       done: null },
-    { pane: "capsule", target: "#sheetBtn", title: "Send it with her store in it",
-      do: "Open Line sheet (PDF), tick “Shown with her store” under Extra pages, then Email as PDF.",
+    { pane: "capsule", target: "#sheetBtn", title: "Send it with the store in it",
+      do: "Open Line sheet (PDF), tick “Shown with the store” under Extra pages, then Email as PDF.",
       say: "“I'll send this tonight with your pieces beside ours, and the order link filled in.”",
-      why: "The page shows her pieces labeled as hers, for context. The order and prices cover only our line.",
+      why: "The page shows the store's pieces labeled as the store's own, for context. The order and prices cover only our line.",
       done: () => !!state.sheet.ctxPage },
   ];
 
@@ -61,7 +61,7 @@
     const ok = !s.done || s.done();
     let box = $("storeTour");
     if (!box) { box = document.createElement("div"); box.id = "storeTour"; document.body.appendChild(box); }
-    box.innerHTML = `<div class="stt-h"><span>Her store training · step ${T.i + 1} of ${n}</span><button class="x" id="sttX" title="Leave training">✕</button></div>
+    box.innerHTML = `<div class="stt-h"><span>Store training · step ${T.i + 1} of ${n}</span><button class="x" id="sttX" title="Leave training">✕</button></div>
       <div class="stt-bar"><i style="width:${((T.i + (ok ? 1 : 0)) / n) * 100}%"></i></div>
       <h3>${esc(s.title)}</h3>
       <p><b>Do:</b> ${esc(s.do)}</p><p><b>Say:</b> ${esc(s.say)}</p><p class="why"><b>Why:</b> ${esc(s.why)}</p>
@@ -74,7 +74,7 @@
   function finish() {
     A.store.set("capsule_storetour_done", new Date().toISOString());
     stop();
-    A.toast("Her store training complete. Use it with the next buyer: two or three of her pieces is enough.");
+    A.toast("Store training complete. Use it with the next buyer: two or three of the store's pieces is enough.");
   }
   function stop() {
     T.on = false;
@@ -84,7 +84,7 @@
   }
   function start() {
     if (window.CB_GUIDED && window.CB_GUIDED.state.on) window.CB_GUIDED.stop();
-    if (window.CB_SIMILAR) { if (window.CB_PANE) window.CB_PANE("store"); window.CB_SIMILAR.setMode("match"); }   // v1.7.4: the training is on "Goes with her store"
+    if (window.CB_SIMILAR) { if (window.CB_PANE) window.CB_PANE("store"); window.CB_SIMILAR.setMode("match"); }   // v1.7.4: the training is on "Goes with the store"
     T.on = true; T.i = 0; T.edited = false; T.strengths = new Set(); T.start = { items: items().length };
     document.body.classList.add("tour-on");
     draw();

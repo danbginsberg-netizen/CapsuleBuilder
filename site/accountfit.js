@@ -1,4 +1,4 @@
-/* Capsule Builder v1.9.0 — Account fit (Dan, 2 Oct 2026).
+/* Capsule Builder v1.9.0 — Account fit (Dan, 2 Oct 2026). v1.9.1: rep links (?rep=&grp=&acct=&open=), account groups, a demo set.
    Pick the retailer a capsule is for. Its profile (app/accounts.js, built from data/accounts.json) records how that retailer
    merchandises jewelry today: price tiers, palette, metals, motifs, materials, what it never carries, comparable brands and
    sources, with the date it was read. The builder then:
@@ -30,12 +30,51 @@
     wrap.id = "acctWrap";
     wrap.innerHTML = `<label class="f" for="acctSel">Account <span class="note">checks the fit</span></label><select id="acctSel"></select><div class="note" id="acctNote"></div>`;
     after.insertAdjacentElement("afterend", wrap);
-    const by = {};
-    ACC.accounts.forEach((a) => (by[a.group] = by[a.group] || []).push(a));
-    $("acctSel").innerHTML = `<option value="">— No account —</option>` + Object.entries(by).map(([g, list]) =>
-      `<optgroup label="${esc(groupName(g))}">${list.map((a) => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join("")}</optgroup>`).join("");
-    $("acctSel").onchange = () => choose($("acctSel").value);
+    $("acctSel").onchange = () => { const v = $("acctSel").value; if (v === "__all") { setGroups(null); fill(); draw(); return; } choose(v); };
+    fill();
+    fromLink();
     draw();
+  }
+  /* v1.9.1: which account groups this browser shows. A rep's link (?grp=sbg) shows his accounts plus the demo set;
+     "Show every account" (or ?grp=all) shows all of them. */
+  const GKEY = "capsule_acct_groups";
+  function groupsShown() { const g = A.store.get(GKEY, null); return Array.isArray(g) && g.length ? g : null; }
+  function setGroups(list) { A.store.set(GKEY, list && list.length ? list : null); }
+  function fill() {
+    const shown = groupsShown(), by = {};
+    ACC.accounts.filter((a) => !shown || shown.includes(a.group) || a.id === state.account).forEach((a) => (by[a.group] = by[a.group] || []).push(a));
+    $("acctSel").innerHTML = `<option value="">— No account —</option>` + Object.entries(by).map(([g, list]) =>
+      `<optgroup label="${esc(groupName(g))}">${list.map((a) => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join("")}</optgroup>`).join("")
+      + (shown ? `<option value="__all">Show every account…</option>` : "");
+  }
+  /* v1.9.1: a rep's own link sets him up in one tap:
+     ?rep=CODE (his rep code on every link) &grp=<group id>|all (his accounts + the demo set) &acct=<account id> (picks it)
+     &open=<n> (opens that account's ready-made capsule n, 0 = first). The account and capsule open once per browser session,
+     so a home-screen bookmark doesn't keep reopening them; rep and groups are simply kept. */
+  function fromLink() {
+    let q; try { q = new URLSearchParams(location.search); } catch (e) { return; }
+    const rep = String(q.get("rep") || "").toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 20);
+    if (rep && $("repCode")) { $("repCode").value = rep; $("repCode").dispatchEvent(new Event("input")); }
+    const grp = String(q.get("grp") || "").toLowerCase();
+    if (grp === "all") setGroups(null);
+    else if (grp) { const ids = grp.split(",").filter((g) => (ACC.groups || []).some((x) => x.id === g)); if (ids.length) setGroups(ids.concat(ids.includes("demo") ? [] : ["demo"])); }
+    fill();
+    const a = A.acctOf(String(q.get("acct") || ""));
+    if (!a) return;
+    const key = "cb_link_" + a.id + "_" + (q.get("open") || "");
+    let seen = false; try { seen = sessionStorage.getItem(key) === "1"; sessionStorage.setItem(key, "1"); } catch (e) { /* ignore */ }
+    if (seen) return;
+    const n = q.get("open");
+    if (n != null && a.capsules && a.capsules[+n]) { state.account = a.id; openCap(a, +n); }
+    else choose(a.id);
+  }
+  // v1.9.1: a link a rep can open on his iPad: his code, his accounts, this account and (if it's on screen) its ready-made capsule
+  function repLink() {
+    const a = A.acctOf(state.account); if (!a) return "";
+    const base = ((A.cfg() || {}).builderPage || {}).url || "https://onlyifyouknow.com/pages/capsule-builder";
+    const c = state.capsule, on = c ? c.anchors.map((x) => x.sku).concat(c.picks.map((p) => p.item.sku)).join(",") : "";
+    const i = (a.capsules || []).findIndex((k) => k.line === A.line() && k.anchors.concat(k.picks).join(",") === on);
+    return `${base}?${state.rep ? "rep=" + encodeURIComponent(state.rep) + "&" : ""}grp=${encodeURIComponent(a.group)}&acct=${encodeURIComponent(a.id)}${i >= 0 ? "&open=" + i : ""}`;
   }
   function choose(id) {
     state.account = id || "";
@@ -91,7 +130,7 @@
     const comps = (a.comparables || []).length ? `<table class="acomp"><thead><tr><th>Brand at ${esc(short(a))}</th><th>Piece</th><th>Retail</th></tr></thead><tbody>${a.comparables.map((c) => `<tr><td>${esc(c.brand)}</td><td>${esc(c.item)}</td><td>$${esc(c.price)}</td></tr>`).join("")}</tbody></table>` : "";
     const caps = (a.capsules || []).map((c, i) => `<button data-cap="${i}" ${c.line !== A.line() ? `title="${c.line === "RF" ? "Retro Forever" : "OIYK"} capsule"` : ""}>${esc(c.name)}</button>`).join("");
     box.innerHTML = `<div class="h"><b>Account fit · ${esc(a.name)}</b>${R ? `<span class="grade ${GCLS[R.grade]}">${esc(R.label)} · ${R.score}</span>` : ""}
-      <span class="sp"></span><button data-ac="rebuild" title="Rebuild with the account's fit pulling the picks; locked pieces stay">Rebuild for ${esc(short(a))}</button><button data-ac="report">Fit report</button>${P.pitch && P.role !== "not a fit" ? `<button data-ac="pitch" title="Put the buyer-facing line on the line sheet">Pitch on line sheet</button>` : ""}</div>
+      <span class="sp"></span><button data-ac="rebuild" title="Rebuild with the account's fit pulling the picks; locked pieces stay">Rebuild for ${esc(short(a))}</button><button data-ac="report">Fit report</button><button data-ac="replink" title="Copy a link that opens this account (and this ready-made capsule) with your rep code, on any device">Copy rep link</button>${P.pitch && P.role !== "not a fit" ? `<button data-ac="pitch" title="Put the buyer-facing line on the line sheet">Pitch on line sheet</button>` : ""}</div>
       ${P.role === "not a fit" ? `<div class="awarn">${esc(P.summary || "This line isn't a fit for this account.")}</div>` : ""}
       ${R ? `<div class="atext">${esc(R.text)}</div>` : ""}
       ${P.summary && P.role !== "not a fit" ? `<div class="asum"><b>Built to:</b> ${esc(P.summary)}</div>` : ""}
@@ -131,6 +170,12 @@
       return;
     }
     if (k === "report") fitReport();
+    if (k === "replink") {
+      const u = repLink(); if (!u) return;
+      const ok = () => A.toast && A.toast("Rep link copied: it opens this account with your rep code.");
+      const fb = () => { const ta = document.createElement("textarea"); ta.value = u; ta.style.cssText = "position:fixed;left:-9999px"; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch (e) { /* ignore */ } ta.remove(); ok(); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(u).then(ok, fb); else fb();
+    }
   }
 
   /* ---------------- rep-facing fit report (opens in a new tab; downloads if the browser blocks it) ---------------- */
@@ -166,7 +211,7 @@ ${(a.watch || []).length ? `<h2>Watch</h2><ul>${a.watch.map((w) => `<li>${esc(w)
   A.hooks.board.push(board);
   A.hooks.line.push(draw);
   A.hooks.account.push(draw);
-  window.CB_ACCOUNT = { choose, report, fitReport, openCap: (id, i) => openCap(A.acctOf(id), i), draw, board };
+  window.CB_ACCOUNT = { choose, report, fitReport, openCap: (id, i) => openCap(A.acctOf(id), i), draw, board, repLink, groupsShown, setGroups };
   mount();
   A.applyContext();
   if (state.capsule) A.renderBoard();

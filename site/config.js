@@ -61,11 +61,11 @@ window.CAPSULE_CONFIG = {
     ],
   },
 
-  /* ---------- v1.7.0: her store (context) ---------- */
-  // Other brands' pieces and her own apparel never enter a capsule or an order; they only nudge our picks.
-  // A piece that suits her store perfectly gains up to max/2 x strength points, a poor fit loses up to max/2 x strength.
-  // Strength (v1.7.2): Light 0.5 (her store breaks ties: about 1 in 6 picks change), Medium 1.5 (about 1 in 3),
-  // Strong 4 (her store leads: about half change). The buyer's pick, stock, minimums and variety rules always hold.
+  /* ---------- v1.7.0: the store (context) ---------- */
+  // Other brands' pieces and the store's own apparel never enter a capsule or an order; they only nudge our picks.
+  // A piece that suits the store perfectly gains up to max/2 x strength points, a poor fit loses up to max/2 x strength.
+  // Strength (v1.7.2): Light 0.5 (the store breaks ties: about 1 in 6 picks change), Medium 1.5 (about 1 in 3),
+  // Strong 4 (the store leads: about half change). The buyer's pick, stock, minimums and variety rules always hold.
   contextPull: { max: 12 },
 
   /* ---------- v1.9.0: account fit ---------- */
@@ -164,6 +164,7 @@ window.CAPSULE_CONFIG = {
   capsulePage: { url: "https://onlyifyouknow.com/pages/capsule" },
   webCopy: { url: "https://danbginsberg-netizen.github.io/CapsuleBuilder/" },   // v1.8.9: photos and logo in a copied email point here when the builder runs from a folder
   builderPage: { url: "https://onlyifyouknow.com/pages/capsule-builder" },   // v1.7.0: guided-mode links
+  lineBookPage: { url: "https://onlyifyouknow.com/pages/line-book" },     // v1.9.3: the rep's full-line browser (Line Book.html / linebook.html)
   programPage: { url: "https://onlyifyouknow.com/pages/wholesale" },        // v1.7.0: "Rep this line" in the recruiting demo
   // Rep codes (letters, numbers, dashes; up to 20). Any code a rep types is carried on the order link, QR code, capsule
   // page, Excel and exports, and the order pages add it to the submitted order. List the codes you've issued here to get a

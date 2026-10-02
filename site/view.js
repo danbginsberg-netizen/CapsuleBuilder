@@ -2,7 +2,7 @@
    Buyer-facing, read-only. The capsule travels inside the link, nothing is stored anywhere:
      ?l=RF|OIYK  &i=SKU:pieces,SKU:pieces,...  &a=<number of buyer's picks at the front of i>
      &u=r (reorder)  &st=<store>  &n=<capsule name>  &p=1 (show wholesale prices)  &rep=<rep code>  &cap=<capsule ID>
-     &lb=b|p|n (v1.8.4: label on her own piece: b "You bought this", p "Built around this piece", n none; default "Your pick")
+     &lb=b|p|n (v1.8.4: label on the buyer's own piece: b "You bought this", p "Built around this piece", n none; default "Your pick")
      &mb=1 (v1.8.9: the In the Know market brief for this line, while it is current; same rules as the builder: line-locked, 60 days, no brand names)
      &ac=<account id> (v1.9.0: the account's buyer-facing line from app/accounts.js)
    Shown on onlyifyouknow.com/pages/capsule (unlisted, noindex), which passes the link through to this page. */
@@ -56,8 +56,8 @@
   const halves = new Set(H ? lines.filter((x) => x.q === H.units).map((x) => x.it.sku) : []);
   engine.halfSet = halves;
   const restored = engine.restore(anchors.map((a) => a.sku), lines.slice(nA).map((x) => x.it.sku), { minQty: cfg.minQty });
-  // v1.8.4: lb= sets how her own piece is labeled. Default "Your pick" (booth and kiosk links); b = pieces she bought; p = the piece the capsule is built around; n = no label
-  // v1.8.4: lb= sets how her own piece is labeled; v1.8.9: the wording lives in app/email.js, shared with the email
+  // v1.8.4: lb= sets how the buyer's own piece is labeled. Default "Your pick" (booth and kiosk links); b = pieces the buyer bought; p = the piece the capsule is built around; n = no label
+  // v1.8.4: lb= sets how the buyer's own piece is labeled; v1.8.9: the wording lives in app/email.js, shared with the email
   const LB = window.CB_MAIL.labels(P.get("lb"));
   const buyerWords = (r) => window.CB_MAIL.buyerWords(r, LB);
   const reasonOf = new Map(restored.picks.map((p) => [p.item.sku, buyerWords(p.reason)]));
@@ -119,7 +119,7 @@
     <p class="small">Market brief from In the Know, ${esc(brief.editionText)}. No brand names.</p></section>`;
   h += `<section class="whybox" id="why"><h2>Why these pieces</h2>
     <h3>The family</h3>${ul(why.family)}
-    ${why.colorways.length ? `<h3>Colorways</h3><p class="small">A colorway is the same design in a different color. Showing a style in two or three colorways lets each customer find her color without a new design; switching a colorway changes the color, not the fit or the price.</p>${ul(why.colorways)}` : ""}
+    ${why.colorways.length ? `<h3>Colorways</h3><p class="small">A colorway is the same design in a different color. Showing a style in two or three colorways lets each customer find their color without a new design; switching a colorway changes the color, not the fit or the price.</p>${ul(why.colorways)}` : ""}
     ${why.sisters.length ? `<h3>Sister pieces</h3><p class="small">Pieces made to be worn together: the same collection, motif or material across categories.</p>${ul(why.sisters)}` : ""}
     <h3>Balance</h3>${ul(why.balance)}</section>`;
   h += `<section class="terms"><h2>Terms</h2><dl>${terms.map((r) => `<dt>${esc(r[0])}</dt><dd>${esc(r[1])}</dd>`).join("")}</dl></section>`;

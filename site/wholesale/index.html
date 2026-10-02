@@ -6,7 +6,23 @@
 <meta name="robots" content="noindex">
 <title>Jewelry for Sales Reps &amp; Retail Buyers | Retro Forever · Only If You Know</title>
 <style>html,body{margin:0;padding:0;background:#fff}
-.wsp{width:100%!important;left:0!important;right:auto!important;margin-left:0!important;margin-right:0!important}</style>
+.wsp{width:100%!important;left:0!important;right:auto!important;margin-left:0!important;margin-right:0!important}
+/* v23 (2 Oct 2026): Lloyd review */
+.wsp header.hero h1{max-width:none!important}                                   /* I1: headline on one line on desktop */
+@media(min-width:1001px){.wsp nav.nav .links{gap:0}.wsp nav.nav .links>a{padding:6px 16px}.wsp nav.nav .links>a+a{border-left:1px solid #d9cfc5}.wsp nav.nav .links>a.on:after{left:16px;right:16px}} /* I3: dividers between top-bar links */
+.wsp .capsule .cfor b,.wsp .capsule.okc .cfor b{color:inherit}                            /* I4: color lives in filled cells, not in part of a sentence */
+.wsp .capsules .capsule .cnote{background:#fbebe7;color:#5e2318;border-left:3px solid var(--red)}
+.wsp .capsules .capsule .cnote span{color:var(--red-deep)}
+.wsp .capsules .capsule.okc .cnote{background:#f1edf8;color:#3f3366;border-left-color:var(--ok)}
+.wsp .capsules .capsule.okc .cnote span{color:var(--ok-deep)}
+.wsp .ctag{background:#fbebe7;color:var(--red-deep);padding:6px 10px;border-radius:6px;display:inline-block}
+.wsp .capsule.okc .ctag{background:#f1edf8}
+@media(min-width:1000px){.wsp .capsules.three{grid-template-rows:repeat(8,auto);row-gap:0;align-items:stretch}
+.wsp .capsules.three>.capsule{display:grid;grid-row:span 8;grid-template-rows:subgrid;align-content:start}
+.wsp .capsules.three>.capsule>*{align-self:start}}               /* I4: the three cards line up row by row */
+.wsp fieldset>legend{float:left;width:100%;padding:0 0 10px;margin:0 0 4px;border-bottom:1px solid var(--line)}
+.wsp fieldset>legend+*{clear:both}                              /* I5: section label sits inside the panel, not across its border */
+</style>
 </head>
 <body>
 <style>
@@ -246,7 +262,7 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 .wsp .wt-head .wt-v.ok{grid-column:3}
 .wsp .wt-tag{display:none}
 @media(max-width:640px){.wsp .wt-row{grid-template-columns:1fr;gap:4px}.wsp .wt-v.both{grid-column:auto}.wsp .wt-head{display:none}.wsp .wt-tag{display:block;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--red);margin-top:2px}.wsp .wt-v.ok .wt-tag{color:var(--ok-deep)}}
-.wsp .wtile .wn{justify-content:space-between;min-height:36px}.wsp .wtile .wm{display:flex;align-items:center;min-width:0}.wsp .wtile .wlogo{display:block;height:28px;width:auto;max-width:170px;object-fit:contain;object-position:left center}.wsp .wtile .wlogo.repzio{height:36px}.wsp .wtile .wlogo.faire{height:17px}.wsp .wtile .wlogo.nuorder{height:15px;max-width:180px}.wsp .wtile .wlogo.joor{height:30px}.wsp .wtile .wlogo.markettime{height:26px}
+.wsp .wtile .wn{justify-content:space-between;min-height:36px}.wsp .wtile .wm{display:flex;align-items:center;min-width:0}.wsp .wtile .wlogo{display:block;height:28px;width:auto;max-width:170px;object-fit:contain;object-position:left center}.wsp .wtile .wlogo.repzio{height:36px}.wsp .wtile .wlogo.wl-faire{height:17px;width:136px;max-width:none}.wsp .wtile .wlogo.nuorder{height:15px;max-width:180px}.wsp .wtile .wlogo.joor{height:30px}.wsp .wtile .wlogo.markettime{height:26px}
 .wsp .lead{max-width:none}.wsp .nav{z-index:35}.wsp .nav .burger{flex:0 0 auto;width:40px;height:40px;border:1px solid var(--line);border-radius:8px;background:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;margin:0}.wsp .nav .burger:hover{border-color:var(--red)}.wsp .nav .burger span,.wsp .nav .burger span:before,.wsp .nav .burger span:after{display:block;width:18px;height:2px;background:var(--ink);border-radius:2px;position:relative;transition:transform .2s,background .2s}.wsp .nav .burger span:before,.wsp .nav .burger span:after{content:"";position:absolute;left:0}.wsp .nav .burger span:before{top:-6px}.wsp .nav .burger span:after{top:6px}.wsp .nav .burger[aria-expanded=true] span{background:transparent}.wsp .nav .burger[aria-expanded=true] span:before{transform:translateY(6px) rotate(45deg)}.wsp .nav .burger[aria-expanded=true] span:after{transform:translateY(-6px) rotate(-45deg)}.wsp .nav .brand{margin-right:auto}.wsp .menu{position:absolute;left:0;right:0;top:100%;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 12px 28px rgba(0,0,0,.10);max-height:calc(100vh - var(--navh));overflow-y:auto}.wsp .menu[hidden]{display:none}.wsp .menu .mg{max-width:1120px;margin:0 auto;padding:14px 22px 18px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}@media(max-width:860px){.wsp .menu .mg{grid-template-columns:repeat(2,1fr);padding:12px 14px 16px}}@media(max-width:420px){.wsp .menu .mg{grid-template-columns:1fr}}.wsp .menu a{display:block;border:1px solid var(--line);border-radius:8px;padding:11px 12px;font-size:14px;font-weight:600;color:var(--ink);background:var(--cream);line-height:1.25}.wsp .menu a.ok{background:var(--ok-soft)}.wsp .menu a:hover{border-color:var(--red);text-decoration:none}@media(max-width:1000px){.wsp .nav .inner{column-gap:10px}.wsp .nav .burger{order:0;width:36px;height:36px}.wsp .nav .brand{margin-right:0;font-size:15.5px;white-space:nowrap}.wsp .nav .links{gap:6px}.wsp .nav .links a{padding:6px 9px;font-size:12.5px}}@media(max-width:380px){.wsp .nav .brand{font-size:14px}.wsp .nav a.cta{padding:7px 10px;font-size:12.5px}}.wsp .proof{background:var(--cream);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:18px 0}.wsp .proof .pl{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;text-align:center}.wsp .proof .pg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}@media(max-width:760px){.wsp .proof .pg{grid-template-columns:1fr 1fr}}.wsp .proof .pg div{text-align:center}.wsp .proof b{display:block;font-family:Georgia,serif;font-size:24px;font-weight:600;color:var(--red-deep);line-height:1.15}.wsp .proof span{display:block;font-size:13px;color:var(--muted);margin-top:3px}.wsp .proof+section{border-top:0}.wsp .capsules{grid-template-columns:repeat(2,1fr)}@media(max-width:900px){.wsp .capsules{grid-template-columns:1fr}}.wsp .capsule .cgrid{grid-template-columns:repeat(4,1fr)}@media(max-width:420px){.wsp .capsule .cgrid{grid-template-columns:repeat(3,1fr)}}.wsp .cnote{font-size:12.5px;color:#4b3d78;background:#f3eff9;border-radius:8px;padding:8px 10px;margin-top:10px}.wsp .cnote span{display:block;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#6d5b9c;margin-bottom:2px}.wsp .ctag{font-size:11.5px;font-weight:700;color:var(--red-deep);margin-top:10px}.wsp .feats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}@media(max-width:1000px){.wsp .feats{grid-template-columns:1fr 1fr}}@media(max-width:560px){.wsp .feats{grid-template-columns:1fr}}.wsp .feat{border:1px solid var(--line);border-radius:12px;padding:16px 16px 14px;background:#fff}.wsp .feat .fk{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--red);margin:0 0 6px}.wsp .feat h3{font-size:17px;margin:0 0 6px}.wsp .feat p{font-size:13.5px;color:var(--muted)}.wsp #builder{background:#fff}.wsp .capsule .pcimg{position:relative}.wsp .cpk{position:absolute;top:5px;left:5px;background:var(--red);color:#fff;font-size:8.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border-radius:999px}
 .wsp .okcaps{margin:10px 0 30px}.wsp .okh{font-size:clamp(20px,2.4vw,24px);margin:0 0 6px}.wsp .capsule.okc{border-color:var(--ok-line)}.wsp .capsule.okc .cpeye{color:var(--ok-deep)}.wsp .capsule.okc .cpk{background:var(--ok-deep)}.wsp .capsule.okc .pcimg{background:#fff;border-color:var(--ok-line)}.wsp .capsule.okc .cfor b,.wsp .capsule.okc .ctag{color:var(--ok-deep)}.wsp .capsule.okc .cfor{border-top-color:var(--ok-line)}.wsp .assure{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;color:#245c2b;margin-top:12px}.wsp .assure:before{content:"\2713";font-weight:700;flex:0 0 auto}.wsp .faire{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;max-width:880px;margin:22px 0 0;padding:16px 18px;border:1px solid var(--line);border-radius:12px;background:#fff}.wsp .faire b{display:block;font-size:16px;margin-bottom:2px}.wsp .faire p{font-size:14px;color:var(--muted);max-width:56ch}.wsp .faire .btn{padding:10px 18px;font-size:14px}.wsp .kitsteps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:0 0 22px;max-width:880px}@media(max-width:640px){.wsp .kitsteps{grid-template-columns:1fr}}.wsp .kitsteps>div{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px}.wsp .kitsteps .n{font-family:Georgia,serif;font-size:22px;color:var(--red);font-weight:600;display:block;line-height:1;margin-bottom:6px}.wsp .kitsteps b{display:block;font-size:15px;margin-bottom:3px}.wsp .kitsteps p{font-size:13.5px;color:var(--muted)}.wsp .kit{border-top:1px solid var(--line)}
 @media(max-width:560px){.wsp .btop{grid-template-columns:1fr 36%}
@@ -306,7 +322,7 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 <div class="lg"><img class="blogo" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/oiyk-logo.png?v=1790437898&amp;width=340" alt="Only If You Know" width="340" height="116"></div>
 <h3>Latest designs.<br>Emerging trends.<br>Premium materials.<br>Made to order.</h3>
 </div>
-<figure class="bpic"><img src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/london-lr0a4580.jpg?v=1790444727&amp;width=420" alt="Stacked beaded bracelet set, worn" width="420" height="525" loading="eager"></figure>
+<figure class="bpic"><img src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/lifestyle-gemstone-layers.jpg?v=1790973111&amp;width=420" alt="Layered gemstone and pearl necklaces with a bracelet, worn" width="420" height="525" style="object-position:50% 15%" loading="eager"></figure>
 </div>
 <ul>
 <li>Seed beads and semi-precious gemstones, sculpted metals and gold-filled</li>
@@ -343,9 +359,9 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 <h2>A capsule from the full catalog, built around the piece you loved</h2>
 <p class="lead">Retro Forever is a New York fashion-jewelry house founded by the head designer and CEO of Frenzy Jewels, whose work has supplied specialty boutiques and the American wholesale market for nearly two decades. On-trend carded necklaces, bracelets and earrings in gold- and rhodium-plated brass, freshwater pearls, natural stones, glass and crystal — every piece hypoallergenic, held in stock and priced to move at retail.</p>
 <div class="look">
-<figure><img loading="lazy" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/london-img5634.jpg?v=1790444727&amp;width=600" alt="Brown top styled with a layered necklace and bracelets" width="600" height="750"></figure><figure><img loading="lazy" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/london-lr0a4517.jpg?v=1790444727&amp;width=600" alt="Layered gemstone necklaces and a beaded bracelet" width="600" height="750"></figure><figure><img loading="lazy" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/london-lr0a4481.jpg?v=1790444727&amp;width=600" alt="Stone bead necklace with a stacked bracelet set" width="600" height="750"></figure><figure><img loading="lazy" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/london-img5684.jpg?v=1790444727&amp;width=600" alt="Beaded bracelets worn at the wrist" width="600" height="750"></figure>
+<figure><img loading="lazy" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/london-img5634.jpg?v=1790444727&amp;width=600" alt="Brown top styled with a layered necklace and bracelets" width="600" height="750"></figure><figure><img loading="lazy" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/lifestyle-bracelet-stack-warm.jpg?v=1790973112&amp;width=600" alt="A warm-neutral beaded bracelet stack, worn" width="600" height="750" style="object-position:50% 40%"></figure><figure><img loading="lazy" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/lifestyle-pastel-stone-set.jpg?v=1790973112&amp;width=600" alt="A matching stone necklace and bracelet stack worn together" width="600" height="750" style="object-position:50% 20%"></figure><figure><img loading="lazy" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/london-img5684.jpg?v=1790444727&amp;width=600" alt="Beaded bracelets worn at the wrist" width="600" height="750"></figure>
 </div>
-<p class="lookcap">From our London lookbook shoot.</p>
+<p class="lookcap">From our lookbook.</p>
 <div class="steps">
 <div class="step">
 <span class="n">1</span><h3>Pick one or two pieces</h3>
@@ -492,13 +508,13 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 <section id="builder">
 <div class="wrap">
 <div class="eyebrow">Inside the Capsule Builder</div>
-<h2>Built around her store, replenished through authentic designs, meticulously sourced materials and New York fashion</h2>
+<h2>Built around each store, replenished through authentic designs, meticulously sourced materials and New York fashion</h2>
 <p class="lead">Most lines hand you a catalog. We hand you a merchandised buy for one specific store: sized to it, styled to it and backed by market intelligence.</p>
 <div class="feats">
 <div class="feat">
 <p class="fk">Buyers &amp; reps</p>
-<h3>Her store, built in</h3>
-<p>Add what she already carries: a photo of her floor, her store palette, or her item list from a spreadsheet or rep platform. The builder reads her colors, metals and look, then finds our pieces that complement her assortment with fresh additions. Her items serve as context for the capsule, and the order carries only our pieces.</p>
+<h3>The store, built in</h3>
+<p>Add what the store already carries: a photo of the floor, the store palette, or an item list from a spreadsheet or rep platform. The builder reads the store’s colors, metals and look, then finds our pieces that complement the assortment with fresh additions. The store’s items serve as context for the capsule, and the order carries only our pieces.</p>
 </div>
 <div class="feat">
 <p class="fk">In the Know</p>
@@ -512,8 +528,8 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 </div>
 <div class="feat">
 <p class="fk">Budget built in</p>
-<h3>Sized to her store and her network</h3>
-<p>Choose small to very large, or enter her monthly jewelry sales: the opening budget follows her sales and daily store traffic, always at or above the first-order minimum. For chains, one anchor is versioned door by door and delivered as a single workbook.</p>
+<h3>Sized to the store and its network</h3>
+<p>Choose small to very large, or enter the store’s monthly jewelry sales: the opening budget follows its sales and daily store traffic, always at or above the first-order minimum. For chains, one anchor piece is built at each store’s own budget and delivered as a single workbook.</p>
 </div>
 <div class="feat">
 <p class="fk">On an iPad or phone</p>
@@ -523,7 +539,7 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 <div class="feat">
 <p class="fk">For reps</p>
 <h3>Training built on our collection</h3>
-<p>Rep training with coach notes at every step (what she sees, what to say, why) and certification sessions, plus a Her store walk-through that coaches on the buyer’s actual assortment. New reps are ready for a first store call the day after signing.</p>
+<p>Rep training with coach notes at every step (what the buyer sees, what to say, why) and certification sessions, plus a store walk-through that coaches on the buyer’s actual assortment. New reps are ready for a first store call the day after signing.</p>
 </div>
 <div class="feat">
 <p class="fk">For approvals</p>
@@ -614,7 +630,7 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 </div>
 </fieldset>
 <button class="btn" type="submit">Send my capsule request</button>
-<p class="assure">Free to request. Your capsule comes back within 24 hours, and you review it and submit before anything is ordered.</p>
+<p class="assure">No commitment: your capsule comes back within 24 hours, and you review it and submit before anything is ordered.</p>
 <p class="fnote">Sold by the dozen; first orders may include a limited number of ½-dozen styles. $100 minimum.</p>
 </form>
 <div class="faire">
@@ -780,7 +796,7 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 </div>
 <div class="wtile">
 <div class="wn">
-<span class="wm"><img class="wlogo faire" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/logo-faire.svg?v=1790459611" alt="Faire" loading="lazy"></span><span class="wk">SKU list</span>
+<span class="wm"><img class="wlogo wl-faire" width="136" height="17" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/logo-faire.svg?v=1790459611" alt="Faire" loading="lazy"></span><span class="wk">SKU list</span>
 </div>
 <p>Retro Forever buyers who prefer Faire's checkout can use it: we build the same capsule as a Faire order from its SKU list. <a href="https://www.faire.com/direct/b_8vkhmv2y63" target="_blank" rel="noopener">Retro Forever on Faire ↗</a></p>
 </div>
@@ -800,9 +816,9 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 <a class="pk" href="mailto:dan@onlyifyouknow.com?subject=Only%20If%20You%20Know%20line%20sheet">Email us for the OIYK line sheet <span class="ar" aria-hidden="true">↗</span></a><a href="#faq">Questions (FAQ) <span class="ar" aria-hidden="true">↓</span></a>
 </div>
 <div class="look">
-<figure><img loading="lazy" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/london-lr0a4525.jpg?v=1790444727&amp;width=600" alt="Layered semi-precious gemstone necklaces" width="600" height="750"></figure><figure><img loading="lazy" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/london-img5638.jpg?v=1790444727&amp;width=600" alt="A stack of beaded bracelets, worn" width="600" height="750"></figure><figure><img loading="lazy" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/london-lr0a4615.jpg?v=1790444727&amp;width=600" alt="Pearl necklace with a mother-of-pearl flower pendant" width="600" height="750"></figure><figure><img loading="lazy" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/london-img5637.jpg?v=1790444727&amp;width=600" alt="Model in a satin slip wearing a beaded gemstone necklace" width="600" height="750"></figure>
+<figure><img loading="lazy" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/lifestyle-stone-necklaces-ivory.jpg?v=1790973112&amp;width=600" alt="Two layered natural-stone bead necklaces" width="600" height="750" style="object-position:50% 30%"></figure><figure><img loading="lazy" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/lifestyle-boho-dress.jpg?v=1790973112&amp;width=600" alt="Colorful layered necklaces and a pearl bracelet stack with an ivory dress" width="600" height="750" style="object-position:50% 0%"></figure><figure><img loading="lazy" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/lifestyle-knit-layered.jpg?v=1790973111&amp;width=600" alt="Layered gemstone necklaces and a bracelet stack with a neutral knit" width="600" height="750" style="object-position:50% 0%"></figure><figure><img loading="lazy" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/london-img5637.jpg?v=1790444727&amp;width=600" alt="Model in a satin slip wearing a beaded gemstone necklace" width="600" height="750"></figure>
 </div>
-<p class="lookcap">From our London lookbook shoot.</p>
+<p class="lookcap">From our lookbook.</p>
 <div class="okstrip" style="margin-bottom:30px">
 <figure><div class="pcimg"><img loading="lazy" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/oiyk-OYN0002GDPRL.jpg?v=1790437898&amp;width=520" alt="Mother of Pearl Flower Pendant Necklace"></div>
 <figcaption>Mother of Pearl Flower Pendant Necklace</figcaption></figure>
@@ -829,9 +845,9 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 <h3>Sales reps and agencies</h3>
 <p class="who">Multi-line reps and showrooms deciding whether a line is worth a spot.</p>
 <details class="qa"><summary>Is Retro Forever worth a place in my line-up?</summary><div class="ans">
-<p><span class="k">Answer</span>Yes. Retro Forever is a proven design program with a record behind it. The team behind it built Frenzy Jewels into a national jewelry business. Our head designer brings two decades across U.S. retail, from boutiques to national chains, and her work has appeared in New York Fashion Week shows across several seasons. Many of the 240 styles in stock today are repeat best sellers.</p>
+<p><span class="k">Answer</span>Yes. Retro Forever is a proven design program with a record behind it. The team behind it built Frenzy Jewels into a national jewelry business. Our head designer brings two decades across U.S. retail, from boutiques to national chains, with work shown at New York Fashion Week across several seasons. Many of the 240 styles in stock today are repeat best sellers.</p>
 <p><span class="k">What’s different</span>Most new lines ask a rep to sell a promise. Ours comes with a sell-through record and the supply chain behind it: multiple national chains, 800+ stores across them, reordering 4 seasons annually; directly sourced materials; reliable manufacturing; and production and manufacturing supporting growth while maintaining quality and also enabling higher margins for customers.</p>
-<p><span class="k">Works with</span>The stores already in your book. Open-price styles at roughly $3–$12 wholesale, a keystone-plus margin and U.S. stock that ships in 1–3 days suit boutiques, gift shops and specialty chains. Commission pays on collected cash: 15%, 18% on quarterly sales above $15,000, and $75 for every account’s first order. Our full proof pack is available on request.</p>
+<p><span class="k">Works with</span>The stores already in your book. Open-price styles at roughly $3–$12 wholesale, a healthy retail markup (suggested retail of 3.5× wholesale and up) and U.S. stock that ships in 1–3 days suit boutiques, gift shops and specialty chains. Commission pays on collected cash: 15%, 18% on quarterly sales above $15,000, and $75 for every account’s first order. Our full proof pack is available on request.</p>
 </div></details><details class="qa"><summary>Is the Capsule Builder worth the time it takes to learn?</summary><div class="ans">
 <p><span class="k">Answer</span>Yes, for both Retro Forever and Only If You Know. It takes about twenty minutes to learn and builds a store’s buy in about a minute. It already knows each line’s styles, pairings and terms, and its training mode coaches you step by step, with certification, so you are ready for a first store call the day after signing.</p>
 <p><span class="k">What’s different</span>Most lines hand a rep a catalog and a price list. We hand over a tool that builds a coordinated capsule around the piece the buyer chose, with a reason for every pick, so your time goes to relationships instead of product homework.</p>
@@ -845,13 +861,13 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 <p><span class="k">What’s different</span>Order-writing systems record what a buyer has already chosen. The coordinated capsule built from one piece the buyer loved, drawn from the full catalog, is our step.</p>
 <p><span class="k">Works with</span>MarketTime Quick Import file, NuORDER order import file, rep kits that load the line into MarketTime and RepZio, SKU line sheets for JOOR, a SKU list for Faire, or our own pre-filled order page.</p>
 </div></details><details class="qa"><summary>How do I follow up quickly after a market?</summary><div class="ans">
-<p><span class="k">Answer</span>One button sends it: your own email opens with the buyer’s capsule link and a pre-filled order link already written in. Review it and press send. At the booth, the buyer scans a QR code and walks away with the capsule on her phone.</p>
+<p><span class="k">Answer</span>One button sends it: your own email opens with the buyer’s capsule link and a pre-filled order link already written in. Review it and press send. At the booth, the buyer scans a QR code and walks away with the capsule on their phone.</p>
 <p><span class="k">What’s different</span>The follow-up is the store’s own buy, with photos and reasons, in place of a generic catalog attachment.</p>
 <p><span class="k">Works with</span>You send it from your own email account, in your own words.</p>
 </div></details><details class="qa"><summary>How does the Capsule Builder strengthen my presentation to buyers?</summary><div class="ans">
 <p><span class="k">Answer</span>Every capsule arrives merchandised and display-ready: necklaces for height, bracelets to stack, earrings as the easy add-on, and a plain-English “Why these pieces” note covering the color story, colorways and matching pieces, plus market notes on the current trends it rides.</p>
-<p><span class="k">What’s different</span>You present a merchandised plan built around the buyer’s own favorite piece and backed by market research, so she has a plan ready instead of a catalog to sort.</p>
-<p><span class="k">Works with</span>The capsule prints as a one-page line sheet and saves as a PDF for her files, with an optional market brief page she can share with her team.</p>
+<p><span class="k">What’s different</span>You present a merchandised plan built around the buyer’s own favorite piece and backed by market research, so the buyer has a plan ready instead of a catalog to sort.</p>
+<p><span class="k">Works with</span>The capsule prints as a one-page line sheet and saves as a PDF for the buyer’s files, with an optional market brief page to share with the team.</p>
 </div></details><p class="fback"><a href="#faq">↑ All FAQ topics</a></p>
 </div>
 <div class="fgroup" id="faq-boutiques">
@@ -884,7 +900,7 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 <p class="who">Regional chains, resort and gift groups, and stores whose buying team reviews new vendors.</p>
 <details class="qa"><summary>Can you give us assortments by door or budget tier?</summary><div class="ans">
 <p><span class="k">Answer</span>Yes. The same anchor piece can be built at several budgets, for example a $300 door and a $1,000 door, side by side and from the same families, so every store tells the same story at its own depth. Each comes as an Excel order form with totals and minimums built in.</p>
-<p><span class="k">What’s different</span>Assortment-planning software is an enterprise purchase. We deliver the programmed assortment itself, ready for your purchasing team to route.</p>
+<p><span class="k">What’s different</span>Assortment-planning software is an enterprise purchase. We deliver the planned assortment itself, ready for your purchasing team to review.</p>
 <p><span class="k">Works with</span>Excel order forms, a universal order file for your system, and SKU-level line sheets.</p>
 </div></details><details class="qa"><summary>Our team reviews new items before approving a vendor. What do you send?</summary><div class="ans">
 <p><span class="k">Answer</span>A buyer packet: the capsule line sheet (prices only if you want them), an item-facts page with materials, suggested retail and quantity, our published terms and your rep’s contact, the Excel order form, and a capsule link anyone on the team can open. We can add a one-page market brief from In the Know, our weekly market research, so reviewers see the trends behind the assortment; it is brand-neutral, so it is safe to circulate. A committee edition is ready for museum and nonprofit stores.</p>
@@ -905,7 +921,7 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 <details class="qa"><summary>What does the Capsule Builder cost?</summary><div class="ans">
 <p><span class="k">Answer</span>It is included with the line. Platform access, software and every capsule are part of the wholesale price you already pay.</p>
 <p><span class="k">What’s different</span>Paid wholesale platforms charge brands, reps or buyers for access. Ours is part of the service.</p>
-<p><span class="k">Works with</span>It sits alongside the platforms you already pay for and complements them.</p>
+<p><span class="k">Works with</span>It works alongside the platforms you already pay for and complements them.</p>
 </div></details><details class="qa"><summary>What information does a capsule link carry?</summary><div class="ans">
 <p><span class="k">Answer</span>The styles, quantities, your store name, the rep code and a capsule reference. Sign-in and payment details stay outside the link.</p>
 <p><span class="k">What’s different</span>The capsule lives inside the link itself.</p>

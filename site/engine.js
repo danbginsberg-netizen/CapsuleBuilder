@@ -153,7 +153,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
       const lo = Math.min(per[0].total, per[1].total), hi = Math.max(per[0].total, per[1].total);
       total = this.cfg.twoAnchorBlend.low * lo + this.cfg.twoAnchorBlend.high * hi;
     }
-    // v1.7.0: her store (context) nudges the pick toward what goes with what she already carries; the anchor still leads
+    // v1.7.0: the store (context) nudges the pick toward what goes with what the buyer already carries; the anchor still leads
     const ctx = this.ctxProfile ? this.contextScore(C) : null;
     if (ctx) total += ctx.pts;
     // v1.9.0: the chosen account pulls toward pieces that fit how it merchandises jewelry
@@ -162,8 +162,8 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
     return { total, per, ctx, acct };
   };
 
-  /* ------------------------------------------------ v1.7.0: her store (context) ------------------------------------------------
-     Context items are other brands' pieces and her own apparel/accessories, described by color families, metal, materials,
+  /* ------------------------------------------------ v1.7.0: the store (context) ------------------------------------------------
+     Context items are other brands' pieces and the store's own apparel/accessories, described by color families, metal, materials,
      pattern, style, scale and neckline. They never enter a capsule, an order or a total: they only add a small pull
      (cfg.contextPull.max points x strength) toward our pieces that complement them. */
   const BUSY = ["floral", "animal", "stripe", "plaid", "geometric", "print"];
@@ -201,7 +201,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
     const P = this.ctxProfile;
     if (!P) return null;
     const parts = [];   // [score 0-1, weight]
-    // color: how well our piece's colors go with her palette (the builder's own color-pair table)
+    // color: how well our piece's colors go with the store's palette (the builder's own color-pair table)
     let colorS = 0, best = null;
     const cl = this.colorList(C);
     for (const [f, wf] of Object.entries(P.colors)) {
@@ -211,13 +211,13 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
       if (!best || wf * m > best.v) best = { v: wf * m, fam: f, ours: hit };
     }
     if (Object.keys(P.colors).length) parts.push([Math.min(1, colorS), 0.45]);
-    // metal: what her jewelry and hardware lean to
+    // metal: what the buyer's jewelry and hardware lean to
     if (Object.keys(P.metals).length) {
       const m = this.cfg.metalMatch; let s = 0;
       for (const [k, w] of Object.entries(P.metals)) s += w * (k === C.metal ? 1 : k === "mixed" || C.metal === "mixed" ? m.mixed / m.same : C.metal === "none" ? 0.5 : 0);
       parts.push([s, 0.15]);
     }
-    // style: her store's look
+    // style: the store's look
     if (Object.keys(P.styles).length) {
       let s = 0;
       for (const [k, w] of Object.entries(P.styles)) s += w * (k === C.style ? 1 : this.styleP.get(k + "|" + C.style) || (C.style === "minimal" ? 0.4 : 0));
@@ -229,13 +229,13 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
       const sc = { delicate: [0.6, 1], medium: [0.8, 0.8], statement: [1, 0.3] }[C.scale] || [0.7, 0.7];
       parts.push([sc[0] * (1 - busy) + sc[1] * busy, 0.1]);
     }
-    // scale of her jewelry and accessories: our pieces near it sit well beside them
+    // scale of the buyer's jewelry and accessories: our pieces near it sit well beside them
     if (Object.keys(P.scales).length) {
       const R = { delicate: 0, medium: 1, statement: 2 }; let sc = 0;
       for (const [k, w] of Object.entries(P.scales)) { const d = Math.abs((R[k] ?? 1) - (R[C.scale] ?? 1)); sc += w * (d === 0 ? 1 : d === 1 ? 0.6 : 0.2); }
       parts.push([sc, 0.1]);
     }
-    // neckline: which necklace shapes (and earrings) sit well with her tops and dresses
+    // neckline: which necklace shapes (and earrings) sit well with the store's tops and dresses
     if (Object.keys(P.necklines).length && (C.cat === "necklace" || C.cat === "earring")) {
       let s = 0;
       for (const [k, w] of Object.entries(P.necklines)) {
@@ -246,16 +246,16 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
     }
     const wsum = parts.reduce((a, p) => a + p[1], 0);
     let s = wsum ? parts.reduce((a, p) => a + p[0] * p[1], 0) / wsum : 0;
-    // she already carries this: same category, same lead color and same main material from another brand -> a little less
+    // the buyer already carries this: same category, same lead color and same main material from another brand -> a little less
     const dup = P.jewelry.find((x) => x.category === C.cat && (x.colors || [])[0] === C.dom && (x.materials || []).some((mt) => (C.mats || []).includes(mt)));
     if (dup) s -= 0.25;
-    // house rule, lead with color: a gold- or silver-led piece gives up a little unless her store is metal-led
+    // house rule, lead with color: a gold- or silver-led piece gives up a little unless the store is metal-led
     if ((this.cfg.goldLedColors || []).includes(C.dom) && !(this.cfg.goldLedColors || []).some((g) => (P.colors[g] || 0) >= 0.4)) s -= 0.06;
     const pull = (this.cfg.contextPull || {}).max || 12;
     const who = best && best.v > 0.25 ? P.items.find((x) => (x.colors || []).includes(best.fam)) : null;
-    return { s, pts: pull * P.strength * (s - 0.5), why: who ? { item: who.name || who.type || "her piece", fam: best.fam, ours: best.ours } : null, dup: dup ? dup.name || dup.type : null };
+    return { s, pts: pull * P.strength * (s - 0.5), why: who ? { item: who.name || who.type || "piece", fam: best.fam, ours: best.ours } : null, dup: dup ? dup.name || dup.type : null };
   };
-  /** v1.7.0: our best complements to her store, with no anchor (in stock and on the order page only). */
+  /** v1.7.0: our best complements to the store, with no anchor (in stock and on the order page only). */
   Engine.prototype.complements = function (opts) {
     opts = opts || {};
     if (!this.ctxProfile) return [];
@@ -271,8 +271,8 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
   };
 
   /* ------------------------------------------------ v1.7.4: find similar (lookalikes) ------------------------------------------------
-     Her store's complements answer "what goes with it"; this answers "what do we have that looks like it":
-     the same stones, the same kind of strand, the same size and colors. A look is described by a few words, her photo's
+     The store's complements answer "what goes with it"; this answers "what do we have that looks like it":
+     the same stones, the same kind of strand, the same size and colors. A look is described by a few words, the buyer's photo's
      colors, or one of our own styles. Lookalikes are ranked per line; RF and OIYK are never mixed in one result. */
   // stone words -> the color families they read as (so "sodalite" also finds navy stone strands)
   const STONES = [
@@ -357,10 +357,10 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
   const cword = (f) => CW[f] || f;
   const nearColor = (a, b) => (a === b ? 1 : NEAR.get(a + "|" + b) || 0);
   const nearSub = (a, b) => (a === b ? 1 : SUB_NEAR.get(a + "|" + b) || 0);
-  // v1.7.6: does the look say anything (words, chips, her photo's colors)?
+  // v1.7.6: does the look say anything (words, chips, the buyer's photo's colors)?
   const hasLook = (Q) => !!Q && ((Q.mats || []).length + (Q.stones || []).length + (Q.subs || []).length + (Q.colors || []).length + (Q.photoColors || []).length + (Q.words || []).length + (Q.scale ? 1 : 0) + (Q.multi ? 1 : 0) + (Q.metal ? 1 : 0)) > 0;
   /** How closely one of our pieces looks like the look Q. v1.7.6: every reason is tagged with where it came from:
-      "photo" (a color read from her photo), "look" (her words or the chips you set). */
+      "photo" (a color read from the buyer's photo), "look" (the buyer's words or the chips you set). */
   Engine.prototype.similarScore = function (Q, it) {
     const txt = low([it.name, it.mtext, it.desc].join(" ")), ctxt = low(it.cname);
     const parts = [], tags = [];
@@ -371,7 +371,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
       for (const m of Q.mats) { if ((it.mats || []).includes(m)) { s += 1; tag(m === "gemstone" ? "natural stone" : lab(m)); } else if (this.cfg.materialGroups.some((g) => g.includes(m) && (it.mats || []).some((x) => g.includes(x)))) s += 0.4; }
       parts.push([s / Q.mats.length, 0.22]);
     }
-    // the stones she named
+    // the stones the buyer named
     const stonesHit = [];
     if ((Q.stones || []).length) {
       for (const n of Q.stones) { const re = (STONES.find((x) => x[0] === n) || [])[1]; if (!re) continue; if (re.test(txt)) stonesHit.push({ stone: n, where: "stone" }); else if (re.test(ctxt)) stonesHit.push({ stone: n, where: "color" }); }
@@ -385,13 +385,13 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
       parts.push([s, 0.14]); if (s >= 0.99) tag(it.sub);
     }
     if (Q.scale) { const R = { delicate: 0, medium: 1, statement: 2 }, d = Math.abs((R[Q.scale] ?? 1) - (R[it.scale] ?? 1)); parts.push([d === 0 ? 1 : d === 1 ? 0.4 : 0, 0.14]); if (!d) tag(it.scale); }
-    // colors: the same colors (or next to them), not colors that go with them. Her words' colors lead; her photo's follow.
+    // colors: the same colors (or next to them), not colors that go with them. The buyer's words' colors lead; the buyer's photo's follow.
     const own = lookColors(Q), ph = (Q.photoColors || []).filter((c) => !own.includes(c));
     const qc = own.concat(ph);
     if (qc.length || Q.multi) {
       const fams = (it.fams || []).filter((f) => !this.metals.has(f) || (it.fams || []).length === 1);
       let s = 0, wsum = 0; const hit = [];
-      qc.forEach((c, i) => { const w = i === 0 ? 1 : 0.7; let m = 0, f0 = null; for (const f of fams) { const v = nearColor(c, f); if (v > m) { m = v; f0 = f; } } s += w * m; wsum += w; if (m >= 0.99 && f0) hit.push([f0, (Q.photoColors || []).includes(c) ? "photo" : "look"]); });   // a color her photo shows is credited to the photo
+      qc.forEach((c, i) => { const w = i === 0 ? 1 : 0.7; let m = 0, f0 = null; for (const f of fams) { const v = nearColor(c, f); if (v > m) { m = v; f0 = f; } } s += w * m; wsum += w; if (m >= 0.99 && f0) hit.push([f0, (Q.photoColors || []).includes(c) ? "photo" : "look"]); });   // a color the buyer's photo shows is credited to the photo
       s = wsum ? s / wsum : 0;
       if (Q.multi) { s = it.multi ? Math.min(1, (qc.length ? s : 0.6) + 0.35) : qc.length ? s * 0.85 : 0.35; if (it.multi) tag("multicolor"); }
       parts.push([s, 0.2]); hit.slice(0, 3).forEach(([f, src]) => tag(cword(f), src));
@@ -408,10 +408,10 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
   };
   /** Lookalikes: in stock and on the order page, grouped by style number, every matching colorway kept (stones matter).
       v1.7.6: three sources blend into one score, each shown on the card as a reason:
-        the look (her words, the chips, her photo's colors)  weight 1
-        opts.refs  = our styles she pointed to ("more like this")  weight 0.8   -> "like FN0761"
-        opts.bought = our styles on her order                   weight 0.35  -> "like her FN2933" (her order leans the ranking)
-      Colorways she already has (opts.owned) are marked and never suggested; her styles in a new colorway move up. */
+        the look (the buyer's words, the chips, the buyer's photo's colors)  weight 1
+        opts.refs  = our styles the buyer pointed to ("more like this")  weight 0.8   -> "like FN0761"
+        opts.bought = our styles on the buyer's order                   weight 0.35  -> "like the buyer's FN2933" (the buyer's order leans the ranking)
+      Colorways the buyer already has (opts.owned) are marked and never suggested; the buyer's styles in a new colorway move up. */
   Engine.prototype.similar = function (Q, opts) {
     opts = opts || {};
     const own = new Set((opts.owned || []).map((s) => String(s).toUpperCase()));
@@ -427,7 +427,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
       let num = look ? r.s : 0, den = look ? 1 : 0;
       const tags = r.tags.slice(), src = { look: look ? r.s : null };
       if (refQ.length) { const b = best(refQ, it); num += 0.8 * b.s; den += 0.8; src.style = b.s; if (b.ref && b.s >= 0.62) tags.unshift({ t: b.ref.sku === it.sku ? "your reference" : `like ${b.ref.sku}`, src: "style" }); }
-      if (boughtQ.length) { const b = best(boughtQ, it); num += 0.35 * b.s; den += 0.35; src.order = b.s; if (b.ref && b.s >= 0.62) tags.push({ t: `like her ${(b.ref.sku.match(/^[A-Z]+\d+/) || [b.ref.sku])[0]}`, src: "order" }); /* the style she bought: the order may not say which colorway */ }
+      if (boughtQ.length) { const b = best(boughtQ, it); num += 0.35 * b.s; den += 0.35; src.order = b.s; if (b.ref && b.s >= 0.62) tags.push({ t: `like the buyer's ${(b.ref.sku.match(/^[A-Z]+\d+/) || [b.ref.sku])[0]}`, src: "order" }); /* the style the buyer bought: the order may not say which colorway */ }
       const s = den ? num / den : 0;
       return { item: it, owned: own.has(it.sku), s, tags, why: tags.map((x) => x.t), stones: r.stones, src };
     }).filter((r) => r.s >= min);
@@ -438,10 +438,10 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
     const groups = [...by.entries()].map(([style, list]) => {
       list.sort((a, b) => b.s - a.s || a.item.sku.localeCompare(b.item.sku));
       const fresh = list.filter((r) => !r.owned), isBought = ownedStyles.has(style);
-      // the style she already bought, in a colorway she doesn't have: the easiest yes, so it moves up a little
+      // the style the buyer already bought, in a colorway the buyer doesn't have: the easiest yes, so it moves up a little
       return { style, best: fresh[0] || list[0], colorways: list, boughtStyle: isBought, rank: (fresh[0] || list[0]).s + (isBought ? 0.05 : 0) };
     }).filter((g) => g.colorways.some((r) => !r.owned)).sort((a, b) => b.rank - a.rank || a.style.localeCompare(b.style));
-    // which of the stones she named we carry at all (in stock), so the rep can say so plainly
+    // which of the stones the buyer named we carry at all (in stock), so the rep can say so plainly
     const stoneReport = ((Q && Q.stones) || []).map((n) => {
       const re = (STONES.find((x) => x[0] === n) || [])[1];
       const skus = this.items.filter((it) => this.inStock(it, opts.minQty) && this.orderable(it) && re && re.test(low([it.name, it.mtext, it.desc].join(" ")))).map((it) => it.sku);
@@ -450,7 +450,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
     return { groups: groups.slice(0, opts.n || 12), stoneReport, total: groups.length };
   };
 
-  /* ------------------------------------------------ v1.7.4: what she bought (order text -> our SKUs) ------------------------------------------------
+  /* ------------------------------------------------ v1.7.4: what the buyer bought (order text -> our SKUs) ------------------------------------------------
      Paste a Shopify order page, an order email or a list of SKUs. Each line with a style number becomes one entry;
      color codes on the same line ("FN2933MLT AMZ and GDMLT") pick the colorways. Nothing is looked up online. */
   const SKU_RE = /\b([A-Z]{1,4}\d{4,5})((?:[A-Z0-9]{0,10})(?:-[A-Z0-9]{1,6})*)\b/g;
@@ -1122,7 +1122,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = T; else ro
     const byBase = new Map();
     items.forEach((it) => { if (it.base) byBase.set(it.base, (byBase.get(it.base) || []).concat([it])); });
     for (const grp of byBase.values()) if (grp.length > 1)
-      out.colorways.push(`${grp[0].name}: shown in ${grp.length} colorways (${grp.map((g) => lab(g.dom)).join(", ")}). Same design, fit and price; each customer can pick her color.`);
+      out.colorways.push(`${grp[0].name}: shown in ${grp.length} colorways (${grp.map((g) => lab(g.dom)).join(", ")}). Same design, fit and price; each customer can pick their color.`);
     // --- sister pieces: made to be worn together
     const used = new Map(), seen = new Set();
     const addPair = (a, b, text) => {

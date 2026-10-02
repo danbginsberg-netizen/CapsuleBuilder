@@ -1,4 +1,4 @@
-/* Capsule Builder UI — runs offline from the local folder. v1.6.0; v1.7.0 adds hooks for app/instore.js (her store, boards, market brief, guided mode) */
+/* Capsule Builder UI — runs offline from the local folder. v1.6.0; v1.7.0 adds hooks for app/instore.js (the store, boards, market brief, guided mode) */
 (function () {
   "use strict";
   const BASE = window.CAPSULE_CONFIG;
@@ -154,7 +154,7 @@
     sheet: sheetDefaults(saved.sheet, saved.markPick),
     capsule: null, locked: new Set(), halves: new Set(), lastMs: 0, loadedId: null,
     rep: cleanRep(store.get("capsule_rep", "")), tmpId: null,
-    // v1.7.0: her store (context: never ordered) and the store size that pre-filled the budget
+    // v1.7.0: the store (context: never ordered) and the store size that pre-filled the budget
     context: normCtx(saved.context), storeSize: saved.storeSize || "",
     account: saved.account || "",   // v1.9.0: the retailer this capsule is for (app/accounts.js); drives the fit check
   };
@@ -231,7 +231,7 @@
       if (!hits.length) { res.hidden = true; return; }
       res.hidden = false;
       res.innerHTML = hits.map((it, k) => `<div data-k="${k}" class="${k === hi ? "hi" : ""}"><img src="${esc(it.img)}" alt=""><span><b>${esc(it.sku)}</b><br>${esc(it.name)}</span><span class="q">${wsShort(it)}</span></div>`).join("");
-      res.querySelectorAll("div[data-k]").forEach((d) => (d.onmousedown = (e) => { e.preventDefault(); setAnchor(i, hits[+d.dataset.k].sku); }));
+      res.querySelectorAll("div[data-k]").forEach((d) => (d.onmousedown = (e) => { e.preventDefault(); setAnchor(i, hits[+d.dataset.k].sku, true); }));
     };
     inp.oninput = () => {
       const q = inp.value.trim().toLowerCase();
@@ -243,25 +243,25 @@
     inp.onkeydown = (e) => {
       if (e.key === "ArrowDown") { hi = Math.min(hi + 1, hits.length - 1); draw(); e.preventDefault(); }
       else if (e.key === "ArrowUp") { hi = Math.max(hi - 1, 0); draw(); e.preventDefault(); }
-      else if (e.key === "Enter" && hits[hi]) setAnchor(i, hits[hi].sku);
+      else if (e.key === "Enter" && hits[hi]) setAnchor(i, hits[hi].sku, true);
       else if (e.key === "Escape") { hits = []; draw(); }
     };
     inp.onblur = () => setTimeout(() => (res.hidden = true), 150);
   }
-  function setAnchor(i, sku) {
+  function setAnchor(i, sku, hold) {   // v1.9.1: hold = a rep's own pick waits for Build capsule
     if (i === 1 && !state.anchors[0]) i = 0;
     if (state.anchors.includes(sku)) return;
     state.anchors[i] = sku;
-    onAnchorsChanged();
+    onAnchorsChanged(hold);
   }
-  function onAnchorsChanged() {
+  function onAnchorsChanged(hold) {
     renderSlot(0); renderSlot(1);
     state.locked.clear(); state.halves = new Set(); syncHalves();
     if (!state.loadedId) state.tmpId = null;   // a new anchor on an unsaved capsule is a new capsule
     resetMix(false);
     $("buildBtn").disabled = !state.anchors[0];
     persist();
-    if (state.anchors[0]) build(); else clearBoard();
+    if (state.anchors[0]) { if (hold) showReady(); else build(); } else clearBoard();
   }
 
   /* ================================================= size / budget / mix */
@@ -301,11 +301,11 @@
     $("piecesBox").classList.toggle("hide", m !== "pieces"); $("budgetBox").classList.toggle("hide", m !== "budget");
     if (m === "budget" && !state.budget) state.budget = (cfg.budgetPresets || [])[2] ? cfg.budgetPresets[2].amount : 300;
     drawPresets(); drawMix(); persist();
-    if (state.anchors[0]) build();
+    if (state.anchors[0] && state.capsule) build();
   }
   function setBudget(v) {
     state.budget = v; if (state.mode !== "budget") { setMode("budget"); return; }
-    drawPresets(); persist(); if (state.anchors[0]) build();
+    drawPresets(); persist(); if (state.anchors[0] && state.capsule) build();
   }
 
   /* ================================================= build + board */
@@ -325,7 +325,7 @@
       state.halves = new Set([...state.halves].filter((s) => inCap.has(s)));
     }
     syncHalves();
-    // v1.7.2: what her store changed — the same build with her store switched off, compared piece by piece
+    // v1.7.2: what the store changed — the same build with the store switched off, compared piece by piece
     state.ctxImpact = null;
     if (engine.ctxProfile && state.context.on) {
       const keepHalves = new Set(state.halves);
@@ -342,11 +342,28 @@
     state.lastMs = Math.round(performance.now() - t0);
     state.alt = !!(extra && extra.exclude && extra.exclude.length);   // true only while another version is showing
     ["regenBtn", "anotherBtn", "sheetBtn", "xlsxBtn", "orderPageBtn", "csvBtn", "saveBtn", "saveNewBtn", "sendBtn", "sendToBtn", "whyBtn"].forEach((id) => ($(id).disabled = false));
+    boardCue(null);
     renderBoard();
+  }
+  // v1.9.1 (Lloyd review): the empty board points to the first step, and a picked piece waits for Build capsule
+  function boardCue(k) { document.body.classList.toggle("cold", k === "cold"); document.body.classList.toggle("ready", k === "ready"); }
+  function wireEmpty() {
+    const b = $("emptyBrowse"); if (b) b.onclick = () => $("browseBtn").click();
+    const g = $("emptyBuild"); if (g) g.onclick = () => build();
+  }
+  function showReady() {
+    state.capsule = null;
+    const it = engine.bySku.get(state.anchors[0]); const it2 = state.anchors[1] ? engine.bySku.get(state.anchors[1]) : null;
+    const chip = (x) => x ? `<span class="ready-pick"><img src="${esc(x.img)}" alt=""><span><b>${esc(x.name)}</b>${esc(x.sku)}</span></span>` : "";
+    $("board").innerHTML = `<div class="empty start"><b>Ready to build.</b>The capsule is built around ${it2 ? "these pieces" : "this piece"}. Set the number of pieces or the budget on the left, then build.<div>${chip(it)} ${chip(it2)}</div><div class="go"><button class="btn primary" id="emptyBuild">Build capsule</button><button class="btn" id="emptyBrowse">Choose a different piece</button></div></div>`;
+    $("econ").innerHTML = ""; $("boardTitle").textContent = "Capsule Builder"; $("boardMeta").textContent = `${cfg.name} · ready to build.`;
+    ["regenBtn", "anotherBtn", "sheetBtn", "xlsxBtn", "orderPageBtn", "csvBtn", "saveBtn", "saveNewBtn", "sendBtn", "sendToBtn", "whyBtn"].forEach((id) => ($(id).disabled = true));
+    boardCue("ready"); wireEmpty();
   }
   function clearBoard() {
     state.capsule = null;
-    $("board").innerHTML = '<div class="empty"><b>One piece in, a capsule out.</b>Search or browse for the buyer\'s favorite, then build — by number of pieces or by the buyer\'s budget.</div>';
+    $("board").innerHTML = '<div class="empty start"><b>One piece in, a capsule out.</b>Start with the piece the buyer liked: browse the catalog, or type a SKU or name in Pick 1 on the left.<div class="go"><button class="btn primary" id="emptyBrowse">Browse the catalog</button></div><div class="steps"><span><b>1</b> · Pick the piece</span><span><b>2</b> · Set pieces or budget</span><span><b>3</b> · Build capsule</span></div></div>';
+    boardCue("cold"); wireEmpty();
     $("econ").innerHTML = ""; $("boardTitle").textContent = "Capsule Builder"; $("boardMeta").textContent = `${cfg.name} · pick the piece the buyer liked to start.`;
     ["regenBtn", "anotherBtn", "sheetBtn", "xlsxBtn", "orderPageBtn", "csvBtn", "saveBtn", "saveNewBtn", "sendBtn", "sendToBtn", "whyBtn"].forEach((id) => ($(id).disabled = true));
   }
@@ -371,7 +388,7 @@
     const locked = !isAnchor && state.locked.has(it.sku);
     const stale = e && e.stale ? `<div class="px stale">No longer passes the stock rule — swap it</div>` : "";
     const newForHer = !isAnchor && state.ctxImpact && state.ctxImpact.added.has(it.sku);
-    const cx = !isAnchor && e && e.sc && e.sc.ctx && state.context.on && (newForHer || (e.sc.ctx.why && e.sc.ctx.pts > 0.5)) ? `<div class="ctxwhy">${newForHer ? "<b>Chosen for her store.</b> " : "Her store: "}${e.sc.ctx.why ? `goes with her ${esc(e.sc.ctx.why.item)}` : "fits her store's palette and look"}</div>` : "";
+    const cx = !isAnchor && e && e.sc && e.sc.ctx && state.context.on && (newForHer || (e.sc.ctx.why && e.sc.ctx.pts > 0.5)) ? `<div class="ctxwhy">${newForHer ? "<b>Chosen for the store.</b> " : "The store: "}${e.sc.ctx.why ? `goes with the store’s ${esc(e.sc.ctx.why.item)}` : "fits the store's palette and look"}</div>` : "";
     return `<div class="card ${isAnchor ? "anchor" : ""}" data-sku="${esc(it.sku)}">
       <div class="im"><img src="${esc(it.img)}" alt="${esc(it.name)}" loading="lazy">${isAnchor ? `<span class="tag">${anchorItems().length > 1 ? "Pick " + (idx + 1) : "Anchor"}</span>` : ""}${locked ? `<span class="tag lock">Locked</span>` : ""}${it.lowres ? `<span class="tag lr">Low-res image</span>` : ""}</div>
       <div class="b"><div class="sku"><span>${esc(it.sku)}</span>${scoreBit}</div><div class="nm">${esc(it.name)}</div><div class="px">${priceLine(it)}</div>${stale}<div class="why">${esc(why)}</div>${cx}${attrs}
@@ -461,14 +478,14 @@
     });
     runHooks("board");
   }
-  // v1.7.0: her store beside the capsule. Context only: never ordered, never totaled.
+  // v1.7.0: the store beside the capsule. Context only: never ordered, never totaled.
   function ctxThumb(x) { return x.thumb ? `<img src="${esc(x.thumb)}" alt="">` : (window.CB_SILHOUETTE ? window.CB_SILHOUETTE(x) : ""); }
   function ctxStripHTML() {
     const L = state.context.items;
     if (!L.length) return "";
     const im = state.ctxImpact, SL = { light: "Light", medium: "Medium", strong: "Strong" };
-    const impact = !state.context.on ? "Not used in matching (switched off)." : im ? `At <b>${SL[im.strength] || im.strength}</b>, her store changed <b>${im.changed} of ${im.total}</b> pieces from the capsule built on the buyer's pick alone${im.changed ? " (marked “Chosen for her store”)" : ""}.` : "";
-    return `<div class="ctxstrip"><div class="h"><b>Her store</b><span>Not ours · for context · never on the order</span><a class="link" data-pane="store">Edit</a></div>${impact ? `<div class="ctximpact">${impact}</div>` : ""}<div class="tiles">${L.map((x) => `<div class="t" title="${esc(x.name || x.type || "")}">${ctxThumb(x)}<small>${esc(x.name || x.type || "")}</small></div>`).join("")}</div></div>`;
+    const impact = !state.context.on ? "Not used in matching (switched off)." : im ? `At <b>${SL[im.strength] || im.strength}</b>, the store changed <b>${im.changed} of ${im.total}</b> pieces from the capsule built on the buyer's pick alone${im.changed ? " (marked “Chosen for the store”)" : ""}.` : "";
+    return `<div class="ctxstrip"><div class="h"><b>The store</b><span>Not ours · for context · never on the order</span><a class="link" data-pane="store">Edit</a></div>${impact ? `<div class="ctximpact">${impact}</div>` : ""}<div class="tiles">${L.map((x) => `<div class="t" title="${esc(x.name || x.type || "")}">${ctxThumb(x)}<small>${esc(x.name || x.type || "")}</small></div>`).join("")}</div></div>`;
   }
   function toggleLock(sku) { state.locked.has(sku) ? state.locked.delete(sku) : state.locked.add(sku); renderBoard(); }
   function toggleHalf(sku) {
@@ -537,7 +554,7 @@
     const list = catalog.items.filter((it) => (bf.cat === "all" || it.cat === bf.cat) && (bf.col === "all" || it.dom === bf.col || (bf.col !== "multicolor" && it.fams.includes(bf.col)))
       && (!q || (it.sku + " " + it.name + " " + (it.collection || "")).toLowerCase().includes(q)));
     $("browseGrid").innerHTML = list.map((it) => `<div data-sku="${esc(it.sku)}" class="${engine.inStock(it, state.minQty) ? "" : "out"}" title="${esc(it.name)}"><img src="${esc(it.img)}" loading="lazy" alt=""><b>${esc(it.sku)}</b><br>${esc(it.name)}<br><span style="color:var(--lav-ink)">${wsShort(it)}</span></div>`).join("") || '<div class="note">No matches.</div>';
-    $("browseGrid").querySelectorAll("div[data-sku]").forEach((d) => (d.onclick = () => { setAnchor(browseTarget, d.dataset.sku); closeDlg("browseDlg"); }));
+    $("browseGrid").querySelectorAll("div[data-sku]").forEach((d) => (d.onclick = () => { setAnchor(browseTarget, d.dataset.sku, true); closeDlg("browseDlg"); }));
   }
 
   /* ================================================= saved capsules */
@@ -746,7 +763,7 @@
     if (f.msrp && it.msrp) tx += `<div class="p m">MSRP ${money(it.msrp)}</div>`;
     if (f.units) tx += HT() ? `<div class="u">Qty ${qtyWord(minFor(it))}</div>` : `<div class="u">Minimum ${minFor(it)} per style</div>`;
     // v1.7.8: "Your pick" gets its own line above the photo (every tile keeps the same line so the rows stay aligned)
-    // v1.8.2: what the buyer bought before (her order, read in Find similar) is marked "You bought this"
+    // v1.8.2: what the buyer bought before (the buyer's order, read in Find similar) is marked "You bought this"
     const bought = S.markPick && window.CB_SIMILAR && window.CB_SIMILAR.boughtSet ? window.CB_SIMILAR.boughtSet() : new Set();
     const mark = S.markPick && orderedItems().some((x) => x.anchor || bought.has(x.it.sku));
     const tag = bought.has(it.sku) ? "You bought this" : o.anchor ? "Your pick" : "";
@@ -894,7 +911,7 @@
         }
       }
     }
-    // v1.7.0: extra pages (market brief, shown with her store, buyer packet) from app/instore.js
+    // v1.7.0: extra pages (market brief, shown with the store, buyer packet) from app/instore.js
     runHooks("sheetPages", { add, newPage, miniHead, fullHead, S, items, pageDims, esc, money, qtyWord, minFor, termsRows, activeUnits });
     // footers: page x of y + title/date on multi-page sheets
     pages.forEach((pg, k) => {
@@ -1159,7 +1176,7 @@
   function whyHTML(x) {
     const ul = (a) => `<ul>${a.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>`;
     let h = `<h4>The family</h4>${ul(x.family)}`;
-    h += `<h4>Colorways</h4><p class="note">A colorway is the same design in a different color. Showing a style in two or three colorways lets each customer find her color without the store buying a new design; switching a colorway changes the color, not the fit or the price.</p>`;
+    h += `<h4>Colorways</h4><p class="note">A colorway is the same design in a different color. Showing a style in two or three colorways lets each customer find their color without the store buying a new design; switching a colorway changes the color, not the fit or the price.</p>`;
     h += x.colorways.length ? ul(x.colorways) : `<p class="note">No style appears in more than one color in this capsule. Tick <b>Colorway story</b> to add the buyer's pick in two more colors.</p>`;
     h += `<h4>Sister pieces</h4><p class="note">Pieces made to be worn together: the lookbook's sister pieces, the same collection, or the same motif or material across categories.</p>`;
     h += x.sisters.length ? ul(x.sisters) : `<p class="note">No matching pairs in this capsule.</p>`;
@@ -1174,7 +1191,7 @@
   function openWhy() { if (!state.capsule) return; $("whyBody").innerHTML = whyHTML(explainNow()); openDlg("whyDlg"); }
 
   /* ---------- "View your capsule" link (hosted page; the capsule travels inside the link) ---------- */
-  // v1.8.9: o.lb = label on her own piece (b / p / n; none = "Your pick"), o.mb = show the In the Know market brief on the page
+  // v1.8.9: o.lb = label on the buyer's own piece (b / p / n; none = "Your pick"), o.mb = show the In the Know market brief on the page
   function capsuleLink(withPrices, o) {
     o = o || {};
     const page = (BASE.capsulePage || {}).url;
@@ -1593,7 +1610,7 @@
   $("buildBtn").disabled = !state.anchors[0];
   renderStatus(); renderLib();
   if (state.anchors[0]) build(); else clearBoard();
-  // v1.7.0: the API app/instore.js builds on (her store, boards, market brief, guided mode, buyer packet, rep kit)
+  // v1.7.0: the API app/instore.js builds on (the store, boards, market brief, guided mode, buyer packet, rep kit)
   window.__cb = {
     state, hooks: HOOKS, store, esc, money, money0, label, CATS, CAT_LABEL, VOCAB, $,
     line: () => line, cfg: () => cfg, engine: () => engine, catalog: () => catalog, acctOf, acctProfile, runHooks,

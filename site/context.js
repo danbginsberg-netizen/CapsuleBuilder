@@ -1,6 +1,6 @@
-/* Capsule Builder v1.7.0 — "Her store": what the buyer already carries, beside our capsule.
+/* Capsule Builder v1.7.0 — "The store": what the buyer already carries, beside our capsule.
    Photos (upload, camera, paste, drag), quick stand-ins, store palettes and CSV/Excel imports become context items:
-   other brands' jewelry and her own apparel and accessories. They never enter a capsule, an order, a total or an export;
+   other brands' jewelry and the store's own apparel and accessories. They never enter a capsule, an order, a total or an export;
    they only nudge our picks toward pieces that go with them (engine.setContext / contextScore). Nothing is uploaded:
    photos are shrunk to small thumbnails and kept in this browser and in the saved capsule. */
 (function () {
@@ -179,7 +179,7 @@
   }
   function addItem(x) {
     const L = ctx().items;
-    if (L.length >= MAX_ITEMS) { A.toast(`Her store holds up to ${MAX_ITEMS} items. Remove one to add more.`); return null; }
+    if (L.length >= MAX_ITEMS) { A.toast(`The store holds up to ${MAX_ITEMS} items. Remove one to add more.`); return null; }
     x = Object.assign({ id: newId(), kind: "apparel", type: "top", colors: [], materials: [], styles: [], pattern: "solid", neckline: "", metal: "", scale: "" }, x);
     if (!x.name) { x.name = autoName(x); x.autoName = true; }
     L.push(x); changed(true); return x;
@@ -213,7 +213,7 @@
       x = addItem({ source: "link", kind: "apparel", type: "top", image: u });
       try { const p = paletteOf(im, x.kind); x.colors = p.families; x.swatches = p.swatches; x.thumb = thumbOf(im, 220); } catch (e) { x.noColor = true; }
     } catch (e) { x = addItem({ source: "link", kind: "apparel", type: "top", image: u, noColor: true }); }
-    if (x) { x.needsType = true; if (x.autoName) x.name = autoName(x); changed(true); if (x.noColor) A.toast("That site doesn't let us read the picture's colors. Tap her colors on the card."); }
+    if (x) { x.needsType = true; if (x.autoName) x.name = autoName(x); changed(true); if (x.noColor) A.toast("That site doesn't let us read the picture's colors. Tap the store's colors on the card."); }
   }
 
   /* ---------------- file import (CSV, Excel) ---------------- */
@@ -312,7 +312,7 @@
           ${x.kind === "apparel" || x.kind === "accessory" ? `<select data-f="pattern">${opt(PATTERNS, x.pattern || "solid")}</select>` : ""}
           ${x.kind === "apparel" && NECK_TYPES.includes(x.type) ? `<select data-f="neckline">${opt(NECKLINES, x.neckline || "")}</select>` : ""}
           ${x.kind === "jewelry" || x.kind === "accessory" ? `<select data-f="metal">${opt(METALS, x.metal || "")}</select><select data-f="scale">${opt(SCALES, x.scale || "")}</select>` : ""}</div>
-        <div class="cx-cols" title="Her colors: tap to add or remove">${Object.keys(SW).map((f) => `<button data-c="${esc(f)}" class="${(x.colors || []).includes(f) ? "on" : ""}" style="--c:${SW[f]}" title="${esc(CNAME[f])}"></button>`).join("")}</div>
+        <div class="cx-cols" title="The store's colors: tap to add or remove">${Object.keys(SW).map((f) => `<button data-c="${esc(f)}" class="${(x.colors || []).includes(f) ? "on" : ""}" style="--c:${SW[f]}" title="${esc(CNAME[f])}"></button>`).join("")}</div>
         <div class="cx-picked">${(x.colors || []).map((f) => esc(cword(f))).join(" · ") || '<span class="warn">No color yet</span>'}</div>
         ${x.kind !== "palette" ? `<details><summary>Fabric, material and look</summary>
           ${fab.length ? `<div class="cx-chips">${fab.map((m) => `<button data-m="${esc(m)}" class="${(x.materials || []).includes(m) ? "on" : ""}">${esc(label(m))}</button>`).join("")}</div>` : ""}
@@ -322,25 +322,25 @@
   }
   function summaryHTML() {
     const P = A.engine().ctxProfile;
-    if (!P) return `<p class="note">Add what she carries to see her palette here.</p>`;
+    if (!P) return `<p class="note">Add what the store carries to see the store's palette here.</p>`;
     const cols = Object.entries(P.colors).sort((a, b) => b[1] - a[1]);
     const top = (o) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => k);
     return `<div class="cx-bar">${cols.map(([f, w]) => `<i style="flex:${w};background:${SW[f] || "#ccc"}" title="${esc(CNAME[f] || f)} ${Math.round(w * 100)}%"></i>`).join("")}</div>
       <div class="note">${cols.slice(0, 4).map(([f, w]) => `${esc(cword(f))} ${Math.round(w * 100)}%`).join(" · ")}</div>
       ${Object.keys(P.metals).length ? `<div class="note">Metal: ${top(P.metals).map(esc).join(", ")}</div>` : ""}
       ${Object.keys(P.styles).length ? `<div class="note">Look: ${top(P.styles).map((k) => esc((STYLES.find((s) => s[0] === k) || [k, k])[1])).join(", ")}</div>` : ""}
-      ${P.apparel ? `<div class="note">${P.busy ? `${P.busy} of ${P.apparel} clothing pieces are prints, so quieter jewelry leads.` : "Her clothing is mostly solid, so statement pieces can lead."}</div>` : ""}`;
+      ${P.apparel ? `<div class="note">${P.busy ? `${P.busy} of ${P.apparel} clothing pieces are prints, so quieter jewelry leads.` : "The store's clothing is mostly solid, so statement pieces can lead."}</div>` : ""}`;
   }
   const STRENGTH_NOTE = {
-    light: "<b>Light:</b> the buyer's pick decides; her store only breaks ties between close matches, so often little or nothing changes.",
-    medium: "<b>Medium:</b> her store and the buyer's pick share the say; a few pieces usually change.",
-    strong: "<b>Strong:</b> her store leads; the most pieces change toward her palette, metal and look (fewer when the buyer's pick already suits her store).",
+    light: "<b>Light:</b> the buyer's pick decides; the store only breaks ties between close matches, so often little or nothing changes.",
+    medium: "<b>Medium:</b> the store and the buyer's pick share the say; a few pieces usually change.",
+    strong: "<b>Strong:</b> the store leads; the most pieces change toward the store's palette, metal and look (fewer when the buyer's pick already suits the store).",
   };
-  const STRENGTH_ALWAYS = "At every level the buyer's pick stays in, and stock, minimums, the category mix and variety rules still hold. The list below is ranked on her store alone, so it doesn't change with the level.";
+  const STRENGTH_ALWAYS = "At every level the buyer's pick stays in, and stock, minimums, the category mix and variety rules still hold. The list below is ranked on the store alone, so it doesn't change with the level.";
   function drawImpact() {
     const el = $("ctxImpact"); if (!el) return;
     const c = ctx(), im = state.ctxImpact;
-    el.innerHTML = !c.items.length ? "" : !c.on ? "Switched off: the capsule is built on the buyer's pick alone." : !state.capsule ? "Build a capsule (or tap “Build from this” below) to see what her store changes." : im ? `On the board now: her store changed <b>${im.changed} of ${im.total}</b> pieces from the capsule built on the buyer's pick alone.${im.changed ? " Those pieces are marked “Chosen for her store.”" : " Try a stronger setting to let it lead."}` : "";
+    el.innerHTML = !c.items.length ? "" : !c.on ? "Switched off: the capsule is built on the buyer's pick alone." : !state.capsule ? "Build a capsule (or tap “Build from this” below) to see what the store changes." : im ? `On the board now: the store changed <b>${im.changed} of ${im.total}</b> pieces from the capsule built on the buyer's pick alone.${im.changed ? " Those pieces are marked “Chosen for the store.”" : " Try a stronger setting to let it lead."}` : "";
   }
   let compCat = "";
   function compHTML() {
@@ -348,14 +348,14 @@
     if (!e.ctxProfile) return "";
     const list = e.complements({ n: 9, cat: compCat || undefined, minQty: state.minQty });
     const cats = [["", "All"], ["necklace", "Necklaces"], ["earring", "Earrings"], ["bracelet", "Bracelets"]];
-    return `<h4>Best from our line for her store</h4><p class="note">${STRENGTH_ALWAYS}</p><div class="chips cx-cat">${cats.map(([k, t]) => `<button data-cat="${k}" class="${compCat === k ? "on" : ""}">${t}</button>`).join("")}</div>
-      <div class="cx-comp">${list.map((r) => `<div class="cc" data-sku="${esc(r.item.sku)}"><img src="${esc(r.item.img)}" alt="" loading="lazy"><b>${esc(r.item.name)}</b><small>${esc(r.item.sku)}${r.ctx.why ? ` · goes with her ${esc(r.ctx.why.item)}` : ""}</small>
+    return `<h4>Best from our line for the store</h4><p class="note">${STRENGTH_ALWAYS}</p><div class="chips cx-cat">${cats.map(([k, t]) => `<button data-cat="${k}" class="${compCat === k ? "on" : ""}">${t}</button>`).join("")}</div>
+      <div class="cx-comp">${list.map((r) => `<div class="cc" data-sku="${esc(r.item.sku)}"><img src="${esc(r.item.img)}" alt="" loading="lazy"><b>${esc(r.item.name)}</b><small>${esc(r.item.sku)}${r.ctx.why ? ` · goes with the store’s ${esc(r.ctx.why.item)}` : ""}</small>
         <div class="cc-a"><button class="btn" data-use="0">Build from this</button>${state.anchors[0] && state.anchors[0] !== r.item.sku ? `<button class="btn" data-use="1">Add as pick 2</button>` : ""}</div></div>`).join("") || '<p class="note">Nothing in stock fits yet.</p>'}</div>`;
   }
   function draw() {
     const pane = $("paneStore"); if (!pane) return;
     const c = ctx();
-    $("ctxItems").innerHTML = c.items.length ? c.items.map(itemCard).join("") : `<div class="cx-empty"><b>Nothing here yet.</b>Add photos of what she carries, tap a quick stand-in, pick her store's palette or import her vendor list.</div>`;
+    $("ctxItems").innerHTML = c.items.length ? c.items.map(itemCard).join("") : `<div class="cx-empty"><b>Nothing here yet.</b>Add photos of what the store carries, tap a quick stand-in, pick the store's palette or import the store's vendor list.</div>`;
     $("ctxOn").checked = c.on; $("ctxStrength").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.s === c.strength));
     // v1.7.2: what the strength does, and what it did to the capsule on the board
     $("ctxStrengthNote").innerHTML = STRENGTH_NOTE[c.strength] || "";
@@ -395,28 +395,32 @@
   function mount() {
     const pane = $("paneStore");
     pane.innerHTML = `
-      <div class="sp-head"><div><h1>Her store</h1><p class="note">Show what she already carries: her clothing and bags, and other jewelry lines on her floor. The builder finds the pieces from our line that go with them. <b>Context only:</b> never on the order, the QR code, the Excel or any total. Photos stay on this device.</p></div><div class="sp-hd-r"><span class="pill" id="ctxCount"></span><button class="btn soft" id="ctxTour">▶ Her store training</button></div></div>
-      <div class="sp-add">
+      <div class="sp-head"><div><h1>The store</h1><p class="note">Show what the store already carries: the store's clothing and bags, and other jewelry lines on the store's floor. The builder finds the pieces from our line that go with them. <b>Context only:</b> never on the order, the QR code, the Excel or any total. Photos stay on this device.</p></div><div class="sp-hd-r"><span class="pill" id="ctxCount"></span><button class="btn soft" id="ctxTour">▶ Store training</button></div></div>
+      <div class="sp-grid">
+        <div class="sp-main">
+          <div class="sp-add">
         <div class="drop" id="ctxDrop"><b>Add photos</b><span>Drop pictures here, paste a screenshot (Ctrl+V / ⌘V), or</span>
           <div class="row"><button class="btn primary" id="ctxPick">Choose photos…</button><button class="btn" id="ctxCam">Take a photo</button><button class="btn" id="ctxLinkBtn">Image link…</button></div>
           <input type="file" id="ctxFiles" accept="image/*" multiple hidden><input type="file" id="ctxCamIn" accept="image/*" capture="environment" hidden>
           <div class="row hide" id="ctxLinkRow"><input type="url" id="ctxLink" placeholder="https://… (a picture of the item)"><button class="btn" id="ctxLinkAdd">Add</button></div></div>
         <div class="sp-q"><h4>Quick add</h4><div class="standins">${STANDINS.map((s, i) => `<button data-i="${i}" title="Add ${esc(s.name)}">${silhouette(Object.assign({ id: "s" + i }, s))}<small>${esc(s.name)}</small></button>`).join("")}</div></div>
-        <div class="sp-q"><h4>Her store's palette</h4><div class="chips pals">${PALETTES.map(([n, cs], i) => `<button data-p="${i}"><span class="pal">${cs.map((c) => `<i style="background:${SW[c]}"></i>`).join("")}</span>${esc(n)}</button>`).join("")}</div>
+          </div>
+          <div class="note" id="ctxNote"></div>
+          <div class="sp-items" id="ctxItems"></div>
+        </div>
+        <div class="sp-side">
+          <h4>The store's palette</h4><div class="chips pals">${PALETTES.map(([n, cs], i) => `<button data-p="${i}"><span class="pal">${cs.map((c) => `<i style="background:${SW[c]}"></i>`).join("")}</span>${esc(n)}</button>`).join("")}</div>
           <h4>From a file</h4><div class="row"><button class="btn" id="ctxImport">Import CSV or Excel…</button><button class="btn" id="ctxTemplate">Template</button></div>
           <input type="file" id="ctxFile" accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" hidden>
-          <p class="note">A vendor list or a rep platform export works: columns are found by name (Brand, Item, Category, Color, Material, Image URL; also Item Number, ItemName, Style Number).</p></div>
-      </div>
-      <div class="note" id="ctxNote"></div>
-      <div class="sp-body">
-        <div class="sp-items" id="ctxItems"></div>
-        <div class="sp-side">
-          <h4>Her store at a glance</h4><div id="ctxSummary"></div>
-          <label class="tog"><input type="checkbox" id="ctxOn"> Use her store when building the capsule</label>
+          <p class="note">A vendor list or a rep platform export works: columns are found by name (Brand, Item, Category, Color, Material, Image URL; also Item Number, ItemName, Style Number).</p>
+          <div class="sp-glance">
+          <h4>The store at a glance</h4><div id="ctxSummary"></div>
+          <label class="tog"><input type="checkbox" id="ctxOn"> Use the store when building the capsule</label>
           <div class="seg" id="ctxStrength"><button data-s="light">Light</button><button data-s="medium">Medium</button><button data-s="strong">Strong</button></div>
           <div class="note" id="ctxStrengthNote"></div><div class="ctx-impact" id="ctxImpact"></div>
-          <div class="row"><button class="btn primary" id="ctxRebuild">Rebuild the capsule with it</button><button class="btn" id="ctxClear">Clear her store</button></div>
+          <div class="row"><button class="btn primary" id="ctxRebuild">Rebuild the capsule with it</button><button class="btn" id="ctxClear">Clear the store</button></div>
           <div id="ctxComp"></div>
+          </div>
         </div>
       </div>`;
     $("ctxTour").onclick = () => window.CB_STORETOUR && window.CB_STORETOUR.start();
@@ -450,7 +454,7 @@
     $("ctxOn").onchange = () => { ctx().on = $("ctxOn").checked; changed(true); };
     $("ctxStrength").querySelectorAll("button").forEach((b) => (b.onclick = () => { ctx().strength = b.dataset.s; changed(true); }));
     $("ctxRebuild").onclick = () => { if (state.anchors[0]) { A.build(); window.CB_PANE && window.CB_PANE("capsule"); } };
-    $("ctxClear").onclick = () => { const b = $("ctxClear"); if (!b.dataset.arm) { b.dataset.arm = 1; b.textContent = "Click again to clear"; setTimeout(() => { b.dataset.arm = ""; b.textContent = "Clear her store"; }, 3500); return; } ctx().items = []; b.dataset.arm = ""; b.textContent = "Clear her store"; changed(true); };
+    $("ctxClear").onclick = () => { const b = $("ctxClear"); if (!b.dataset.arm) { b.dataset.arm = 1; b.textContent = "Click again to clear"; setTimeout(() => { b.dataset.arm = ""; b.textContent = "Clear the store"; }, 3500); return; } ctx().items = []; b.dataset.arm = ""; b.textContent = "Clear the store"; changed(true); };
     draw();
   }
   A.hooks.context.push(draw);

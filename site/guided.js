@@ -23,10 +23,10 @@
 
   /* ---------------- coach notes (training) ---------------- */
   const COACH = {
-    1: { sees: "A photo grid of the line, filtered by category and color.", say: "“Which piece did you pick up twice?” Let her tap it herself.", why: "The capsule is built around one piece she already loves, and that piece stays in the order." },
-    2: { sees: "Budget tiles and store sizes.", say: "“What's your opening budget for jewelry?” If she doesn't know: “Roughly how much jewelry do you sell in a month?”", why: "Store size sets the budget at about 38% of a month's jewelry sales, never below the line's first-order minimum." },
-    3: { sees: "Her capsule: a balanced mix around her piece, with a market note when one fits.", say: "Tap a piece and read its reason aloud. Show prices only when she asks, then point to the retail value.", why: "Every pick has a reason she can repeat to her staff. The mix, stock and minimums are already handled." },
-    4: { sees: "Her capsule page (photos and why each piece was chosen) to preview or send, plus a QR code that opens the order page with her capsule filled in.", say: "“Here's your capsule. Scan this and your quantities are in; change anything you like and submit when you're ready.” If she'd rather think it over, send the capsule page first and the order link comes with it.", why: "The capsule page is what she shows her buyer or partner; the order page is where she buys. Your rep code rides on both links, so the order is credited to you, whether she submits it or you place it with her." },
+    1: { sees: "A photo grid of the line, filtered by category and color.", say: "“Which piece did you pick up twice?” Let the buyer tap it themselves.", why: "The capsule is built around one piece the buyer already loves, and that piece stays in the order." },
+    2: { sees: "Budget tiles and store sizes.", say: "“What's your opening budget for jewelry?” If the buyer doesn't know: “Roughly how much jewelry do you sell in a month?”", why: "Store size sets the budget at about 38% of a month's jewelry sales, never below the line's first-order minimum." },
+    3: { sees: "The buyer's capsule: a balanced mix around the buyer's piece, with a market note when one fits.", say: "Tap a piece and read its reason aloud. Show prices only when the buyer asks, then point to the retail value.", why: "Every pick has a reason the buyer can repeat to the store's staff. The mix, stock and minimums are already handled." },
+    4: { sees: "The buyer's capsule page (photos and why each piece was chosen) to preview or send, plus a QR code that opens the order page with the capsule filled in.", say: "“Here's your capsule. Scan this and your quantities are in; change anything you like and submit when you're ready.” If the buyer would rather think it over, send the capsule page first and the order link comes with it.", why: "The capsule page is what the buyer shows a partner or the buying team; the order page is where the buyer buys. Your rep code rides on both links, so the order is credited to you, whether the buyer submits it or you place it with the buyer." },
   };
 
   /* ---------------- helpers ---------------- */
@@ -98,10 +98,10 @@
         <div class="g-acts"><button class="btn" id="gRestart">Start over</button></div>`;
     }
     const t = g.mode === "train" ? train() : null;
-    return `<div class="g-q"><h1>Take it with you</h1><p>Preview the capsule page she will see, or scan to open our order page with this capsule filled in. Change any quantity, add your details and submit when you're ready.</p></div>
+    return `<div class="g-q"><h1>Take it with you</h1><p>Preview the capsule page the buyer will see, or scan to open our order page with this capsule filled in. Change any quantity, add your details and submit when you're ready.</p></div>
       <div class="g-end"><div class="g-qr big">${ol ? A.qrSVG(ol.url) : ""}<small>Order page, pre-filled${state.rep ? ` · rep ${esc(state.rep)}` : ""}</small></div>
         <div class="g-card-rep"><label>Store name <input type="text" id="gStore" value="${esc(state.buyer)}" autocomplete="organization"></label>
-          <div class="g-col"><button class="btn primary" id="gPreview">Preview her capsule page ↗</button><button class="btn" id="gOrder">Open the order page</button><button class="btn" id="gMail">Email me this capsule</button><button class="btn" id="gShare">Text or share…</button><button class="btn" id="gCopyCap">Copy capsule link</button></div>
+          <div class="g-col"><button class="btn primary" id="gPreview">Preview the buyer's capsule page ↗</button><button class="btn" id="gOrder">Open the order page</button><button class="btn" id="gMail">Email me this capsule</button><button class="btn" id="gShare">Text or share…</button><button class="btn" id="gCopyCap">Copy capsule link</button></div>
           <p class="note" id="gReqNote"></p>
           ${t ? `<div class="g-train"><h3>Training sessions</h3><ol>
             <li class="${t.anchors.length >= 5 ? "done" : ""}"><b>Five anchors.</b> Build five capsules from five different pieces (${Math.min(5, t.anchors.length)} of 5).</li>
@@ -118,7 +118,7 @@
     const body = g.step === 1 ? step1() : g.step === 2 ? step2() : g.step === 3 ? step3() : step4();
     const c = COACH[g.step];
     el.className = "g-on g-" + g.mode;
-    el.innerHTML = header() + `<div class="g-wrap"><main class="g-body">${body}</main>${g.mode === "train" ? `<aside class="g-coach"><h3>Coach notes · step ${g.step}</h3><p><b>What she sees:</b> ${esc(c.sees)}</p><p><b>What to say:</b> ${esc(c.say)}</p><p><b>Why:</b> ${esc(c.why)}</p></aside>` : ""}</div>
+    el.innerHTML = header() + `<div class="g-wrap"><main class="g-body">${body}</main>${g.mode === "train" ? `<aside class="g-coach"><h3>Coach notes · step ${g.step}</h3><p><b>What the buyer sees:</b> ${esc(c.sees)}</p><p><b>What to say:</b> ${esc(c.say)}</p><p><b>Why:</b> ${esc(c.why)}</p></aside>` : ""}</div>
       ${g.confirmExit ? `<div class="g-confirm"><span>Leave kiosk mode?</span><button class="btn primary" id="gExitYes">Leave</button><button class="btn" id="gExitNo">Stay</button></div>` : ""}`;
     wire();
     el.scrollTop = 0;
@@ -224,10 +224,10 @@
   function openLauncher() {
     $("gmBody").innerHTML = Object.entries(MODES).map(([k, m]) => `<div class="gm-row"><div><b>${esc(m.title)}</b><div class="note">${esc(m.who)}. ${k === "guided" ? "Prices stay hidden until you tap Show prices; ends with the pre-filled order page." : k === "kiosk" ? "Prices stay hidden until someone taps Show prices; ends with “Request this capsule,” an email to us. Exit asks before leaving, and it starts over after 3 idle minutes." : k === "train" ? "Coach notes beside each step and the four training sessions." : "Featured styles, ending with a “Rep this line” card."}</div>
       <div class="gm-link">${esc(link(k))}</div></div><div class="gm-a"><button class="btn primary" data-go="${k}">Start here</button><button class="btn" data-copy="${k}">Copy link</button></div></div>`).join("") +
-      `<div class="gm-row"><div><b>Her store training</b><div class="note">Reps learning “Her store”: an eight-step walk-through on the real screen (add her pieces, fix them, read her palette, build from the best match, set Light/Medium/Strong, show and send it). Each step ticks itself off.</div>
+      `<div class="gm-row"><div><b>Store training</b><div class="note">Reps learning the Store tab: an eight-step walk-through on the real screen (add the store's pieces, fix them, read the store's palette, build from the best match, set Light/Medium/Strong, show and send it). Each step ticks itself off.</div>
         <div class="gm-link">${esc(A.cfg().builderPage.url + "?mode=store&line=" + A.line())}</div></div><div class="gm-a"><button class="btn primary" id="gmStore">Start here</button><button class="btn" id="gmStoreCopy">Copy link</button></div></div>` +
-      [["send", "Send a capsule training", "Reps learning to send: rep code, build, Send capsule…, preview the page she will see, get it to her, and follow it. A seven-step walk-through on the real screen."],
-       ["follow", "Follow-up training", "Reps following up a buyer who has ordered: Find similar, paste her order, choose the pieces, build, send. A six-step walk-through on the real screen."]].map(([k, t, d]) => `<div class="gm-row"><div><b>${esc(t)}</b><div class="note">${esc(d)}</div>
+      [["send", "Send a capsule training", "Reps learning to send: rep code, build, Send capsule…, preview the page the buyer will see, get it to the buyer, and follow it. A seven-step walk-through on the real screen."],
+       ["follow", "Follow-up training", "Reps following up a buyer who has ordered: Find similar, paste the buyer's order, choose the pieces, build, send. A six-step walk-through on the real screen."]].map(([k, t, d]) => `<div class="gm-row"><div><b>${esc(t)}</b><div class="note">${esc(d)}</div>
         <div class="gm-link">${esc(A.cfg().builderPage.url + "?mode=" + k + "&line=" + A.line())}</div></div><div class="gm-a"><button class="btn primary" data-tour="${k}">Start here</button><button class="btn" data-tourcopy="${k}">Copy link</button></div></div>`).join("") +
       `<p class="note">Each link opens ${esc(A.cfg().name)} only${state.rep ? ` and carries your rep code ${esc(state.rep)} (booth and training)` : ". Set your rep code under Buyer first so booth and training links carry it"}.</p>`;
     $("gmBody").querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => start(b.dataset.go)));
@@ -242,7 +242,7 @@
 
   // from the link
   const q = new URLSearchParams(location.search), m = q.get("mode");
-  if (m === "store") {   // v1.7.2: Her store training
+  if (m === "store") {   // v1.7.2: Store training
     const L = String(q.get("line") || "").toUpperCase();
     if ((L === "RF" || L === "OIYK") && L !== A.line()) A.switchLine(L, false);
     setTimeout(() => window.CB_STORETOUR && window.CB_STORETOUR.start(), 0);
