@@ -1234,7 +1234,7 @@ if(h&&h.charAt(0)!=='#'&&!/^(mailto|tel):/i.test(h)&&!a[i].target){a[i].target='
 <script>
 /* v24 (2 Oct 2026): In the Know signup. Inside the onlyifyouknow.com page, the storefront posts the signup itself (same site, so Shopify
    adds the subscriber with the in-the-know tags) and comes back with ?customer_posted=true. Opened on its own, or if the storefront
-   doesn't answer, the form posts straight to onlyifyouknow.com/contact. */
+   doesn't answer, the visitor goes to the buyer brief's own signup (Shopify's spam check only accepts forms on onlyifyouknow.com). */
 (function(){
 var F=document.getElementById("itk-form");if(!F)return;
 var PO="https://onlyifyouknow.com",done=document.getElementById("itk-done"),err=F.querySelector(".itk-err"),
@@ -1244,7 +1244,8 @@ try{if(new URLSearchParams(location.search).get("customer_posted")==="true")sent
 function clean(v){return (v||"").replace(/[,<>"]/g," ").replace(/[ ]+/g," ").trim();}
 function handle(v){v=(v||"").trim().replace(/^(https?:[/][/])?(www[.])?instagram[.]com[/]/i,"").replace(/[/?#].*$/,"").replace(/^@+/,"");return /^[A-Za-z0-9._]{1,30}$/.test(v)?v.toLowerCase():"";}
 function show(m){err.textContent=m;err.style.display=m?"block":"none";}
-window.addEventListener("message",function(e){if(e.origin===PO&&e.data&&e.data.rf==="itk-ack")acked=true;});
+var BB="https://onlyifyouknow.com/pages/buyer-brief?utm_source=wholesale-page&utm_medium=referral&utm_campaign=itk-fall26&utm_content=signup-fallback#follow";
+window.addEventListener("message",function(e){if(e.origin!==PO||!e.data)return;if(e.data.rf==="itk-ack")acked=true;if(e.data.rf==="itk-fail"){var b=F.querySelector('button[type="submit"]');b.disabled=false;b.textContent="Sign me up";err.innerHTML='We couldn\u2019t finish that just now. Please try again, or <a href="'+BB+'" target="_top">sign up on the buyer brief</a>.';err.style.display="block";}});
 F.addEventListener("submit",function(e){
 e.preventDefault();show("");
 var mail=(em.value||"").trim();
@@ -1256,7 +1257,7 @@ tg.value=tags.join(", ");
 var b=F.querySelector('button[type="submit"]');b.disabled=true;b.textContent="Signing you up…";
 var framed=window.parent!==window;
 if(framed){try{window.parent.postMessage({rf:"itk",email:mail,tags:tg.value},PO);}catch(x){}}
-setTimeout(function(){if(!acked)F.submit();},framed?3000:0);
+setTimeout(function(){if(!acked){try{window.open(BB,"_top");}catch(x){location.href=BB;}}},framed?3000:0);
 });
 })();
 </script>
