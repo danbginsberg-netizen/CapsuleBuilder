@@ -72,7 +72,7 @@
       <h1>${esc(B.title)}</h1><p class="lede">${esc(B.lede)}</p>
       <div class="row bf-acts"><button class="btn primary" id="bfMail" ${live ? "" : "disabled"} title="Copies the brief as a formatted email. Paste it into any email program.">Copy for email</button><button class="btn${window.CB_MAIL && window.CB_MAIL.touchDevice() ? "" : " hide"}" id="bfShare" ${live ? "" : "disabled"}>Share…</button><button class="btn" id="bfCopy" ${live ? "" : "disabled"}>Copy as text</button><button class="btn" id="bfPdf" ${live ? "" : "disabled"}>Download PDF</button>
         <label class="tog"><input type="checkbox" id="bfSheet" ${state.sheet.brief ? "checked" : ""} ${live ? "" : "disabled"}> Add to the line sheet PDF</label>
-        <label class="tog"><input type="checkbox" id="bfSend" ${A.store.get("capsule_brief_in_send", false) ? "checked" : ""} ${live ? "" : "disabled"}> Add to "Send capsule" emails and capsule pages</label></div>
+        <label class="tog"><input type="checkbox" id="bfSend" ${A.store.get("capsule_brief_in_send", true) ? "checked" : ""} ${live ? "" : "disabled"}> Add to "Send capsule" emails and capsule pages</label></div>
       <div class="note" id="bfNote"></div>
       <div class="bf-grid">
         <div class="panel"><h3>What the market is doing</h3><ul>${B.points.map((p) => `<li>${esc(p)}</li>`).join("")}</ul></div>
@@ -310,7 +310,7 @@
     $("storeSize").onchange = () => { const v = $("storeSize").value; $("storeSales").classList.toggle("hide", v !== "custom"); if (v === "custom") { $("storeSales").focus(); return; } applyStoreSize(v); };
     $("storeSales").onchange = () => { const v = +$("storeSales").value; if (v > 0) applyStoreSize("$" + v); };
     $("bdSaveGo").onclick = saveBoard;
-    if ($("sdBrief")) $("sdBrief").checked = !!A.store.get("capsule_brief_in_send", false);
+    if ($("sdBrief")) $("sdBrief").checked = !!A.store.get("capsule_brief_in_send", true);
     if ($("sdBrief")) $("sdBrief").onchange = () => A.store.set("capsule_brief_in_send", $("sdBrief").checked);
     let p0 = "capsule"; try { p0 = sessionStorage.getItem("cb_pane") || "capsule"; } catch (e) { /* ignore */ }
     show(p0);

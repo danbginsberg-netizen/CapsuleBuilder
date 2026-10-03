@@ -1204,7 +1204,7 @@
     if (state.capName.trim()) url += `&n=${encodeURIComponent(state.capName.trim())}`;
     if (withPrices) url += "&p=1";
     if (o.lb && /^[bpn]$/.test(o.lb)) url += `&lb=${o.lb}`;
-    if (o.mb) url += "&mb=1";
+    if (o.mb === false) url += "&mb=0";   // v1.9.6: the capsule page shows the brief by default; an unticked Send capsule turns it off
     const ap = acctProfile(line);   // v1.9.0: the account's buyer-facing line rides along (never the rep's notes)
     if (ap && ap.pitch && ap.role !== "not a fit") url += `&ac=${encodeURIComponent(state.account)}`;
     return url + tagParams();
@@ -1632,7 +1632,12 @@
     setSize: (n) => { state.size = n; if (state.mode !== "pieces") { state.mode = "pieces"; $("modePieces").classList.add("on"); $("modeBudget").classList.remove("on"); $("piecesBox").classList.remove("hide"); $("budgetBox").classList.add("hide"); } resetMix(true); persist(); if (state.anchors[0]) build(); },
   };
   function restoreBoard(b) {   // open a board: its anchors, and its picks if it has them (else a fresh build at its size or budget)
-    if (b.line && b.line !== line) loadLine(b.line);
+    if (b.line && b.line !== line) {   // v1.9.6: a ready-made or rep-link capsule on the other line gets that line's order-type wording and stock rule
+      loadLine(b.line);
+      const s = store.get("capsule_ui", {});
+      state.minQty = s[`minQty_${line}`] != null ? s[`minQty_${line}`] : cfg.minQty;
+      $("minQty").value = state.minQty; $("minQtyRow").classList.toggle("hide", line === "OIYK");
+    }
     state.loadedId = null; state.tmpId = null;
     state.anchors = [b.anchors[0] || null, b.anchors[1] || null].map((x) => (x && engine.bySku.has(x) ? x : null));
     if (!state.anchors[0]) return false;
@@ -1642,7 +1647,7 @@
     if (b.budget) { state.mode = "budget"; state.budget = b.budget; } else { state.mode = "pieces"; state.size = b.size || BASE.defaultSize; state.counts = null; }
     $("modePieces").classList.toggle("on", state.mode === "pieces"); $("modeBudget").classList.toggle("on", state.mode === "budget");
     $("piecesBox").classList.toggle("hide", state.mode !== "pieces"); $("budgetBox").classList.toggle("hide", state.mode !== "budget");
-    renderSlot(0); renderSlot(1); drawPresets(); resetMix(true); $("buildBtn").disabled = false;
+    renderSlot(0); renderSlot(1); drawPresets(); drawUnits(); resetMix(true); $("buildBtn").disabled = false;
     if (b.picks && (b.picks.length || b.exact)) {
       applyContext();
       state.capsule = engine.restore(state.anchors.filter(Boolean), b.picks, { colorwayStory: state.story, minQty: state.minQty });

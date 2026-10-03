@@ -3,7 +3,8 @@
      ?l=RF|OIYK  &i=SKU:pieces,SKU:pieces,...  &a=<number of buyer's picks at the front of i>
      &u=r (reorder)  &st=<store>  &n=<capsule name>  &p=1 (show wholesale prices)  &rep=<rep code>  &cap=<capsule ID>
      &lb=b|p|n (v1.8.4: label on the buyer's own piece: b "You bought this", p "Built around this piece", n none; default "Your pick")
-     &mb=1 (v1.8.9: the In the Know market brief for this line, while it is current; same rules as the builder: line-locked, 60 days, no brand names)
+     &mb=0 hides the In the Know market brief. v1.9.6 (Dan, 3 Oct 2026): the brief shows by default, so links already sent
+     without &mb=1 show it too (v1.8.9 rules unchanged: this line's brief only, while current (60 days), no brand names)
      &ac=<account id> (v1.9.0: the account's buyer-facing line from app/accounts.js)
    Shown on onlyifyouknow.com/pages/capsule (unlisted, noindex), which passes the link through to this page. */
 (function () {
@@ -94,7 +95,7 @@
   let h = `<header class="hd"><img src="${esc(cfg.logo)}" alt="${esc(cfg.name)}"><div class="tag">${esc(cfg.sheetTagline || cfg.name)}</div>
     <h1>${esc(title)}</h1>
     <div class="meta">${lines.length} styles · ${CATS.filter((c) => cnt[c]).map((c) => `${cnt[c]} ${cnt[c] === 1 ? c : CAT_LABEL[c].toLowerCase()}`).join(" · ")}${reorder ? " · reorder" : ""}${store ? ` · prepared for ${esc(store)}` : ""}</div>${pitch ? `<div class="pitch">${esc(pitch)}</div>` : ""}
-    <div class="acts">${ol ? `<a class="btn primary" href="${esc(ol)}" target="_top" rel="noopener">Order this capsule</a>` : ""}<a class="btn" href="#why">&#9432; Why these pieces</a>${P.get("mb") === "1" ? `<a class="btn" href="#brief">Market brief</a>` : ""}<button class="btn" id="printBtn">Print / save as PDF</button></div>
+    <div class="acts">${ol ? `<a class="btn primary" href="${esc(ol)}" target="_top" rel="noopener">Order this capsule</a>` : ""}<a class="btn" href="#why">&#9432; Why these pieces</a>${P.get("mb") !== "0" ? `<a class="btn" href="#brief">Market brief</a>` : ""}<button class="btn" id="printBtn">Print / save as PDF</button></div>
     ${ol ? `<p class="small">Opens our wholesale order page with these ${lines.length} styles filled in. Adjust quantities there, add your details and submit.</p>` : ""}</header>`;
   if (showPrices) h += `<div class="tot"><div><span>${reorder ? "Reorder" : "Wholesale total"}</span><b>${money(tot)}</b><small>${pcs} pieces</small></div><div><span>Retail value</span><b>${money0(retail)}</b><small>${tot ? (retail / tot).toFixed(1) + "× your cost" : ""}</small></div></div>`;
   for (const c of CATS) {
@@ -110,8 +111,8 @@
     }).join("") + `</div></section>`;
   }
   if (gone.length) h += `<p class="small warn">No longer in our catalog, so left out: ${esc(gone.join(", "))}.</p>`;
-  // v1.8.9: the market brief, when the rep ticked it (Send capsule), and only while it is current
-  const brief = P.get("mb") === "1" ? window.CB_MAIL.brief((window.TREND_SIGNALS || {})[L], L, new Date().toISOString().slice(0, 10), lines.map((x) => x.it), engine) : null;
+  // v1.8.9: the market brief, only while it is current; v1.9.6: on unless the link says &mb=0 (rep unticked it in Send capsule)
+  const brief = P.get("mb") !== "0" ? window.CB_MAIL.brief((window.TREND_SIGNALS || {})[L], L, new Date().toISOString().slice(0, 10), lines.map((x) => x.it), engine) : null;
   if (brief) h += `<section class="brief" id="brief"><div class="eb">Market brief · In the Know · ${esc(brief.editionText)}</div><h2>${esc(brief.title)}</h2><p class="lede">${esc(brief.lede)}</p>
     <div class="cols"><div><h3>What the market is doing</h3>${ul(brief.points)}</div><div><h3>Display ideas a store can copy</h3>${ul(brief.display)}${brief.timing.length ? `<h3>Timing</h3>${ul(brief.timing)}` : ""}</div></div>
     ${brief.signals.length ? `<h3>Trend notes</h3><ul>${brief.signals.map((x) => `<li>${esc(x.text)}${x.hit ? ` <b class="hit">· in this capsule</b>` : ""}</li>`).join("")}</ul>` : ""}
