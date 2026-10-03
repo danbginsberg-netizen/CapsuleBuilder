@@ -37,6 +37,13 @@
   /* filters */
   #filters { max-width: 1400px; margin: 8px auto 0; display: flex; gap: 8px; align-items: center; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
   #filters::-webkit-scrollbar { display: none; }
+  /* v1.9.4 (Dan, 3 Oct 2026): with a mouse there is no swipe, so on desktop the filter row wraps onto a second line
+     instead of scrolling sideways out of reach. Touch screens (iPad, phone) keep the one-line swipe row. */
+  @media (hover: hover) and (pointer: fine) {
+    #filters { flex-wrap: wrap; overflow: visible; row-gap: 8px; }
+    #filters .grp { flex-wrap: wrap; }
+    #filters .sep { display: none; }
+  }
   #filters .grp { display: flex; gap: 6px; flex: 0 0 auto; }
   .chip { flex: 0 0 auto; min-height: 40px; border: 1px solid var(--line); background: #fff; border-radius: 99px; padding: 7px 14px; font-weight: 600; font-size: 14px; cursor: pointer; white-space: nowrap; }
   .chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
@@ -136,7 +143,7 @@
 <body>
 <header>
   <div class="hrow">
-    <div class="brand"><img id="logo" src="logo_rf.png?h=88500682" alt=""><div><b>Line Book</b><small>Every style we sell · for reps · v1.9.3</small></div></div>
+    <div class="brand"><img id="logo" src="logo_rf.png?h=88500682" alt=""><div><b>Line Book</b><small>Every style we sell · for reps · v1.9.4</small></div></div>
     <div class="seg" role="tablist" aria-label="Line"><button data-line="RF">Retro Forever</button><button data-line="OIYK">Only If You Know</button><button data-line="ALL">Both</button></div>
     <label class="search"><input id="q" type="search" placeholder="Search name, SKU, color, stone…" autocomplete="off" aria-label="Search"></label>
     <a class="hbtn" id="builderBtn" href="#">Capsule Builder ↗</a>
@@ -177,7 +184,7 @@
 <script src="lbdata.js?h=9bd1509d"></script>
 <script src="linebook.js?h=75b11443"></script>
 <script>/* v1.8.0: open the newest release, not a saved copy (GitHub Pages keeps pages up to 10 minutes) */
-(function(){var V="1.9.3",t0=Date.now();
+(function(){var V="1.9.4",t0=Date.now();
 function newest(cb){try{fetch("version.json?cb="+Date.now(),{cache:"no-store"}).then(function(r){return r.json()}).then(function(j){if(j&&j.version&&j.version!==V)cb(j.version)}).catch(function(){})}catch(e){}}
 function reload(v){try{if(sessionStorage.getItem("cb_fresh")===v)return false;sessionStorage.setItem("cb_fresh",v)}catch(e){}var u=new URL(location.href);u.searchParams.set("v",v);location.replace(u.toString());return true}
 function bar(v){if(document.getElementById("cbFresh"))return;var d=document.createElement("div");d.id="cbFresh";d.style.cssText="position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:99999;background:#1f1d24;color:#fff;padding:9px 14px;border-radius:10px;font:600 14px system-ui,sans-serif;box-shadow:0 4px 18px #0004";d.innerHTML="Version "+v+" is ready. <button style='margin-left:8px;border:0;border-radius:7px;padding:5px 10px;font-weight:700;cursor:pointer'>Reload</button>";d.querySelector("button").onclick=function(){try{sessionStorage.removeItem("cb_fresh")}catch(e){}reload(v)};document.body.appendChild(d)}
