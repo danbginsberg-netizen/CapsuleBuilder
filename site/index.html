@@ -520,6 +520,7 @@
   .ctxstrip .ctximpact { font-size: 13px; margin: -2px 0 8px; } .card .ctxwhy b { font-weight: 700; }
   /* v1.9.0: account fit */
   #acctWrap .note { margin-top: 4px; } #acctWrap .acaps { margin-top: 3px; }
+  #acctWrap .adisc, .acctbox .adisc { font-size: 11.5px; line-height: 1.4; color: var(--muted); } .acctbox .adisc { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
   .acctbox { border: 1px solid var(--lav); border-radius: 12px; padding: 10px 12px 12px; margin: 0 0 16px; background: #fff; }
   .acctbox .h { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 14px; }
   .acctbox .h .sp { flex: 1; }
@@ -665,7 +666,7 @@
 <body>
 <div class="app">
   <aside>
-    <div class="brand"><img id="brandLogo" src="logo_rf.png?h=88500682" alt=""><div><b>Capsule Builder</b><small>Internal sales tool · v1.9.4</small></div></div>
+    <div class="brand"><img id="brandLogo" src="logo_rf.png?h=88500682" alt=""><div><b>Capsule Builder</b><small>For reps &amp; buyers · v1.9.5</small></div></div>
     <div class="lines">
       <button class="on" id="lineRF" data-line="RF">Retro Forever</button>
       <button id="lineOIYK" data-line="OIYK">OIYK</button>
@@ -856,7 +857,7 @@
 <div id="guided"></div>
 <div id="sheetWrap"></div>
 
-<script src="config.js?h=72e2c45e"></script>
+<script src="config.js?h=a57670e5"></script>
 <script src="data_rf.js?h=189147ab"></script>
 <script src="data_oiyk.js?h=e00012b9"></script>
 <script src="faire_rf.js?h=977f58fa"></script>
@@ -866,21 +867,21 @@
 <script src="jspdf.umd.min.js?h=e6c65801" defer></script>
 <script src="html2canvas.min.js?h=d7530aa0" defer></script>
 <script src="guide.js?h=47973b5b"></script>
-<script src="engine.js?h=64694963"></script>
+<script src="engine.js?h=1b25502c"></script>
 <script src="accounts.js?h=2f35da0c"></script>
 <script src="email.js?h=f1d01085"></script>
-<script src="ui.js?h=84bc8260"></script>
+<script src="ui.js?h=a428da43"></script>
 <script src="boards.js?h=775a6d26"></script>
 <script src="context.js?h=4b8fb899"></script>
 <script src="instore.js?h=c960d955"></script>
 <script src="guided.js?h=fb172527"></script>
 <script src="storetour.js?h=b3655d32"></script>
-<script src="similar.js?h=ecdd7846"></script>
+<script src="similar.js?h=5fd27e1b"></script>
 <script src="sendtour.js?h=2054e7b6"></script>
-<script src="accountfit.js?h=9e7a3d2a"></script>
-<script src="lb_bridge.js?h=57509ca8"></script>
+<script src="accountfit.js?h=ef7ab67d"></script>
+<script src="lb_bridge.js?h=56e910cf"></script>
 <script>/* v1.8.0: open the newest release, not a saved copy (GitHub Pages keeps pages up to 10 minutes) */
-(function(){var V="1.9.4",t0=Date.now();
+(function(){var V="1.9.5",t0=Date.now();
 function newest(cb){try{fetch("version.json?cb="+Date.now(),{cache:"no-store"}).then(function(r){return r.json()}).then(function(j){if(j&&j.version&&j.version!==V)cb(j.version)}).catch(function(){})}catch(e){}}
 function reload(v){try{if(sessionStorage.getItem("cb_fresh")===v)return false;sessionStorage.setItem("cb_fresh",v)}catch(e){}var u=new URL(location.href);u.searchParams.set("v",v);location.replace(u.toString());return true}
 function bar(v){if(document.getElementById("cbFresh"))return;var d=document.createElement("div");d.id="cbFresh";d.style.cssText="position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:99999;background:#1f1d24;color:#fff;padding:9px 14px;border-radius:10px;font:600 14px system-ui,sans-serif;box-shadow:0 4px 18px #0004";d.innerHTML="Version "+v+" is ready. <button style='margin-left:8px;border:0;border-radius:7px;padding:5px 10px;font-weight:700;cursor:pointer'>Reload</button>";d.querySelector("button").onclick=function(){try{sessionStorage.removeItem("cb_fresh")}catch(e){}reload(v)};document.body.appendChild(d)}

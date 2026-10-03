@@ -20,6 +20,10 @@
   const fmtDate = (d) => { const t = new Date(String(d) + "T12:00:00"); return isNaN(t) ? d : t.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); };
   const short = (a) => a.name.split(" (")[0];
   let open = false;   // "How it merchandises jewelry" folded or not
+  /* v1.9.5 (Dan, 3 Oct 2026): retailer names are illustrative, never the retailer's own line. Short note under the picker,
+     full note in the fit box and the fit report. */
+  const DISC_SHORT = "Retailer names are for illustration only. Account profiles and ready-made capsules are representative examples, not the retailers' own product lines or orders.";
+  const DISC = "About retailer names: retailer names and profiles are used for illustration only. Account profiles and ready-made capsules are representative examples we put together from publicly available information. They are not the retailers' own product lines, assortments, buying plans or orders. Retro Forever and Only If You Know™ are not affiliated with, sponsored by or endorsed by these retailers. All retailer names and trademarks belong to their owners.";
 
   /* ---------------- left panel: the Account picker ---------------- */
   function mount() {
@@ -28,7 +32,7 @@
     if (!after) return;
     const wrap = document.createElement("div");
     wrap.id = "acctWrap";
-    wrap.innerHTML = `<label class="f" for="acctSel">Account <span class="note">checks the fit</span></label><select id="acctSel"></select><div class="note" id="acctNote"></div>`;
+    wrap.innerHTML = `<label class="f" for="acctSel">Account <span class="note">checks the fit</span></label><select id="acctSel"></select><div class="note" id="acctNote"></div><div class="note adisc">${esc(DISC_SHORT)}</div>`;
     after.insertAdjacentElement("afterend", wrap);
     $("acctSel").onchange = () => { const v = $("acctSel").value; if (v === "__all") { setGroups(null); fill(); draw(); return; } choose(v); };
     fill();
@@ -142,7 +146,8 @@
         <h4>How to reach the buyer</h4><p>${esc(a.route)}</p>
         ${caps ? `<h4>Ready-made capsules</h4><div class="acapbtns">${caps}</div>` : ""}
         <h4>Sources (read ${esc(fmtDate(a.checked))}, ${esc(a.confidence)} confidence)</h4><ul class="asrc">${sources}</ul>
-      </div>`;
+      </div>
+      <div class="adisc">${esc(DISC)}</div>`;
     bd.insertBefore(box, bd.firstChild);
     box.querySelectorAll("[data-ac]").forEach((b) => (b.onclick = () => act(b.dataset.ac)));
     box.querySelectorAll("[data-cap]").forEach((b) => (b.onclick = () => openCap(a, +b.dataset.cap)));
@@ -190,7 +195,7 @@
     const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fit report · ${esc(A.capTitle())}</title>
 <style>body{font:14px/1.45 -apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#1f1d24;max-width:1100px;margin:24px auto;padding:0 16px}h1{font:600 24px Georgia,serif;margin:0 0 4px}h2{font-size:15px;text-transform:uppercase;letter-spacing:.06em;color:#6b6775;margin:22px 0 6px}.meta{color:#6b6775}.g{display:inline-block;border-radius:99px;padding:2px 10px;font-weight:700;background:#e8f4ec;color:#2f7d4f}.g.mixed,.g.poor{background:#fff3e0;color:#a15c00}table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #e6e2ee;padding:6px 8px;text-align:left;vertical-align:top}th{font-size:12px;text-transform:uppercase;color:#6b6775}img{width:64px;height:64px;object-fit:contain}tr.off{background:#fdecea}tr.stretch{background:#fff8ec}.m{color:#a15c00}blockquote{border-left:3px solid #b8a9d9;margin:8px 0;padding:4px 12px;background:#faf9fc}small{color:#6b6775}@media print{body{margin:0}tr{break-inside:avoid}}</style></head><body>
 <h1>Fit report · ${esc(A.capTitle())}</h1>
-<div class="meta">${esc(a.name)} · ${esc(A.line() === "RF" ? "Retro Forever" : "Only If You Know")} · ${R.n} styles · rep ${esc(state.rep || "—")} · ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
+<div class="meta">${esc(a.name)} · ${esc(A.line() === "RF" ? "Retro Forever" : "Only If You Know™")} · ${R.n} styles · rep ${esc(state.rep || "—")} · ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
 <p><span class="g ${R.grade}">${esc(R.label)} · ${R.score}</span> ${esc(R.text)}</p>
 ${P.summary ? `<p><b>Built to:</b> ${esc(P.summary)}</p>` : ""}
 ${P.pitch && P.role !== "not a fit" ? `<blockquote><b>Buyer-facing line:</b> “${esc(P.pitch)}”</blockquote>` : ""}
@@ -200,7 +205,8 @@ ${(a.comparables || []).length ? `<table><thead><tr><th>Brand</th><th>Piece</th>
 ${(a.watch || []).length ? `<h2>Watch</h2><ul>${a.watch.map((w) => `<li>${esc(w)}</li>`).join("")}</ul>` : ""}
 <h2>How to reach the buyer</h2><p>${esc(a.route)}</p>
 <h2>Sources</h2><p class="meta">Read ${esc(fmtDate(a.checked))} · ${esc(a.confidence)} confidence. Retailers change their assortment often; re-check before a big pitch.</p><ul>${(a.sources || []).map((s) => `<li><a href="${esc(s.u)}">${esc(s.t)}</a></li>`).join("")}</ul>
-<p class="meta">Internal: for the rep, not the buyer.</p></body></html>`;
+<p class="meta">Internal: for the rep, not the buyer.</p>
+<p class="meta">${esc(DISC)}</p></body></html>`;
     const name = `${A.fileSafe ? A.fileSafe("Fit report " + A.capTitle()) : "Fit_report"}.html`;
     let w = null;
     try { w = window.open(URL.createObjectURL(new Blob([html], { type: "text/html" })), "_blank"); } catch (e) { w = null; }

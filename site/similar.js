@@ -11,7 +11,7 @@
   const { $, esc, state, money } = A;
   const KEY = "capsule_similar_v1";
   const LINES = ["RF", "OIYK"];
-  const NAME = { RF: "Retro Forever", OIYK: "Only If You Know" };
+  const NAME = { RF: "Retro Forever", OIYK: "Only If You Know™" };
 
   /* ---------------- state (kept in this browser) ---------------- */
   const DEF = { words: "", q: null, photos: [], orderText: "", orderRef: "", orderDate: "", sel: { RF: [], OIYK: [] }, touched: { RF: false, OIYK: false },

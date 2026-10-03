@@ -11,7 +11,7 @@
   if (!A) return;
   const { $, store, state } = A;
   const B = window.CAPSULE_CONFIG || {};
-  const LINE_NAME = { RF: "Retro Forever", OIYK: "Only If You Know" };
+  const LINE_NAME = { RF: "Retro Forever", OIYK: "Only If You Know™" };
 
   function lineBookUrl() {
     const p = new URLSearchParams();

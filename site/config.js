@@ -245,7 +245,7 @@ window.CAPSULE_CONFIG = {
       ],
     },
     OIYK: {
-      name: "Only If You Know",
+      name: "Only If You Know™",
       logo: "logo_oiyk.png?h=64cbd40d",
       sheetTagline: "Color, memory, light",
       minQty: 0,                 // made to order: no stock rule

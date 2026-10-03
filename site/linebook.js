@@ -29,7 +29,7 @@
   if (qs.get("rep")) store.set("capsule_rep", cleanRep(qs.get("rep")));
   if (qs.get("grp")) store.set("capsule_acct_groups", qs.get("grp") === "all" ? null : qs.get("grp").split(",").filter(Boolean));
   const rep = () => cleanRep(store.get("capsule_rep", ""));
-  const LINE_NAME = { RF: "Retro Forever", OIYK: "Only If You Know" };
+  const LINE_NAME = { RF: "Retro Forever", OIYK: "Only If You Know™" };
   const CAT = { necklace: "Necklaces", bracelet: "Bracelets", earring: "Earrings" };
   const STYLE = { boho: "Boho", minimal: "Minimal", "retro/vintage": "Retro & vintage", glam: "Glam & sparkle", playful: "Playful color", "classic pearl": "Pearl", coastal: "Coastal", statement: "Statement" };
   const MOTIF = { "cross/faith": "Cross & faith", heart: "Hearts", "ocean/shell": "Sea life & shell", "floral/botanical": "Flowers", "animal print": "Animal print", "evil eye": "Evil eye", celestial: "Celestial", "coin/medallion": "Coins & medallions", butterfly: "Butterflies", bow: "Bows", geometric: "Geometric" };
@@ -211,6 +211,7 @@
     $("clear").classList.toggle("hide", !any);
     const a = acctById(S.acct);
     $("acctNote").innerHTML = a ? `<b>${esc(a.name.split(" (")[0])}</b>: pieces it never carries are hidden; the rest are sorted by how well they fit how it merchandises jewelry today. ${a.lines[S.line === "ALL" ? "RF" : S.line] && a.lines[S.line === "ALL" ? "RF" : S.line].summary ? esc(a.lines[S.line === "ALL" ? "RF" : S.line].summary) : ""}` : "";
+    if (a) $("acctNote").innerHTML += `<div class="adisc">About the account lens: a representative guide that compares our styles with ${esc(a.name.split(" (")[0])}'s publicly listed jewelry assortment${a.checked ? ` as of ${esc(new Date(String(a.checked) + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }))}` : ""}. It is not the retailer's own product line, buying plan or order. Retro Forever and Only If You Know™ are not affiliated with, sponsored by or endorsed by this retailer, and its name and trademarks belong to their owner.</div>`;   // v1.9.5 (Dan, 3 Oct 2026)
     $("acctNote").classList.toggle("hide", !a);
     document.body.classList.toggle("line-oiyk", S.line === "OIYK");
     $("logo").src = S.line === "OIYK" ? "logo_oiyk.png?h=64cbd40d" : "logo_rf.png?h=88500682";
@@ -361,7 +362,7 @@
     const body = sec("RF") + sec("OIYK");
     $("trayBody").innerHTML = `<label class="f" for="trayStore">Store name <span class="small">(goes on the order page and capsule page)</span></label><input id="trayStore" type="text" value="${st}" placeholder="e.g. Sea Breeze Boutique">`
       + `<div class="small">Rep code: <b>${esc(rep() || "none")}</b>${rep() ? "" : " (set it in the Capsule Builder, or open this page with ?rep=YOURCODE)"}</div>`
-      + (body || `<div class="empty"><b>No picks yet.</b>Tap + on any piece. Retro Forever and Only If You Know picks stay separate, as they order separately.</div>`);
+      + (body || `<div class="empty"><b>No picks yet.</b>Tap + on any piece. Retro Forever and Only If You Know™ picks stay separate, as they order separately.</div>`);
     const upd = () => document.querySelectorAll("[data-olink],[data-clink]").forEach((a) => {
       const id = a.dataset.olink || a.dataset.clink, items = tray[id].map((s) => L[id].eng.bySku.get(s)).filter(Boolean);
       a.href = a.dataset.olink ? orderLink(id, items) : capsulePageLink(id, items);
