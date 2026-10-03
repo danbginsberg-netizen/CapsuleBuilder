@@ -22,6 +22,31 @@
 .wsp .capsules.three>.capsule>*{align-self:start}}               /* I4: the three cards line up row by row */
 .wsp fieldset>legend{float:left;width:100%;padding:0 0 10px;margin:0 0 4px;border-bottom:1px solid var(--line)}
 .wsp fieldset>legend+*{clear:both}                              /* I5: section label sits inside the panel, not across its border */
+/* v24 (2 Oct 2026): In the Know buyer brief link + email signup */
+.wsp section.itk{background:var(--ok-soft)}
+.wsp .itk .eyebrow{color:var(--ok-deep)}
+.wsp .itk-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:start}
+@media(max-width:860px){.wsp .itk-grid{grid-template-columns:1fr;gap:26px}}
+.wsp .itk .lead{margin-bottom:20px}
+.wsp a.itk-card{display:grid;grid-template-columns:150px 1fr;background:#fff;border:1px solid var(--ok-line);border-radius:12px;overflow:hidden;color:var(--ink);text-decoration:none;transition:transform .15s,box-shadow .15s}
+.wsp a.itk-card:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(109,91,156,.16);text-decoration:none}
+.wsp a.itk-card img{width:100%;height:100%;min-height:170px;object-fit:cover;object-position:50% 0;display:block}
+.wsp a.itk-card .t{padding:18px 20px;display:flex;flex-direction:column;gap:6px;justify-content:center}
+.wsp a.itk-card .k{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ok-deep)}
+.wsp a.itk-card b{font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:600;line-height:1.2}
+.wsp a.itk-card .d{font-size:14px;color:var(--muted)}
+.wsp a.itk-card .go{font-weight:700;color:var(--ok-deep);font-size:15px;margin-top:4px}
+@media(max-width:480px){.wsp a.itk-card{grid-template-columns:110px 1fr}.wsp a.itk-card b{font-size:19px}}
+.wsp .itk-sign{background:#fff;border:1px solid var(--ok-line);border-radius:12px;padding:24px 24px 20px}
+.wsp .itk-sign h3{font-size:21px;margin:0 0 4px}
+.wsp .itk-sign .who{color:var(--muted);font-size:14px;margin:0 0 16px}
+.wsp .itk-sign .fgrid{margin-bottom:14px}
+.wsp .itk-sign .btn{width:100%}
+.wsp .itk-err{display:none;color:#b3261e;font-size:14px;font-weight:600;margin:0 0 10px}
+.wsp .itk-sign .sent{margin:0;background:var(--ok-soft);border-color:var(--ok-line);color:#3f3366}
+.wsp .itk-sign .sent a{color:var(--ok-deep);font-weight:700}
+.wsp .feat .itk-more{margin-top:10px;font-weight:700;font-size:14px}
+.wsp .feat .itk-more a{color:var(--ok-deep)}
 </style>
 </head>
 <body>
@@ -277,6 +302,7 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 <div class="links" id="wsp-links">
 <a href="#reps" data-s="reps">For Sales Reps</a>
 <a href="#works" data-s="works">Works With Your Tools</a>
+<a href="#itk" data-s="itk">Market Brief</a>
 <a href="#faq" data-s="faq">Questions (FAQ)</a>
 </div>
 <a class="cta" href="#rf-form">Request a capsule</a>
@@ -291,6 +317,7 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 <a href="#reps">For sales reps</a>
 <a href="#works">Works with your tools</a>
 <a class="ok" href="#oiyk">Only If You Know</a>
+<a class="ok" href="#itk">In the Know buyer brief</a>
 <a href="#faq">Questions (FAQ)</a>
 <a href="#terms">Wholesale terms</a>
 </div>
@@ -520,6 +547,7 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 <p class="fk">In the Know</p>
 <h3>Backed by market research</h3>
 <p>In the Know, our own market research, reads the newest pieces and collections the week they launch, plus bestseller and sell-out tracking, across 30+ fashion-jewelry brands for Retro Forever and the premium jewelry market for Only If You Know. Each capsule shows the trends it rides, and the notes are replaced with new insights as the research is refreshed every week.</p>
+<p class="itk-more"><a href="https://onlyifyouknow.com/pages/buyer-brief?utm_source=wholesale-page&amp;utm_medium=referral&amp;utm_campaign=itk-fall26&amp;utm_content=feature" target="_top">Read this season&rsquo;s buyer brief <span aria-hidden="true">&#8599;</span></a></p>
 </div>
 <div class="feat">
 <p class="fk">Ready to open</p>
@@ -553,7 +581,7 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 </div>
 </div>
 <div class="next">
-<a class="p" href="#rf-form">Request a Retro Forever capsule <span class="ar" aria-hidden="true">↓</span></a><a class="pk" href="#oiyk">Only If You Know <span class="ar" aria-hidden="true">↓</span></a><a href="#works">Works with your tools <span class="ar" aria-hidden="true">↓</span></a>
+<a class="p" href="#rf-form">Request a Retro Forever capsule <span class="ar" aria-hidden="true">↓</span></a><a class="pk" href="#oiyk">Only If You Know <span class="ar" aria-hidden="true">↓</span></a><a class="pk" href="#itk">Free market brief <span class="ar" aria-hidden="true">↓</span></a><a href="#works">Works with your tools <span class="ar" aria-hidden="true">↓</span></a>
 </div>
 </div>
 </section>
@@ -834,6 +862,37 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 </div>
 </div>
 </section>
+<section class="itk" id="itk">
+<div class="wrap">
+<div class="itk-grid">
+<div>
+<div class="eyebrow">In the Know · Buyer brief</div>
+<h2>The free market brief for store buyers</h2>
+<p class="lead">What the jewelry market is launching this season, from the $15–$40 counter to the designer case, what’s selling, and display ideas you can set up the same week. It’s brand-neutral and yours to share with your team.</p>
+<a class="itk-card" href="https://onlyifyouknow.com/pages/buyer-brief?utm_source=wholesale-page&amp;utm_medium=referral&amp;utm_campaign=itk-fall26&amp;utm_content=card" target="_top"><img loading="lazy" src="https://cdn.shopify.com/s/files/1/0702/5777/0723/files/lifestyle-knit-layered.jpg?width=400" alt="Layered gemstone necklaces and a warm-neutral bracelet stack worn with a knit" width="400" height="500"><span class="t"><span class="k">Fall 2026 edition</span><b>Jewelry, fall 2026</b><span class="d">Thirteen trends, twelve display ideas and the fall buying calendar</span><span class="go">Read the fall brief <span aria-hidden="true">&#8599;</span></span></span></a>
+</div>
+<div class="itk-sign">
+<h3>Get each new edition by email</h3>
+<p class="who">The holiday edition lands in early November. About once a month, and you can unsubscribe anytime.</p>
+<form id="itk-form" method="post" action="https://onlyifyouknow.com/contact" target="_top" accept-charset="UTF-8" novalidate>
+<input type="hidden" name="form_type" value="customer">
+<input type="hidden" name="utf8" value="✓">
+<input type="hidden" name="contact[tags]" id="itk-tags" value="in-the-know, itk-buyer-brief">
+<input type="hidden" name="return_to" value="/pages/wholesale?customer_posted=true#itk">
+<div class="fgrid">
+<div class="full"><label for="itk-email">Email <span class="req">*</span></label><input type="email" id="itk-email" name="contact[email]" required autocomplete="email" placeholder="you@yourstore.com"></div>
+<div><label for="itk-store">Store name</label><input type="text" id="itk-store" autocomplete="organization" maxlength="60"></div>
+<div><label for="itk-ig">Store Instagram</label><input type="text" id="itk-ig" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="60" placeholder="@yourstore"></div>
+</div>
+<p class="itk-err" role="alert"></p>
+<button class="btn okbtn" type="submit">Sign me up</button>
+<p class="fnote">By signing up, you agree to receive In the Know emails from Only If You Know. <a href="https://onlyifyouknow.com/policies/privacy-policy" target="_blank" rel="noopener">Privacy policy</a></p>
+</form>
+<div class="sent" id="itk-done" role="status"><b>You’re on the list.</b> Watch your inbox for the November edition. <a href="https://onlyifyouknow.com/pages/buyer-brief?utm_source=wholesale-page&amp;utm_medium=referral&amp;utm_campaign=itk-fall26&amp;utm_content=thanks" target="_top">Read the fall brief now <span aria-hidden="true">&#8599;</span></a></div>
+</div>
+</div>
+</div>
+</section>
 <section id="faq">
 <div class="wrap">
 <div class="eyebrow">Questions</div>
@@ -891,7 +950,7 @@ width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:
 <p><span class="k">Works with</span>Forward the link to a partner or a buyer on your team; it works the same for them.</p>
 </div></details><details class="qa"><summary>How is this different from browsing Faire or a line sheet?</summary><div class="ans">
 <p><span class="k">Answer</span>A line sheet lists every style; a marketplace lists every brand. The Capsule Builder starts with your store and what the market is launching this season: a floor photo, your palette or the pieces you already carry, so the buy complements what is on your shelves. It builds one coordinated capsule from a piece you chose, or from one of twelve trend-built starter boards, sizes it to your sales and traffic, and explains every pick.</p>
-<p><span class="k">What’s different</span>It is backed by market intelligence. In the Know, our own market research, tracks 30+ fashion-jewelry brands for Retro Forever and the premium jewelry market for Only If You Know, refreshed every week, and each capsule shows the current trends it rides. It is a service the brand performs for you, included with the line, before you place an order.</p>
+<p><span class="k">What’s different</span>It is backed by market intelligence. In the Know, our own market research, tracks 30+ fashion-jewelry brands for Retro Forever and the premium jewelry market for Only If You Know, refreshed every week, and each capsule shows the current trends it rides. It is a service the brand performs for you, included with the line, before you place an order. <a href="https://onlyifyouknow.com/pages/buyer-brief?utm_source=wholesale-page&amp;utm_medium=referral&amp;utm_campaign=itk-fall26&amp;utm_content=faq" target="_top">Read the latest buyer brief</a>.</p>
 <p><span class="k">Works with</span>The capsule prints as a one-page line sheet, with an optional market brief page. If you prefer Faire’s checkout, we can put the same Retro Forever capsule there for you.</p>
 </div></details><p class="fback"><a href="#faq">↑ All FAQ topics</a></p>
 </div>
@@ -1171,6 +1230,35 @@ document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!menu.hasAt
 /* Hosted copy: links that leave this page open in the full browser window, not inside the embed frame. */
 (function(){var a=document.querySelectorAll('a[href]');for(var i=0;i<a.length;i++){var h=a[i].getAttribute('href');
 if(h&&h.charAt(0)!=='#'&&!/^(mailto|tel):/i.test(h)&&!a[i].target){a[i].target='_top';a[i].rel='noopener';}}})();
+</script>
+<script>
+/* v24 (2 Oct 2026): In the Know signup. Inside the onlyifyouknow.com page, the storefront posts the signup itself (same site, so Shopify
+   adds the subscriber with the in-the-know tags) and comes back with ?customer_posted=true. Opened on its own, or if the storefront
+   doesn't answer, the form posts straight to onlyifyouknow.com/contact. */
+(function(){
+var F=document.getElementById("itk-form");if(!F)return;
+var PO="https://onlyifyouknow.com",done=document.getElementById("itk-done"),err=F.querySelector(".itk-err"),
+em=document.getElementById("itk-email"),st=document.getElementById("itk-store"),ig=document.getElementById("itk-ig"),tg=document.getElementById("itk-tags"),acked=false;
+function sent(scroll){F.style.display="none";done.style.display="block";if(scroll){var go=function(){var s=document.getElementById("itk");if(s)s.scrollIntoView({block:"start"});};setTimeout(go,300);setTimeout(go,1200);}}
+try{if(new URLSearchParams(location.search).get("customer_posted")==="true")sent(true);}catch(x){}
+function clean(v){return (v||"").replace(/[,<>"]/g," ").replace(/[ ]+/g," ").trim();}
+function handle(v){v=(v||"").trim().replace(/^(https?:[/][/])?(www[.])?instagram[.]com[/]/i,"").replace(/[/?#].*$/,"").replace(/^@+/,"");return /^[A-Za-z0-9._]{1,30}$/.test(v)?v.toLowerCase():"";}
+function show(m){err.textContent=m;err.style.display=m?"block":"none";}
+window.addEventListener("message",function(e){if(e.origin===PO&&e.data&&e.data.rf==="itk-ack")acked=true;});
+F.addEventListener("submit",function(e){
+e.preventDefault();show("");
+var mail=(em.value||"").trim();
+if(!/^[^ @]+@[^ @]+[.][^ @]{2,}$/.test(mail)){show("Please enter a valid email address.");em.focus();return;}
+em.value=mail;
+var tags=["in-the-know","itk-buyer-brief","itk-src: wholesale page"],s=clean(st.value).slice(0,50);if(s)tags.push("store: "+s);
+if(ig.value.trim()){var h=handle(ig.value);if(!h){show("That Instagram handle doesn’t look right. Use letters, numbers, periods or underscores.");ig.focus();return;}tags.push("ig: @"+h);}
+tg.value=tags.join(", ");
+var b=F.querySelector('button[type="submit"]');b.disabled=true;b.textContent="Signing you up…";
+var framed=window.parent!==window;
+if(framed){try{window.parent.postMessage({rf:"itk",email:mail,tags:tg.value},PO);}catch(x){}}
+setTimeout(function(){if(!acked)F.submit();},framed?3000:0);
+});
+})();
 </script>
 </body>
 </html>
