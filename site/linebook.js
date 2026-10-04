@@ -26,9 +26,11 @@
   const TODAY = new Date().toISOString().slice(0, 10);
   const qs = new URLSearchParams(location.search);
   const cleanRep = (v) => String(v || "").toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 20);
-  if (qs.get("rep")) store.set("capsule_rep", cleanRep(qs.get("rep")));
-  if (qs.get("grp")) store.set("capsule_acct_groups", qs.get("grp") === "all" ? null : qs.get("grp").split(",").filter(Boolean));
-  const rep = () => cleanRep(store.get("capsule_rep", ""));
+  // Attribution belongs to this link, never to a previously visited tab.
+  // Leave Capsule Builder's shared context intact.
+  const linkRep = cleanRep(qs.get("rep"));
+  let linkGroups = qs.get("grp") && qs.get("grp") !== "all" ? qs.get("grp").split(",").filter(Boolean) : null;
+  const rep = () => linkRep;
   const LINE_NAME = { RF: "Retro Forever", OIYK: "Only If You Know™" };
   const CAT = { necklace: "Necklaces", bracelet: "Bracelets", earring: "Earrings" };
   const STYLE = { boho: "Boho", minimal: "Minimal", "retro/vintage": "Retro & vintage", glam: "Glam & sparkle", playful: "Playful color", "classic pearl": "Pearl", coastal: "Coastal", statement: "Statement" };
@@ -75,7 +77,7 @@
   }
 
   /* ------------------------------------------------ accounts (same lens as the builder's Account picker) */
-  const groupsShown = () => { const g = store.get("capsule_acct_groups", null); return Array.isArray(g) && g.length ? g : null; };
+  const groupsShown = () => { const g = linkGroups; return Array.isArray(g) && g.length ? g : null; };
   const groupName = (g) => ((ACC.groups || []).find((x) => x.id === g) || {}).name || g;
   const acctById = (id) => (ACC.accounts || []).find((a) => a.id === id) || null;
   function fitOf(it) {
@@ -88,6 +90,7 @@
   /* ------------------------------------------------ state */
   const S = Object.assign({ line: "RF", cat: "", style: "", motif: "", fam: "", price: "", trend: false, stock: false, acct: "", sort: "featured", group: true, ws: true }, store.get("cb_lb_ui", {}));
   S.q = "";
+  if (!qs.get("rep") && !qs.get("grp") && !qs.get("acct")) S.acct = "";
   if (qs.get("line") && /^(RF|OIYK|ALL)$/.test(qs.get("line"))) S.line = qs.get("line");
   if (qs.get("acct") && acctById(qs.get("acct"))) S.acct = qs.get("acct");
   const save = () => { const o = Object.assign({}, S); delete o.q; store.set("cb_lb_ui", o); };
@@ -271,6 +274,7 @@
           ${tiers}
           <tr><th>Materials</th><td>${esc(it.mtext || (it.mats || []).join(", "))}</td></tr>
           ${e.len ? `<tr><th>Length</th><td>${esc(e.len)}${e.ext ? ` plus ${esc(e.ext)} extender` : ""}</td></tr>` : ""}
+          ${e.extPendant ? `<tr><th>Extension / pendant</th><td>${esc(e.extPendant)}</td></tr>` : ""}
           ${e.wt ? `<tr><th>Weight</th><td>${esc(e.wt)}</td></tr>` : ""}
           <tr><th>Category</th><td>${esc(CAT[it.cat] || it.cat)}${it.sub ? " · " + esc(it.sub) : ""}${it.collection ? " · " + esc(it.collection) + " collection" : ""}</td></tr>
           ${terms.retailNote ? `<tr><th>Retail</th><td>${esc(terms.retailNote)}</td></tr>` : ""}
@@ -386,7 +390,7 @@
   });
   [["fStyle", "style"], ["fMotif", "motif"], ["fFam", "fam"], ["fPrice", "price"], ["fSort", "sort"]].forEach(([id, k]) => ($(id).onchange = () => { S[k] = $(id).value; draw(); }));
   $("fAcct").onchange = () => {
-    if ($("fAcct").value === "__all") { store.set("capsule_acct_groups", null); drawChips(); return; }
+    if ($("fAcct").value === "__all") { linkGroups = null; drawChips(); return; }
     S.acct = $("fAcct").value; if (S.acct) S.sort = "featured"; draw();
   };
   let qt; $("q").oninput = () => { clearTimeout(qt); qt = setTimeout(() => { S.q = $("q").value.trim(); draw(); }, 160); };
