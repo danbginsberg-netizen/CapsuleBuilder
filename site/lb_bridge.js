@@ -16,6 +16,8 @@
   function lineBookUrl() {
     const p = new URLSearchParams();
     if (state.rep) p.set("rep", state.rep);
+    const g = store.get("capsule_acct_groups", null);   // v1.9.8: the Line Book now reads rep and groups only from its link
+    if (Array.isArray(g) && g.length) p.set("grp", g.join(","));
     p.set("line", A.line());
     if (state.account) p.set("acct", state.account);
     const q = "?" + p.toString();

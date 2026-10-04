@@ -67,8 +67,10 @@
   // "Trending": a dated In the Know signal that is rising or new (not the steady or perennial notes); the most specific first
   const hot = (it) => trendOf(it).filter((n) => !n.evergreen && /^(rising|new)$/i.test(n.direction || "")).sort((a, b) => a.share - b.share);
   const dated = (it) => hot(it).length > 0;
+  // v1.9.8: stock is the catalog snapshot, so the date it was read travels with it
+  const STOCK_AS_OF = (() => { const b = String(((window.CATALOG_RF || {}).built) || "").slice(0, 10); const d = new Date(b + "T12:00:00"); return isNaN(d) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); })();
   function stockOf(it) {
-    if (it.line === "OIYK" || it.mto) return { cls: "mto", text: "Made to order", long: "Made to order: 45 to 60 days on most styles" };
+    if (it.line === "OIYK" || it.mto) return { cls: "mto", text: "Made to order", long: "Made to order: 45- to 60-day lead times on most styles. Reorders of in-stock styles ship from our U.S. warehouse in about 10 business days." };
     const q = +it.qty || 0;
     if (q >= 24) return { cls: "ok", text: "In stock", long: "In stock at our U.S. warehouse" };
     if (q >= 12) return { cls: "lim", text: "Limited stock", long: `Limited stock (${q} on hand)` };
@@ -197,7 +199,7 @@
     document.querySelectorAll(".seg button").forEach((b) => b.classList.toggle("on", b.dataset.line === S.line));
     $("cats").innerHTML = chip("cat", "", "All") + Object.entries(CAT).map(([k, v]) => chip("cat", k, v)).join("");
     $("tog").innerHTML = `<button class="chip${S.trend ? " on" : ""}" data-t="trend">★ Trending now</button>` +
-      `<button class="chip${S.stock ? " on" : ""}" data-t="stock">In stock (RF)</button>` +
+      `<button class="chip${S.stock ? " on" : ""}" data-t="stock" title="Retro Forever colorways with 24 or more on hand${STOCK_AS_OF ? ` (stock as of ${STOCK_AS_OF})` : ""}. Styles with fewer can still fill smaller first-order quantities.">24+ in stock (RF)</button>` +
       `<button class="chip${S.group ? " on" : ""}" data-t="group">One card per style</button>` +
       `<button class="chip${S.ws ? " on" : ""}" data-t="ws">Wholesale prices</button>`;
     const sel = (id, key, opts) => { const el = $(id); el.innerHTML = opts.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join(""); el.value = S[key]; el.classList.toggle("set", !!S[key]); };
@@ -269,7 +271,7 @@
         ${tn.length ? `<div class="itk"><div class="lbl">In the Know</div>${tn.map((n) => `<p><b>${esc(n.trend)}</b>${n.evergreen ? "" : ` <span class="dir">${esc(n.direction || "")}</span>`}<br>${esc(n.text)}</p>`).join("")}</div>` : ""}
         ${f ? `<div class="fitbox ${fitCls(f)}"><div class="lbl">${esc(acctById(S.acct).name.split(" (")[0])}: ${esc(f.label)}</div>${(f.plus || []).slice(0, 3).map((x) => `<p>+ ${esc(x)}</p>`).join("")}${(f.minus || []).slice(0, 2).map((x) => `<p>– ${esc(x)}</p>`).join("")}</div>` : ""}
         <table class="facts">
-          <tr><th>Availability</th><td><span class="bd ${st.cls}">${esc(st.text)}</span> ${esc(st.long)}</td></tr>
+          <tr><th>Availability</th><td><span class="bd ${st.cls}">${esc(st.text)}</span> ${esc(st.long)}${it.line === "RF" && STOCK_AS_OF ? ` <span class="small">(stock as of ${esc(STOCK_AS_OF)})</span>` : ""}</td></tr>
           <tr><th>Minimum</th><td>${esc(unitsTxt)} a style on a first order${esc(setNote)}; ${money(terms.orderMinimum || 0)} order minimum${l.id === "RF" ? ". Sold by the dozen; a first order may include a few ½-dozen styles." : ". Reorders: a dozen a style."}</td></tr>
           ${tiers}
           <tr><th>Materials</th><td>${esc(it.mtext || (it.mats || []).join(", "))}</td></tr>
@@ -319,7 +321,11 @@
   function builderUrl() {
     if (location.protocol === "file:") return "Capsule Builder.html";
     const u = (B.builderPage || {}).url || "index.html";
-    return u + (rep() ? `?rep=${encodeURIComponent(rep())}` : "");
+    const p = new URLSearchParams();   // v1.9.8: the Line Book's own link context (rep, account groups) travels to the builder
+    if (rep()) p.set("rep", rep());
+    if (linkGroups && linkGroups.length) p.set("grp", linkGroups.join(","));
+    const q = p.toString();
+    return u + (q ? "?" + q : "");
   }
   // Send SKUs to the Capsule Builder: a builder tab that is open (any tab on this site) picks the message up at once and
   // answers; with none open, a new builder tab opens and reads the waiting message when it loads (lb_bridge.js).
@@ -365,7 +371,7 @@
     };
     const body = sec("RF") + sec("OIYK");
     $("trayBody").innerHTML = `<label class="f" for="trayStore">Store name <span class="small">(goes on the order page and capsule page)</span></label><input id="trayStore" type="text" value="${st}" placeholder="e.g. Sea Breeze Boutique">`
-      + `<div class="small">Rep code: <b>${esc(rep() || "none")}</b>${rep() ? "" : " (set it in the Capsule Builder, or open this page with ?rep=YOURCODE)"}</div>`
+      + `<div class="small">Rep code: <b>${esc(rep() || "none")}</b>${rep() ? "" : " (orders are credited only when this page is opened from your own rep link or from the Capsule Builder)"}</div>`
       + (body || `<div class="empty"><b>No picks yet.</b>Tap + on any piece. Retro Forever and Only If You Know™ picks stay separate, as they order separately.</div>`);
     const upd = () => document.querySelectorAll("[data-olink],[data-clink]").forEach((a) => {
       const id = a.dataset.olink || a.dataset.clink, items = tray[id].map((s) => L[id].eng.bySku.get(s)).filter(Boolean);

@@ -226,7 +226,7 @@ window.CAPSULE_CONFIG = {
         paymentTerms: "Credit card, ACH, check or wire transfer (credit cards add 3%; wires add $20).",
         shipping: "In stock at our U.S. warehouse. Ships via UPS / FedEx, prepaid & add or on your carrier account. Fast reorders from inventory on hand.",
         returns: "",
-        retailNote: "Suggested retail 3.2–3.5x wholesale.",
+        retailNote: "Suggested retail is about 3.2–3.5x wholesale; each style shows its own MSRP.",
         unitsNote: "Sold by the dozen. First orders may include a limited number of ½-dozen styles. Same price per piece either way.",
       },
       // Wholesale order page (on onlyifyouknow.com; the Shopify page shows the GitHub Pages form full-screen and passes
