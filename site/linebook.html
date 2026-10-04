@@ -90,7 +90,7 @@
   .dtop { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--line); gap: 10px; }
   .dtop button { min-height: 44px; min-width: 44px; border: 1px solid var(--line); background: #fff; border-radius: 99px; padding: 6px 16px; font-weight: 700; cursor: pointer; }
   #dPos { color: var(--muted); font-size: 14px; }
-  #dBody { flex: 1; overflow: auto; display: grid; grid-template-columns: 1fr; -webkit-overflow-scrolling: touch; }
+  #dBody { flex: 1; overflow: auto; display: grid; grid-template-columns: minmax(0, 1fr); -webkit-overflow-scrolling: touch; }
   @media (min-width: 900px) and (orientation: landscape), (min-width: 1100px) { #dBody { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); overflow: hidden; } .dinfo { overflow: auto; } }
   .dimg { position: relative; background: #fff; display: flex; align-items: center; justify-content: center; min-height: 52vh; overflow: hidden; touch-action: pan-y; }
   .dimg img { max-width: 100%; max-height: 100%; width: 100%; height: 100%; object-fit: contain; cursor: zoom-in; transition: transform .2s; }
@@ -101,7 +101,7 @@
   .nav.prev { left: 0; border-radius: 0 12px 12px 0; } .nav.next { right: 0; border-radius: 12px 0 0 12px; }
   .pdots { position: absolute; bottom: 12px; left: 0; right: 0; display: flex; justify-content: center; gap: 8px; }
   .pdots button { width: 12px; height: 12px; border-radius: 50%; border: 0; background: #d6d1cb; padding: 0; cursor: pointer; } .pdots button.on { background: var(--ink); }
-  .dinfo { padding: 18px 22px 40px; }
+  .dinfo { min-width: 0; padding: 18px 22px 40px; }
   .dinfo h2 { font: 500 clamp(24px, 3vw, 32px)/1.15 Georgia, serif; margin: 4px 0 2px; }
   .dsub { color: var(--muted); }
   .dpx { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0; }
@@ -183,8 +183,8 @@
 <script src="orderpage_oiyk.js?h=b9386002"></script>
 <script src="engine.js?h=8798e928"></script>
 <script src="accounts.js?h=5c82b5e3"></script>
-<script src="lbdata.js?h=9bd1509d"></script>
-<script src="linebook.js?h=9bf8c86c"></script>
+<script src="lbdata.js?h=12e7eb7f"></script>
+<script src="linebook.js?h=1d03da64"></script>
 <script>/* v1.8.0: open the newest release, not a saved copy (GitHub Pages keeps pages up to 10 minutes) */
 (function(){var V="1.9.7",t0=Date.now();
 function newest(cb){try{fetch("version.json?cb="+Date.now(),{cache:"no-store"}).then(function(r){return r.json()}).then(function(j){if(j&&j.version&&j.version!==V)cb(j.version)}).catch(function(){})}catch(e){}}
