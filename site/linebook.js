@@ -69,7 +69,10 @@
   const dated = (it) => hot(it).length > 0;
   // v1.9.8: stock is the catalog snapshot, so the date it was read travels with it
   const STOCK_AS_OF = (() => { const b = String(((window.CATALOG_RF || {}).built) || "").slice(0, 10); const d = new Date(b + "T12:00:00"); return isNaN(d) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); })();
+  // Nov 2 2026: every RF style is flagged mto (back catalog, made to order), so the stock chip and sort are hidden
+  const RF_MTO = ((window.CATALOG_RF || {}).items || []).length > 0 && ((window.CATALOG_RF || {}).items || []).every((i) => i.mto);
   function stockOf(it) {
+    if (it.line === "RF" && it.mto) return { cls: "mto", text: "Made to order", long: "Back catalog, made to order: 45- to 60-day lead times on most styles, depending on the season." };
     if (it.line === "OIYK" || it.mto) return { cls: "mto", text: "Made to order", long: "Made to order: 45- to 60-day lead times on most styles. Reorders of in-stock styles ship from our U.S. warehouse in about 10 business days." };
     const q = +it.qty || 0;
     if (q >= 24) return { cls: "ok", text: "In stock", long: "In stock at our U.S. warehouse" };
@@ -112,7 +115,7 @@
     if (S.fam && !(it.fams || []).includes(S.fam)) return false;
     if (S.price) { const p = PRICE.find((x) => x[0] === S.price); if (p && !(it.msrp >= p[2] && it.msrp < p[3])) return false; }
     if (S.trend && !dated(it)) return false;   // "Trending now": the dated In the Know signals, not the perennial notes
-    if (S.stock && it.line === "RF" && !((+it.qty || 0) >= 24)) return false;
+    if (S.stock && !RF_MTO && it.line === "RF" && !((+it.qty || 0) >= 24)) return false;
     if (S.acct && skip !== "acct") { const f = fitOf(it); if (f && (f.hard)) return false; }
     if (S.q) {
       const hay = [it.sku, it.name, it.cname, it.mtext, it.style, (it.motifs || []).join(" "), (it.fams || []).join(" "), it.cat, it.collection].join(" ").toLowerCase();
@@ -199,7 +202,7 @@
     document.querySelectorAll(".seg button").forEach((b) => b.classList.toggle("on", b.dataset.line === S.line));
     $("cats").innerHTML = chip("cat", "", "All") + Object.entries(CAT).map(([k, v]) => chip("cat", k, v)).join("");
     $("tog").innerHTML = `<button class="chip${S.trend ? " on" : ""}" data-t="trend">★ Trending now</button>` +
-      `<button class="chip${S.stock ? " on" : ""}" data-t="stock" title="Retro Forever colorways with 24 or more on hand${STOCK_AS_OF ? ` (stock as of ${STOCK_AS_OF})` : ""}. Styles with fewer can still fill smaller first-order quantities.">24+ in stock (RF)</button>` +
+      (RF_MTO ? "" : `<button class="chip${S.stock ? " on" : ""}" data-t="stock" title="Retro Forever colorways with 24 or more on hand${STOCK_AS_OF ? ` (stock as of ${STOCK_AS_OF})` : ""}. Styles with fewer can still fill smaller first-order quantities.">24+ in stock (RF)</button>`) +
       `<button class="chip${S.group ? " on" : ""}" data-t="group">One card per style</button>` +
       `<button class="chip${S.ws ? " on" : ""}" data-t="ws">Wholesale prices</button>`;
     const sel = (id, key, opts) => { const el = $(id); el.innerHTML = opts.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join(""); el.value = S[key]; el.classList.toggle("set", !!S[key]); };
@@ -207,7 +210,7 @@
     sel("fMotif", "motif", [["", "Any motif"]].concat(Object.entries(MOTIF).filter(([k]) => counts("motif", k))));
     sel("fFam", "fam", [["", "Any color"]].concat(Object.keys(FAM).filter((k) => counts("fam", k)).map((k) => [k, k.replace(/\//g, " / ").replace(/^./, (c) => c.toUpperCase())])));
     sel("fPrice", "price", [["", "Any retail price"]].concat(PRICE.map((p) => [p[0], p[1]])));
-    sel("fSort", "sort", [["featured", S.acct ? "Best fit first" : "Featured"], ["low", "Price: low to high"], ["high", "Price: high to low"], ["name", "Name"], ["stock", "Most in stock"]]);
+    sel("fSort", "sort", [["featured", S.acct ? "Best fit first" : "Featured"], ["low", "Price: low to high"], ["high", "Price: high to low"], ["name", "Name"]].concat(RF_MTO ? [] : [["stock", "Most in stock"]]));
     const shown = groupsShown(), by = {};
     (ACC.accounts || []).filter((a) => !shown || shown.includes(a.group) || a.id === S.acct).forEach((a) => (by[a.group] = by[a.group] || []).push(a));
     $("fAcct").innerHTML = `<option value="">No account lens</option>` + Object.entries(by).map(([g, list]) => `<optgroup label="${esc(groupName(g))}">${list.map((a) => `<option value="${esc(a.id)}">${esc(a.name.split(" (")[0])}</option>`).join("")}</optgroup>`).join("") + (shown ? `<option value="__all">Show every account…</option>` : "");
@@ -271,7 +274,7 @@
         ${tn.length ? `<div class="itk"><div class="lbl">In the Know</div>${tn.map((n) => `<p><b>${esc(n.trend)}</b>${n.evergreen ? "" : ` <span class="dir">${esc(n.direction || "")}</span>`}<br>${esc(n.text)}</p>`).join("")}</div>` : ""}
         ${f ? `<div class="fitbox ${fitCls(f)}"><div class="lbl">${esc(acctById(S.acct).name.split(" (")[0])}: ${esc(f.label)}</div>${(f.plus || []).slice(0, 3).map((x) => `<p>+ ${esc(x)}</p>`).join("")}${(f.minus || []).slice(0, 2).map((x) => `<p>– ${esc(x)}</p>`).join("")}</div>` : ""}
         <table class="facts">
-          <tr><th>Availability</th><td><span class="bd ${st.cls}">${esc(st.text)}</span> ${esc(st.long)}${it.line === "RF" && STOCK_AS_OF ? ` <span class="small">(stock as of ${esc(STOCK_AS_OF)})</span>` : ""}</td></tr>
+          <tr><th>Availability</th><td><span class="bd ${st.cls}">${esc(st.text)}</span> ${esc(st.long)}${it.line === "RF" && !it.mto && STOCK_AS_OF ? ` <span class="small">(stock as of ${esc(STOCK_AS_OF)})</span>` : ""}</td></tr>
           <tr><th>Minimum</th><td>${esc(unitsTxt)} a style on a first order${esc(setNote)}; ${money(terms.orderMinimum || 0)} order minimum${l.id === "RF" ? ". Sold by the dozen; a first order may include a few ½-dozen styles." : ". Reorders: a dozen a style."}</td></tr>
           ${tiers}
           <tr><th>Materials</th><td>${esc(it.mtext || (it.mats || []).join(", "))}</td></tr>

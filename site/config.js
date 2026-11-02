@@ -224,7 +224,7 @@ window.CAPSULE_CONFIG = {
         // (danbginsberg-netizen.github.io/RetroForeverWSorder). Printed in the line sheet terms block
         // and at the top of the Excel order form. Leave any of them "" to hide that line.
         paymentTerms: "Credit card, ACH, check or wire transfer (credit cards add 3%; wires add $20).",
-        shipping: "In stock at our U.S. warehouse. Ships via UPS / FedEx, prepaid & add or on your carrier account. Fast reorders from inventory on hand.",
+        shipping: "Back catalog, made to order: 45- to 60-day lead times on most styles, depending on the season (Dan, 2 Nov 2026: RF stock sold). Ships from our U.S. warehouse via UPS / FedEx, prepaid & add or on your carrier account.",
         returns: "",
         retailNote: "Suggested retail is about 3.2–3.5x wholesale; each style shows its own MSRP.",
         unitsNote: "Sold by the dozen. First orders may include a limited number of ½-dozen styles. Same price per piece either way.",
